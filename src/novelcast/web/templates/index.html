@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>NovelCast</title>
+</head>
+<body>
+
+<h1>📚 NovelCast Dashboard</h1>
+
+<form action="/subscribe" method="post">
+    <input name="url" placeholder="Novel URL">
+    <button type="submit">Subscribe</button>
+</form>
+
+<form action="/update" method="post">
+    <button type="submit">Run Update</button>
+</form>
+
+<h2>Subscriptions</h2>
+
+<ul>
+    {% for s in subs %}
+        <li>
+            {{ s[2] }} - {{ s[1] }} (chapters: {{ s[3] }})
+        </li>
+    {% endfor %}
+</ul>
+
+</body>
+</html>
