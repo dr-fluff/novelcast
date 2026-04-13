@@ -11,8 +11,11 @@ router = APIRouter()
 db = Database()
 engine = UpdateEngine(db)
 
-templates = Jinja2Templates(directory="src/novelcast/web/templates")
+from pathlib import Path
 
+BASE_DIR = Path(__file__).resolve().parents[2]
+
+templates = Jinja2Templates(directory=str(BASE_DIR / "src/novelcast/web/templates"))
 
 # 🌐 Dashboard
 @router.get("/", response_class=HTMLResponse)

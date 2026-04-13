@@ -5,7 +5,6 @@ from pathlib import Path
 
 DB_PATH = Path("data/novelcast.db")
 
-
 class Database:
     def __init__(self):
         DB_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -34,9 +33,20 @@ class Database:
         self.conn.commit()
 
     def get_subscriptions(self):
-        return self.conn.execute(
+        cur = self.conn.execute(
             "SELECT id, url, title, last_chapter FROM subscriptions"
-        ).fetchall()
+        )
+        rows = cur.fetchall()
+
+        return [
+            {
+                "id": r[0],
+                "url": r[1],
+                "title": r[2],
+                "last_chapter": r[3],
+            }
+            for r in rows
+        ]
 
     def update_last_chapter(self, url, chapter):
         self.conn.execute(

@@ -21,7 +21,7 @@
 <ul>
     {% for s in subs %}
         <li>
-            {{ s[2] }} - {{ s[1] }} (chapters: {{ s[3] }})
+            {{ s.title }} - {{ s.url }} (chapters: {{ s.last_chapter }})
         </li>
     {% endfor %}
 </ul>

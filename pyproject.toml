@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "novelcast"
 version = "0.1.0"
@@ -21,6 +25,6 @@ package-dir = {"" = "src"}
 where = ["src"]
 
 [project.scripts]
-novelcast = "novelcast.main:app"
+novelcast = "novelcast.__main__:main"
 
 

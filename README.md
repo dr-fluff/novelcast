@@ -1,2 +1,5 @@
 # novelcast
-podcast for webseries
+
+podcast like app for web-series
+
+## 
