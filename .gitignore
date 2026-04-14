@@ -5,6 +5,8 @@
 __pycache__/
 *.py[codz]
 *$py.class
+*.db
+uv.lock
 
 # C extensions
 *.so

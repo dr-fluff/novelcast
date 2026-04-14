@@ -3,36 +3,39 @@
 from fastapi import APIRouter, Request, Form
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+from fastapi.responses import RedirectResponse
 
 from novelcast.storage.db import Database
 from novelcast.engine.updater import UpdateEngine
+
+from pathlib import Path
+
+from types import SimpleNamespace
 
 router = APIRouter()
 db = Database()
 engine = UpdateEngine(db)
 
-from pathlib import Path
+BASE_DIR = Path(__file__).resolve().parent.parent
 
-BASE_DIR = Path(__file__).resolve().parents[2]
-
-templates = Jinja2Templates(directory=str(BASE_DIR / "src/novelcast/web/templates"))
+templates = Jinja2Templates(
+    directory=str(BASE_DIR / "web/templates")
+)
+templates.env.auto_reload = True
 
 # 🌐 Dashboard
 @router.get("/", response_class=HTMLResponse)
 def home(request: Request):
-    subs = db.get_subscriptions()
+    subs = [SimpleNamespace(**s)for s in db.get_subscriptions()]
     return templates.TemplateResponse(
         "index.html",
         {"request": request, "subs": subs}
     )
 
-
-# ➕ Add subscription
 @router.post("/subscribe")
 def subscribe(url: str = Form(...)):
     db.add_subscription(url)
-    return {"status": "added", "url": url}
-
+    return RedirectResponse("/", status_code=303)
 
 # 📚 Get all subscriptions
 @router.get("/subscriptions")
