@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ title }} - NovelCast</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="subscription-form">
+        <h1>📖 {{ title }}</h1>
+        <p>By: {{ author }}</p>
+        <p>Chapters available: {{ chapters | length }}</p>
+        <a href="/">← Back to Dashboard</a>
+    </div>
+
+    <div class="subscriptions">
+        <h2>Chapters</h2>
+        <ul class="chapter-list">
+            {% for chapter in chapters %}
+                <li><a href="/chapter?url={{ url | urlencode }}&chapter={{ chapter | urlencode }}">{{ chapter }}</a></li>
+            {% endfor %}
+        </ul>
+    </div>
+</body>
+</html>

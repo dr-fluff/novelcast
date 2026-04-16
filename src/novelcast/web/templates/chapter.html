@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ title }} - {{ chapter }} - NovelCast</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="subscription-form">
+        <h1>📖 {{ title }}</h1>
+        <p>By: {{ author }}</p>
+        <p>{{ chapter }}</p>
+        <a href="/story?url={{ url | urlencode }}">← Back to Chapters</a>
+    </div>
+
+    <div class="chapter-content">
+        {{ content | safe }}
+    </div>
+</body>
+</html>

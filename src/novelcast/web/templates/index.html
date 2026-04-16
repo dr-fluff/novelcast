@@ -2,29 +2,67 @@
 <html>
 <head>
     <title>NovelCast</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="A novel subscription and update notification system.">
+    <meta name="keywords" content="novel, subscription, updates, notifications">
+    
+    <link rel="icon" type="image/png" href="/static/images/favicon.png">
+    <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body>
 
-<h1>📚 NovelCast Dashboard</h1>
+<div class="subscription-form">
+    <h1>📚 NovelCast Dashboard</h1>
 
-<form action="/subscribe" method="post">
-    <input name="url" placeholder="Novel URL">
-    <button type="submit">Subscribe</button>
-</form>
+    <form action="/subscribe" method="post" id="subscribe-form">
+        <input name="url" placeholder="Novel URL">
+        <input type="hidden" name="chapters" id="chapters" value="1">
+        <button type="submit">Subscribe</button>
+    </form>
 
-<form action="/update" method="post">
-    <button type="submit">Run Update</button>
-</form>
+    <form action="/update_all" method="post">
+        <button type="submit">Update All</button>
+    </form>
 
-<h2>Subscriptions</h2>
+    <p>Files are saved under <code>data/stories/</code> in the project directory.</p>
+</div>
 
-<ul>
-    {% for s in subs %}
-        <li>
-            {{ s.title }} - {{ s.url }} (chapters: {{ s.last_chapter }})
-        </li>
-    {% endfor %}
-</ul>
+<!-- Modal for chapter confirmation -->
+<div id="chapter-modal" class="modal">
+    <div class="modal-content">
+        <h2>Confirm Chapters</h2>
+        <p id="modal-text">Found <span id="chapter-count">0</span> chapters. Do you want to download them?</p>
+        <button id="accept-btn">Accept</button>
+        <button id="cancel-btn">Cancel</button>
+    </div>
+</div>
+
+<div class="subscriptions">
+    <h2>Subscriptions</h2>
+
+    <div class="subscriptions-grid">
+        {% for s in subs %}
+            <article class="fiction-card">
+                <div class="fiction-thumb">
+                    <!--<img src="{% if s.cover_url %}/cover?url={{ s.cover_url | urlencode }}{% else %}/static/images/cover-placeholder.svg{% endif %}" alt="{{ s.display_title }} cover">-->
+                    <img src="{{ '/cover?url=' + (s.cover_url | urlencode) if s.cover_url else '/static/images/cover-placeholder.svg' }}">
+                    <span class="thumb-letter">{{ s.thumbnail_letter }}</span>
+                </div>
+                <div class="fiction-content">
+                    <h3 class="fiction-title">{{ s.display_title }}</h3>
+                    <p class="fiction-meta">Chapters downloaded: {{ s.last_chapter }}</p>
+                    <p class="fiction-url">{{ s.url }}</p>
+                    <div class="fiction-actions">
+                        <a href="/story?url={{ s.url | urlencode }}">Read</a>
+                        <a href="{{ s.url }}" target="_blank" rel="noopener">Open source</a>
+                    </div>
+                </div>
+            </article>
+        {% endfor %}
+    </div>
+</div>
+
+<script src="/static/scripts/main.js"></script>
 
 </body>
 </html>

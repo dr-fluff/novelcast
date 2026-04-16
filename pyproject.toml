@@ -17,6 +17,9 @@ dependencies = [
     "python-multipart",
     "pydantic",
     "schedule",
+    "fanficfare",
+    "requests",
+    "beautifulsoup4",
 ]
 
 [tool.setuptools]
