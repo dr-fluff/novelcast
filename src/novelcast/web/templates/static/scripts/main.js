@@ -1,130 +1,147 @@
 document.addEventListener("DOMContentLoaded", function () {
-  const subscribeForm = document.getElementById("subscribe-form");
-  const modal = document.getElementById("chapter-modal");
-  const modalText = document.getElementById("modal-text");
-  const chapterCountSpan = document.getElementById("chapter-count");
-  const acceptBtn = document.getElementById("accept-btn");
-  const cancelBtn = document.getElementById("cancel-btn");
-  const chaptersInput = document.getElementById("chapters");
 
-  let currentUrl = "";
+  /* =============================
+     📦 ELEMENTS
+  ============================== */
+  const readerUI = document.querySelector(".reader-ui");
+  const chapterContent = document.querySelector(".chapter-content");
+  const progressBar = document.getElementById("progress-bar");
+  const progressText = document.getElementById("reading-progress-text");
 
-  if (!subscribeForm || !modal) {
-    return;
+  /* =============================
+     📖 READER STATE
+  ============================== */
+  let fontSize = 1.1;
+  let theme = "light";
+
+  function applyFont() {
+    if (chapterContent) {
+      chapterContent.style.fontSize = fontSize + "rem";
+    }
   }
 
-  modal.style.display = "none";
+  window.changeFont = function (delta) {
+    fontSize = Math.min(1.6, Math.max(0.9, fontSize + delta * 0.1));
+    applyFont();
+  };
 
-  window.addEventListener("pageshow", function (event) {
-    modal.style.display = "none";
-  });
+  window.setTheme = function (t) {
+    theme = t;
+    document.body.classList.remove("light", "dark", "sepia");
+    document.body.classList.add(t);
+  };
 
-  subscribeForm.addEventListener("submit", function (event) {
-    event.preventDefault();
+  /* =============================
+     📜 SCROLL PROGRESS
+  ============================== */
+  function updateProgress() {
+    const scrollTop = window.scrollY;
+    const docHeight = document.body.scrollHeight - window.innerHeight;
 
-    const urlInput = subscribeForm.querySelector("input[name=url]");
-    currentUrl = urlInput?.value.trim();
+    const progress = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
 
-    if (!currentUrl) {
-      alert("Please enter a novel URL before subscribing.");
-      return;
+    if (progressBar) {
+      progressBar.style.width = progress + "%";
     }
 
-    // Fetch chapter count
-    fetch(`/get_chapters?url=${encodeURIComponent(currentUrl)}`)
-      .then(response => response.json())
-      .then(data => {
-        const chapters = data.chapters || 0;
-        if (chapters > 0) {
-          chapterCountSpan.textContent = chapters;
-          modal.style.display = "block";
-        } else {
-          alert("No chapters found on this page. Please check the URL.");
-        }
-      })
-      .catch(error => {
-        console.error("Error fetching chapters:", error);
-        alert("Failed to fetch chapter count. Please try again.");
-      });
-  });
-
-  acceptBtn.addEventListener("click", async function () {
-    const chapters = parseInt(chapterCountSpan.textContent, 10);
-    if (chaptersInput) {
-      chaptersInput.value = String(chapters);
+    if (progressText) {
+      progressText.textContent = Math.round(progress) + "% read";
     }
-    modal.style.display = "none";
-    const loading = document.createElement("div");
-    loading.id = "loading-overlay";
-    loading.innerHTML = `
-      <div class="loading-content">
-        <h2>Downloading Chapters...</h2>
-        <div class="progress-bar">
-          <div class="progress-fill" id="progress-fill"></div>
-        </div>
-        <p id="progress-text">Preparing download...</p>
-      </div>
-    `;
-    document.body.appendChild(loading);
+  }
 
-    // Progress animation up to 90%
-    let progress = 0;
-    const progressFill = document.getElementById("progress-fill");
-    const progressText = document.getElementById("progress-text");
-    const interval = setInterval(() => {
-      progress += Math.random() * 10;
-      if (progress > 90) progress = 90;
-      progressFill.style.width = progress + "%";
-      progressText.textContent = `Downloading... ${Math.round(progress)}%`;
-    }, 200);
+  window.addEventListener("scroll", updateProgress);
 
-    // Submit form via fetch
-    const formData = new FormData(subscribeForm);
-    try {
-      const response = await fetch('/subscribe', {
-        method: 'POST',
-        body: formData
-      });
-      if (response.redirected) {
-        // Complete progress
-        clearInterval(interval);
-        progressFill.style.width = "100%";
-        progressText.textContent = "Download complete! Redirecting...";
-        // Small delay to show completion
-        setTimeout(() => {
-          window.location.href = response.url;
-        }, 500);
+  /* =============================
+     👆 TAP TOGGLE UI
+  ============================== */
+  if (readerUI) {
+    let uiVisible = true;
+
+    document.addEventListener("click", (e) => {
+      // ignore clicks on controls or links
+      if (e.target.closest("a") || e.target.closest("button")) return;
+
+      uiVisible = !uiVisible;
+      readerUI.classList.toggle("hidden", !uiVisible);
+    });
+  }
+
+  /* =============================
+     📜 AUTO HIDE ON SCROLL
+  ============================== */
+  if (readerUI) {
+    let lastScrollY = window.scrollY;
+
+    window.addEventListener("scroll", () => {
+      if (window.scrollY > lastScrollY) {
+        readerUI.classList.add("hidden");
       } else {
-        // Get error message from response
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Download failed');
+        readerUI.classList.remove("hidden");
       }
-    } catch (e) {
-      clearInterval(interval);
-      alert('Error: ' + e.message);
-      document.body.removeChild(loading);
-      modal.style.display = "none";
+
+      lastScrollY = window.scrollY;
+    });
+  }
+
+  /* =============================
+     📱 SWIPE NAVIGATION
+  ============================== */
+  let touchStartX = 0;
+
+  document.addEventListener("touchstart", e => {
+    touchStartX = e.changedTouches[0].screenX;
+  });
+
+  document.addEventListener("touchend", e => {
+    const touchEndX = e.changedTouches[0].screenX;
+    const threshold = 50;
+
+    const nextBtn = document.querySelector(".nav-button.next");
+    const prevBtn = document.querySelector(".nav-button.prev");
+
+    if (touchEndX < touchStartX - threshold && nextBtn) {
+      navigateWithTransition(nextBtn.href);
+    }
+
+    if (touchEndX > touchStartX + threshold && prevBtn) {
+      navigateWithTransition(prevBtn.href);
     }
   });
 
-  cancelBtn.addEventListener("click", function () {
-    modal.style.display = "none";
-  });
+  /* =============================
+     ✨ PAGE TRANSITIONS
+  ============================== */
+  function navigateWithTransition(url) {
+    if (!url) return;
 
-  // Close modal when clicking outside
-  window.addEventListener("click", function (event) {
-    if (event.target === modal) {
-      modal.style.display = "none";
-    }
-  });
+    chapterContent?.classList.add("chapter-transition-out");
+    readerUI?.classList.add("chapter-transition-out");
 
-  // Handle thumbnail image errors
-  document.addEventListener("DOMContentLoaded", function () {
-    const thumbImages = document.querySelectorAll(".fiction-thumb img");
-    thumbImages.forEach(img => {
-      img.addEventListener("error", function () {
-        this.src = "/static/images/cover-placeholder.svg";
-      });
+    setTimeout(() => {
+      window.location.href = url;
+    }, 250);
+  }
+
+  document.querySelectorAll(".nav-button").forEach(btn => {
+    btn.addEventListener("click", function (e) {
+      const url = this.getAttribute("href");
+
+      if (!url || url.startsWith("#")) return;
+
+      e.preventDefault();
+      navigateWithTransition(url);
     });
   });
+
+  /* =============================
+     🚀 INIT
+  ============================== */
+  window.addEventListener("load", () => {
+    chapterContent?.classList.add("chapter-transition-in");
+    readerUI?.classList.add("chapter-transition-in");
+
+    applyFont();
+    updateProgress();
+  });
+
 });

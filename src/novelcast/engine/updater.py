@@ -153,37 +153,56 @@ class UpdateEngine:
     # ─────────────────────────────
     # UPDATE CHECKER (TRUE VERSION)
     # ─────────────────────────────
-    def check_updates(self):
+    def check_updates(self, status_callback=None):
         subs = self.db.get_subscriptions()
 
         for sub in subs:
             url = sub["url"]
-            print(f"\n🔍 Checking {url}")
+            status_msg = f"🔍 Checking {url}"
+            if status_callback:
+                status_callback(status_msg, f"Checking {url}")
 
             available = self.refresh_available_chapters(url)
             downloaded = self._count_downloaded_chapters_from_db(sub)
 
-            print(f"📦 Available: {available}")
-            print(f"💾 Downloaded: {downloaded}")
+            status_msg = f"📦 Available: {available}"
+            if status_callback:
+                status_callback(f"📦 Available: {available}", f"Checking {url}")
+
+            status_msg = f"💾 Downloaded: {downloaded}"
+            if status_callback:
+                status_callback(f"💾 Downloaded: {downloaded}", f"Checking {url}")
 
             if available is None:
-                print("❌ Failed to fetch available chapters")
+                status_msg = "❌ Failed to fetch available chapters"
+                if status_callback:
+                    status_callback(status_msg, f"Checking {url}")
                 continue
 
             missing = available - downloaded
 
             if missing <= 0:
-                print("✅ Up to date")
+                status_msg = "✅ Up to date"
+                if status_callback:
+                    status_callback(status_msg, f"Checking {url}")
                 continue
 
-            print(f"⬇️ Missing {missing} chapters → downloading")
+            status_msg = f"⬇️ Missing {missing} chapters → downloading"
+            if status_callback:
+                status_callback(status_msg, f"Downloading {url}")
 
             ok, msg = self.download_story(url)
 
             if ok:
-                print("✅ Updated:", msg)
+                status_msg = f"✅ Updated: {msg}"
+                print(status_msg)
+                if status_callback:
+                    status_callback(status_msg, f"Updated {url}")
             else:
-                print("❌ Failed:", msg)
+                status_msg = f"❌ Failed: {msg}"
+                print(status_msg)
+                if status_callback:
+                    status_callback(status_msg, f"Failed to update {url}")
 
     # ─────────────────────────────
     # AVAILABLE CHAPTERS SCRAPER

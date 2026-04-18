@@ -1,228 +1,259 @@
-/* Basic styles */
+/* =========================
+   DESIGN TOKENS
+========================= */
+
+:root {
+    --text: #111827;
+    --muted: #6b7280;
+    --accent: #3b82f6;
+
+    --bg: #f4f4f4;
+    --card: #ffffff;
+}
+
+/* THEMES */
+
+body.light {
+    --text: #111827;
+    --bg: #f4f4f4;
+    --card: #ffffff;
+}
+
+body.dark {
+    --text: #e5e7eb;
+    --bg: #0f172a;
+    --card: #1e293b;
+}
+
+body.sepia {
+    --text: #3b2f2f;
+    --bg: #f5ecd7;
+    --card: #fff3d6;
+}
+
+/* BASE */
+
+html {
+    font-size: clamp(14px, 1.2vw, 18px);
+}
+
 body {
-    font-family: Arial, sans-serif;
     margin: 0;
-    padding: 2vw;
-    background-color: #f4f4f4;
+    font-family: system-ui, sans-serif;
+
+    background: var(--bg);
+    color: var(--text);
+
+    padding-bottom: 6rem;
 }
 
-.subscription-form {
-    background: white;
-    padding: 2vw;
-    border-radius: 0.8vw;
-    box-shadow: 0 0.2vw 1vw rgba(0,0,0,0.1);
-    margin-bottom: 2vw;
+/* ICON COLOR FIX */
+i {
+    color: var(--text);
 }
 
-.subscriptions {
-    background: white;
-    padding: 2vw;
-    border-radius: 0.8vw;
-    box-shadow: 0 0.2vw 1vw rgba(0,0,0,0.1);
-}
+/* =========================
+   HEADER
+========================= */
 
-.subscriptions-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(15vw, 1fr));
-    gap: 2vw;
-    padding: 2vw;
-}
-
-@media (max-width: 1200px) {
-    .subscriptions-grid {
-        grid-template-columns: repeat(3, 1fr);
-    }
-}
-
-@media (max-width: 900px) {
-    .subscriptions-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
-
-@media (max-width: 600px) {
-    .subscriptions-grid {
-        grid-template-columns: 1fr;
-    }
-}
-
-.fiction-card {
-    display: flex;
-    flex-direction: column;
-    background: #ffffff;
-    border-radius: 1.2vw;
-    overflow: hidden;
-    box-shadow: 0 0.4vw 1.8vw rgba(0, 0, 0, 0.08);
-    min-height: 2vh;
-    border: 0.1vw solid #e5e7eb;
-}
-
-.fiction-thumb {
-    min-height: 10vh;
-    position: relative;
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.fiction-thumb img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-}
-
-.thumb-letter {
-    position: absolute;
-    left: 0.8vw;
-    bottom: 0.8vw;
-    width: 3vw;
-    height: 3vw;
-    border-radius: 0.6vw;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1rem;
-    font-weight: 700;
-    color: #ffffff;
-    background: rgba(17, 45, 78, 0.85);
-}
-
-.fiction-content {
-    padding: 1.2vw;
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-}
-
-.fiction-title {
-    margin: 0 0 0.7vw;
-    font-size: 0.9rem;
-    line-height: 1.4;
-    color: #111827;
-}
-
-.fiction-meta,
-.fiction-url {
-    margin: 0 0 0.5vw;
-    color: #4b5563;
-    font-size: 0.85rem;
-    line-height: 1.5;
-    word-break: break-word;
-}
-
-.fiction-actions {
-    margin-top: auto;
-}
-
-.fiction-actions a {
-    display: inline-block;
-    background: #2563eb;
-    color: white;
-    text-decoration: none;
-    padding: 0.7vw 1vw;
-    border-radius: 0.5vw;
-    font-size: 0.85rem;
-    transition: background-color 0.2s ease;
-}
-
-.fiction-actions a:hover {
-    background: #1d4ed8;
-}
-
-ul {
-    display: none;
-}
-
-li {
-    padding: 0.8vw 0;
-    border-bottom: 0.1vw solid #eee;
-}
-
-/* Modal styles */
-.modal {
-    display: none;
-    position: fixed;
-    z-index: 1;
-    left: 0;
+.reader-header {
+    position: sticky;
     top: 0;
-    width: 100%;
-    height: 100%;
-    overflow: auto;
-    background-color: rgba(0,0,0,0.4);
+
+    background: var(--bg);
+    padding: 1rem 1.5rem;
+
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    z-index: 100;
 }
 
-.modal-content {
-    background-color: #fefefe;
-    margin: 15% auto;
-    padding: 2vw;
-    border: 0.1vw solid #888;
-    width: 80%;
-    max-width: 40vw;
-    border-radius: 0.8vw;
-    text-align: center;
+.book-info h1 {
+    font-size: 1.2rem;
+    margin: 0;
 }
 
-.modal-content h2 {
-    margin-top: 0;
+.book-info p {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--muted);
 }
 
-.modal-content button {
-    margin: 1vw;
-    padding: 1vw 2vw;
+.reading-progress-text {
+    font-size: 0.85rem;
+    color: var(--muted);
+}
+
+/* =========================
+   READING CARD
+========================= */
+
+.chapter-content {
+    font-size: 1.1rem;
+    line-height: 1.9;
+
+    background: var(--card);
+
+    max-width: 42rem;
+    margin: 3rem auto;
+    padding: 2.5rem;
+
+    border-radius: 1rem;
+
+    box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+}
+
+/* TITLE */
+
+.chapter-title {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.chapter-content hr {
     border: none;
-    border-radius: 0.4vw;
+    border-top: 1px solid #e5e7eb;
+    margin: 1rem 0 2rem;
+}
+
+/* =========================
+   FLOATING NAV
+========================= */
+
+.desktop-nav {
+    position: fixed;
+    bottom: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+
+    background: var(--card);
+    padding: 0.6rem;
+
+    border-radius: 1rem;
+
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+
+    display: flex;
+    gap: 0.5rem;
+}
+
+.nav-button {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+
+    padding: 0.6rem 0.9rem;
+
+    border-radius: 0.6rem;
+
+    background: #f3f4f6;
+    color: var(--text);
+
+    text-decoration: none;
+}
+
+.nav-button:hover {
+    background: #e5e7eb;
+}
+
+/* =========================
+   SIDE CONTROLS
+========================= */
+
+.reader-controls {
+    position: fixed;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.reader-controls button {
+    width: 3rem;
+    height: 3rem;
+
+    border-radius: 0.8rem;
+    border: none;
+
+    background: var(--card);
+    color: var(--text);
+
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+
+    font-weight: bold;
     cursor: pointer;
 }
 
-#accept-btn {
-    background-color: #4CAF50;
-    color: white;
-}
+/* =========================
+   PROGRESS BAR
+========================= */
 
-#cancel-btn {
-    background-color: #f44336;
-    color: white;
-}
-
-/* Loading overlay styles */
-#loading-overlay {
+#progress-bar {
     position: fixed;
-    z-index: 1000;
-    left: 0;
     top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0,0,0,0.8);
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    left: 0;
+
+    height: 4px;
+    width: 0%;
+
+    background: linear-gradient(90deg, #3b82f6, #60a5fa);
+
+    z-index: 9999;
 }
 
-.loading-content {
-    background-color: white;
-    padding: 2vw;
-    border-radius: 0.8vw;
-    text-align: center;
-    max-width: 40vw;
-    width: 80%;
+/* =========================
+   UI TOGGLE
+========================= */
+
+.reader-ui.hidden {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
 }
 
-.progress-bar {
-    width: 100%;
-    background-color: #f3f3f3;
-    border-radius: 0.4vw;
-    overflow: hidden;
-    margin: 1vw 0;
+/* =========================
+   TRANSITIONS
+========================= */
+
+.chapter-transition-out {
+    opacity: 0;
+    transform: translateY(10px);
+    transition: 0.25s ease;
 }
 
-.chapter-content {
-    padding: 2vw;
-    background: white;
-    border-radius: 0.8vw;
-    box-shadow: 0 0.2vw 1vw rgba(0,0,0,0.1);
-    margin: 2vw;
-    line-height: 1.6;
-    font-size: 1rem;
+.chapter-transition-in {
+    opacity: 1;
+    transform: translateY(0);
+    transition: 0.25s ease;
+}
+
+/* =========================
+   MOBILE
+========================= */
+
+@media (max-width: 600px) {
+
+    .chapter-content {
+        margin: 1rem;
+        padding: 1.5rem;
+    }
+
+    .reader-controls {
+        right: 0.5rem;
+    }
+
+    .desktop-nav {
+        bottom: 0.5rem;
+        width: calc(100% - 1rem);
+        justify-content: space-around;
+    }
 }

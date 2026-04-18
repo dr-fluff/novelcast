@@ -3,7 +3,8 @@
 <head>
     <title>{{ title }} - NovelCast</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <script src="/static/scripts/main.js"></script>
 </head>
 <body>
     <div class="subscription-form">
@@ -11,6 +12,16 @@
         <p>By: {{ author }}</p>
         <p>Chapters available: {{ chapters | length }}</p>
         <a href="/">← Back to Dashboard</a>
+
+        <form action="/story" method="get" class="sort-form">
+            <input type="hidden" name="url" value="{{ url }}">
+            <label for="sort">Sort chapters by:</label>
+            <select name="sort" id="sort" onchange="this.form.submit()">
+                {% for option in sort_options %}
+                    <option value="{{ option.key }}" {% if option.key == sort %}selected{% endif %}>{{ option.label }}</option>
+                {% endfor %}
+            </select>
+        </form>
     </div>
 
     <div class="subscriptions">
@@ -21,5 +32,38 @@
             {% endfor %}
         </ul>
     </div>
+
+<!-- Notification container -->
+<div id="notification" class="notification">
+    <div id="notification-message"></div>
+    <div id="notification-progress"></div>
+</div>
+
+<script>
+function updateNotification() {
+    fetch('/api/status')
+        .then(response => response.json())
+        .then(data => {
+            const notification = document.getElementById('notification');
+            const message = document.getElementById('notification-message');
+            const progress = document.getElementById('notification-progress');
+            if (data.downloading) {
+                message.textContent = data.message;
+                progress.textContent = data.progress || 'Processing...';
+                notification.style.display = 'block';
+            } else {
+                notification.style.display = 'none';
+            }
+        })
+        .catch(error => console.error('Error fetching status:', error));
+}
+
+// Poll every 2 seconds
+setInterval(updateNotification, 2000);
+
+// Initial check
+updateNotification();
+</script>
+
 </body>
 </html>

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request, Form
+from fastapi import APIRouter, Request, Form, BackgroundTasks
 from fastapi.responses import HTMLResponse, StreamingResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
@@ -6,7 +6,7 @@ from novelcast.storage.db import Database
 from novelcast.engine.updater import UpdateEngine
 
 from pathlib import Path
-from urllib.parse import urlparse, urljoin, quote
+from urllib.parse import urlparse, quote
 from urllib.request import Request as UrlRequest, urlopen
 from urllib.error import URLError, HTTPError
 
@@ -15,6 +15,50 @@ import requests
 import logging
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
+
+LOG_FILE = Path.cwd() / "novelcast.log"
+
+DASHBOARD_SORT_OPTIONS = [
+    {"key": "title", "label": "Title"},
+    {"key": "last_chapter", "label": "Downloaded Chapters"},
+    {"key": "url", "label": "URL"},
+]
+
+CHAPTER_SORT_OPTIONS = [
+    {"key": "name", "label": "Name"},
+    {"key": "reverse", "label": "Reverse"},
+]
+
+DEFAULT_DASHBOARD_SORT = "title"
+DEFAULT_CHAPTER_SORT = "name"
+
+# Global status for background tasks
+status = {"downloading": False, "message": "", "progress": "", "cancel": False}
+
+
+def get_log_tail(limit: int = 50) -> list[str]:
+    if not LOG_FILE.exists():
+        return []
+
+    try:
+        with LOG_FILE.open("r", encoding="utf-8", errors="ignore") as f:
+            lines = f.readlines()
+        return [line.rstrip("\n") for line in lines[-limit:]]
+    except Exception as e:
+        logger.error("Unable to read log file: %s", e)
+        return []
+
+
+def render_error(request: Request, error_message: str) -> HTMLResponse:
+    return templates.TemplateResponse(
+        "error.html",
+        {
+            "request": request,
+            "error": error_message,
+            "log": get_log_tail()
+        }
+    )
 
 db = Database()
 engine = UpdateEngine(db)
@@ -55,6 +99,20 @@ def build_display_title(sub: dict) -> str:
     return fallback.replace("-", " ").replace("_", " ").title()
 
 
+def sort_subscriptions(subs: list[dict], sort_key: str) -> list[dict]:
+    if sort_key == "last_chapter":
+        return sorted(subs, key=lambda s: s.get("last_chapter") or 0, reverse=True)
+    if sort_key == "url":
+        return sorted(subs, key=lambda s: (s.get("url") or "").lower())
+    return sorted(subs, key=lambda s: (s.get("display_title") or "").lower())
+
+
+def sort_chapters(chapters: list[str], sort_key: str) -> list[str]:
+    if sort_key == "reverse":
+        return sorted(chapters, reverse=True)
+    return sorted(chapters)
+
+
 def enrich_subscription(sub: dict) -> dict:
     title = build_display_title(sub)
 
@@ -71,14 +129,18 @@ def enrich_subscription(sub: dict) -> dict:
 
 @router.get("/", response_class=HTMLResponse)
 def home(request: Request):
+    sort_key = request.query_params.get("sort", DEFAULT_DASHBOARD_SORT)
     subs_raw = db.get_subscriptions()
     subs = [enrich_subscription(s) for s in subs_raw]
+    subs = sort_subscriptions(subs, sort_key)
 
     return templates.TemplateResponse(
         "index.html",
         {
             "request": request,
-            "subs": subs
+            "subs": subs,
+            "sort": sort_key,
+            "sort_options": DASHBOARD_SORT_OPTIONS
         }
     )
 
@@ -88,26 +150,49 @@ def home(request: Request):
 # ─────────────────────────────────────────────
 
 @router.post("/subscribe")
-def subscribe(url: str = Form(...), chapters: int = Form(1)):
-    print(f"Subscribing to {url} ({chapters} chapters)")
+def subscribe(request: Request, url: str = Form(...), chapters: int = Form(1), background_tasks: BackgroundTasks = None):
+    logger.info("Subscribing to %s (%s chapters)", url, chapters)
 
     existing = db.get_subscription(url)
 
     if not existing:
         db.add_subscription(url, title=url)
 
-    success, error_msg = engine.download_story(url, chapters)
-
-    if not success:
-        return templates.TemplateResponse(
-            "error.html",
-            {
-                "request": {},   # OK for now, but can be improved later
-                "error": error_msg
-            }
-        )
+    # Start download in background
+    background_tasks.add_task(download_story_background, url, chapters)
 
     return RedirectResponse("/", status_code=303)
+
+
+def download_story_background(url: str, chapters: int):
+    global status
+    status["downloading"] = True
+    status["message"] = f"Downloading {url}..."
+    status["progress"] = "Initializing download..."
+
+    try:
+        from novelcast.engine.updater import UpdateEngine
+        engine = UpdateEngine(db)
+        status["progress"] = "Fetching story information..."
+        success, error_msg = engine.download_story(url, chapters)
+        if not success:
+            logger.error("Background download failed for %s: %s", url, error_msg)
+            status["message"] = f"Download failed: {error_msg}"
+            status["progress"] = "Failed"
+        else:
+            status["message"] = "Download completed."
+            status["progress"] = "100% - Complete"
+    except Exception as e:
+        logger.exception("Exception in background download for %s", url)
+        status["message"] = f"Download error: {str(e)}"
+        status["progress"] = "Error"
+    finally:
+        status["downloading"] = False
+
+
+@router.get("/api/status")
+def get_status():
+    return status
 
 
 # ─────────────────────────────────────────────
@@ -138,7 +223,7 @@ def get_chapters(url: str):
         return {"chapters": chapters}
 
     except Exception as e:
-        print(f"Error fetching chapters: {e}")
+        logger.exception("Error fetching chapters for url=%s", url)
         return {"chapters": 1}
 
 
@@ -157,7 +242,8 @@ def proxy_cover(url: str):
             media_type=response.headers.get("content-type", "image/jpeg")
         )
 
-    except Exception:
+    except Exception as e:
+        logger.exception("Error proxying cover url=%s", url)
         placeholder = STATIC_DIR / "images/cover-placeholder.svg"
         return StreamingResponse(
             open(placeholder, "rb"),
@@ -174,20 +260,19 @@ def story(request: Request, url: str):
     sub = db.get_subscription(url)
 
     if not sub or not sub.get("story_path"):
-        return templates.TemplateResponse(
-            "error.html",
-            {"request": request, "error": "Story not found"}
-        )
+        logger.error("Story not found for url=%s", url)
+        return render_error(request, "Story not found")
 
     fiction_dir = Path(sub["story_path"])
 
     if not fiction_dir.exists():
-        return templates.TemplateResponse(
-            "error.html",
-            {"request": request, "error": "Story folder missing"}
-        )
+        logger.error("Story folder missing: %s", fiction_dir)
+        return render_error(request, "Story folder missing")
 
     chapters = sorted(fiction_dir.glob("*.html"))
+    sort_key = request.query_params.get("sort", DEFAULT_CHAPTER_SORT)
+    chapter_names = [c.name for c in chapters]
+    chapter_names = sort_chapters(chapter_names, sort_key)
 
     return templates.TemplateResponse(
         "story.html",
@@ -195,8 +280,10 @@ def story(request: Request, url: str):
             "request": request,
             "title": sub["title"],
             "author": "Unknown",
-            "chapters": [c.name for c in chapters],
-            "url": url
+            "chapters": chapter_names,
+            "url": url,
+            "sort": sort_key,
+            "sort_options": CHAPTER_SORT_OPTIONS
         }
     )
 
@@ -210,18 +297,22 @@ def chapter(request: Request, url: str, chapter: str):
     sub = db.get_subscription(url)
 
     if not sub or not sub.get("story_path"):
-        return templates.TemplateResponse(
-            "error.html",
-            {"request": request, "error": "Story not found"}
-        )
+        logger.error("Story not found for chapter request url=%s chapter=%s", url, chapter)
+        return render_error(request, "Story not found")
 
-    chapter_file = Path(sub["story_path"]) / chapter
+    story_path = Path(sub["story_path"])
+    chapter_file = story_path / chapter
 
     if not chapter_file.exists():
-        return templates.TemplateResponse(
-            "error.html",
-            {"request": request, "error": "Chapter not found"}
-        )
+        logger.error("Chapter not found: %s", chapter_file)
+        return render_error(request, "Chapter not found")
+
+    chapters = sorted(story_path.glob("*.html"))
+    chapter_names = [c.name for c in chapters]
+    current_index = chapter_names.index(chapter) if chapter in chapter_names else -1
+
+    prev_chapter = chapter_names[current_index - 1] if current_index > 0 else None
+    next_chapter = chapter_names[current_index + 1] if 0 <= current_index < len(chapter_names) - 1 else None
 
     html = chapter_file.read_text(encoding="utf-8", errors="ignore")
 
@@ -233,15 +324,38 @@ def chapter(request: Request, url: str, chapter: str):
             "author": "Unknown",
             "content": html,
             "url": url,
-            "chapter": chapter
+            "chapter": chapter,
+            "prev_chapter": prev_chapter,
+            "next_chapter": next_chapter
         }
     )
 
 @router.post("/update_all")
-def update_all():
-    from novelcast.engine.updater import UpdateEngine
-
-    engine = UpdateEngine(db)
-    engine.check_updates()
-
+def update_all(background_tasks: BackgroundTasks):
+    background_tasks.add_task(update_all_background)
     return RedirectResponse("/", status_code=303)
+
+
+def update_all_background():
+    global status
+    status["downloading"] = True
+    status["message"] = "Updating all subscriptions..."
+    status["progress"] = "Starting update process..."
+
+    def status_callback(message, progress):
+        global status
+        status["message"] = message
+        status["progress"] = progress
+
+    try:
+        from novelcast.engine.updater import UpdateEngine
+        engine = UpdateEngine(db)
+        engine.check_updates(status_callback)
+        status["message"] = "Update completed."
+        status["progress"] = "All subscriptions checked"
+    except Exception:
+        logger.exception("Error running update_all")
+        status["message"] = "Update failed."
+        status["progress"] = "Error occurred"
+    finally:
+        status["downloading"] = False
