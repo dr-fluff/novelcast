@@ -1,0 +1,78 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Settings - NovelCast{% endblock %}
+
+{% block content %}
+
+<div class="settings-layout">
+
+    <!-- SIDEBAR -->
+    <aside class="settings-sidebar">
+
+        <h2>Settings</h2>
+
+        <nav>
+            <a href="#general" class="active">General</a>
+            <a href="#reader">Reader</a>
+            <a href="#appearance">Appearance</a>
+        </nav>
+
+    </aside>
+
+    <!-- CONTENT -->
+    <main class="settings-content">
+
+        <!-- GENERAL -->
+        <section id="general" class="settings-section">
+            <h3>General</h3>
+
+            <div class="settings-card">
+                <label>Default sort</label>
+                <select>
+                    <option>Title</option>
+                    <option>Last chapter</option>
+                </select>
+            </div>
+
+            <div class="settings-card">
+                <label>Auto update subscriptions</label>
+                <input type="checkbox" />
+            </div>
+        </section>
+
+        <!-- READER -->
+        <section id="reader" class="settings-section">
+            <h3>Reader</h3>
+
+            <div class="settings-card">
+                <label>Default font size</label>
+                <input type="range" min="12" max="24" />
+            </div>
+
+            <div class="settings-card">
+                <label>Progress sync</label>
+                <input type="checkbox" />
+            </div>
+        </section>
+
+        <!-- APPEARANCE -->
+        <section id="appearance" class="settings-section">
+            <h3>Appearance</h3>
+
+            <div class="settings-card">
+                <label>Theme</label>
+
+                <select onchange="setTheme(this.value)">
+                    <option value="light">Light</option>
+                    <option value="dark">Dark</option>
+                    <option value="sepia">Sepia</option>
+                </select>
+            </div>
+
+        </section>
+
+    </main>
+
+</div>
+
+{% endblock %}

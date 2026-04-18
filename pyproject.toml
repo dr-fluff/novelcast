@@ -20,6 +20,7 @@ dependencies = [
     "fanficfare",
     "requests",
     "beautifulsoup4",
+    "pydantic-settings>=2.13.1",
 ]
 
 [tool.setuptools]
@@ -29,6 +30,6 @@ package-dir = {"" = "src"}
 where = ["src"]
 
 [project.scripts]
-novelcast = "novelcast.__main__:main"
+novelcast = "novelcast.run:main"
 
 

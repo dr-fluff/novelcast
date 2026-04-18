@@ -1,0 +1,25 @@
+<nav class="chapter-nav desktop-nav">
+
+    <a class="nav-button back"
+       href="/story?url={{ url | urlencode }}">
+        <i class="fa-solid fa-list"></i>
+        Chapters
+    </a>
+
+    {% if prev_chapter %}
+    <a class="nav-button prev"
+       href="/chapter?url={{ url | urlencode }}&chapter={{ prev_chapter | urlencode }}">
+        <i class="fa-solid fa-arrow-left"></i>
+        Previous
+    </a>
+    {% endif %}
+
+    {% if next_chapter %}
+    <a class="nav-button next"
+       href="/chapter?url={{ url | urlencode }}&chapter={{ next_chapter | urlencode }}">
+        Next
+        <i class="fa-solid fa-arrow-right"></i>
+    </a>
+    {% endif %}
+
+</nav>

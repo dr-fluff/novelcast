@@ -1,0 +1,37 @@
+<!doctype html>
+<html>
+  <head>
+    <title>{% block title %}NovelCast{% endblock %}</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- GLOBAL CSS -->
+    <link rel="stylesheet" href="/static/css/tokens.css" />
+    <link rel="stylesheet" href="/static/css/base.css" />
+    <link rel="stylesheet" href="/static/css/layout.css" />
+
+    <!-- COMPONENT CSS -->
+    <link rel="stylesheet" href="/static/css/components/nav.css" />
+    <link rel="stylesheet" href="/static/css/components/cards.css" />
+    <link rel="stylesheet" href="/static/css/components/forms.css" />
+    <link rel="stylesheet" href="/static/css/components/modal.css" />
+
+    <link rel="stylesheet" href="/static/css/pages/index.css" />
+    <link rel="stylesheet" href="/static/css/pages/story.css" />
+    <link rel="stylesheet" href="/static/css/pages/chapter.css" />
+    <link rel="stylesheet" href="/static/css/pages/error.css" />
+
+    {% block head %}{% endblock %}
+
+  </head>
+
+  <body>
+
+    {% block content %}{% endblock %}
+
+    <script src="/static/scripts/main.js" defer></script>
+
+    {% block scripts %}{% endblock %}
+
+  </body>
+</html>

@@ -1,0 +1,65 @@
+.settings-layout {
+  display: flex;
+  height: calc(100vh - 0px);
+}
+
+/* SIDEBAR */
+.settings-sidebar {
+  width: 220px;
+  padding: 2rem;
+
+  background: var(--bg);
+  border-right: 1px solid rgba(0,0,0,0.08);
+}
+
+.settings-sidebar h2 {
+  margin-top: 0;
+}
+
+.settings-sidebar nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.settings-sidebar a {
+  text-decoration: none;
+  color: var(--text);
+
+  padding: 0.5rem;
+  border-radius: 8px;
+}
+
+.settings-sidebar a.active {
+  background: var(--card);
+}
+
+/* CONTENT */
+.settings-content {
+  flex: 1;
+  padding: 2rem;
+
+  overflow-y: auto;
+}
+
+.settings-section {
+  margin-bottom: 3rem;
+}
+
+.settings-section h3 {
+  margin-bottom: 1rem;
+}
+
+/* CARDS */
+.settings-card {
+  background: var(--card);
+  padding: 1rem;
+
+  border-radius: 12px;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  margin-bottom: 0.8rem;
+}

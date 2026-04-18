@@ -1,0 +1,28 @@
+:root {
+  --text: #111827;
+  --muted: #6b7280;
+  --accent: #3b82f6;
+
+  --bg: #f4f4f4;
+  --card: #ffffff;
+}
+
+/* THEMES */
+
+body.light {
+  --text: #111827;
+  --bg: #f4f4f4;
+  --card: #ffffff;
+}
+
+body.dark {
+  --text: #e5e7eb;
+  --bg: #0f172a;
+  --card: #1e293b;
+}
+
+body.sepia {
+  --text: #3b2f2f;
+  --bg: #f5ecd7;
+    --card: #fff3d6;
+}

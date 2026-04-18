@@ -1,0 +1,170 @@
+.reader-header {
+  position: sticky;
+  top: 0;
+
+  background: var(--bg);
+  padding: 1rem 1.5rem;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  z-index: 100;
+}
+
+.book-info h1 {
+  font-size: 1.2rem;
+  margin: 0;
+}
+
+.book-info p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.reading-progress-text {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.chapter-content {
+  font-size: 1.1rem;
+  line-height: 1.9;
+
+  background: var(--card);
+
+  max-width: 42rem;
+  margin: 3rem auto;
+  padding: 2.5rem;
+
+  border-radius: 1rem;
+
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+}
+
+.chapter-title {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.chapter-content hr {
+  border: none;
+  border-top: 1px solid #e5e7eb;
+  margin: 1rem 0 2rem;
+}
+
+.desktop-nav {
+  position: fixed;
+  bottom: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+
+  background: var(--card);
+  padding: 0.6rem;
+
+  border-radius: 1rem;
+
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+
+  display: flex;
+  gap: 0.5rem;
+}
+
+.nav-button {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+
+  padding: 0.6rem 0.9rem;
+
+  border-radius: 0.6rem;
+
+  background: #f3f4f6;
+  color: var(--text);
+
+  text-decoration: none;
+}
+
+.nav-button:hover {
+  background: #e5e7eb;
+}
+
+.reader-controls {
+  position: fixed;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.reader-controls button {
+  width: 3rem;
+  height: 3rem;
+
+  border-radius: 0.8rem;
+  border: none;
+
+  background: var(--card);
+  color: var(--text);
+
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+
+  font-weight: bold;
+  cursor: pointer;
+}
+
+#progress-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+
+  height: 4px;
+  width: 0%;
+
+  background: linear-gradient(90deg, #3b82f6, #60a5fa);
+
+  z-index: 9999;
+}
+
+.reader-ui.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.chapter-transition-out {
+  opacity: 0;
+  transform: translateY(10px);
+  transition: 0.25s ease;
+}
+
+.chapter-transition-in {
+  opacity: 1;
+  transform: translateY(0);
+  transition: 0.25s ease;
+}
+
+@media (max-width: 600px) {
+  .chapter-content {
+    margin: 1rem;
+    padding: 1.5rem;
+  }
+
+  .reader-controls {
+    right: 0.5rem;
+  }
+
+  .desktop-nav {
+    bottom: 0.5rem;
+    width: calc(100% - 1rem);
+    justify-content: space-around;
+  }
+}

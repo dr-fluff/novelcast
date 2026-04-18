@@ -9,6 +9,8 @@ __pycache__/
 uv.lock
 data/*
 data/novelcast.db
+node_modules/
+package-lock.json
 
 # C extensions
 *.so
@@ -142,7 +144,6 @@ celerybeat.pid
 *.sage.py
 
 # Environments
-.env
 .envrc
 .venv
 env/

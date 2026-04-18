@@ -1,0 +1,35 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}{{ title }} - {{ chapter }}{% endblock %}
+
+{% block content %}
+
+<!-- PROGRESS BAR -->
+<div id="progress-bar"></div>
+
+<!-- READER UI -->
+<div class="reader-ui">
+
+    {% include "components/reader_header.html" %}
+
+    {% include "components/reader_controls.html" %}
+
+</div>
+
+<!-- CHAPTER CONTENT -->
+<main class="chapter-content">
+
+    <h2 class="chapter-title">
+        <i class="fa-regular fa-bookmark"></i>
+        {{ chapter }}
+    </h2>
+
+    <hr />
+
+    {{ content | safe }}
+
+</main>
+
+{% include "components/chapter_nav.html" %}
+
+{% endblock %}

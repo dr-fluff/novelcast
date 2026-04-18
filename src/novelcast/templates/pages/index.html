@@ -1,0 +1,59 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}NovelCast{% endblock %}
+
+{% block content %}
+
+{% include "components/nav.html" %}
+
+<!-- FILTER BAR -->
+<section class="library-filters">
+
+    <form action="/" method="get" class="search-sort-bar">
+
+        <input
+            type="text"
+            name="q"
+            placeholder="Search library..."
+        />
+
+        <select name="sort" onchange="this.form.submit()">
+            {% for option in sort_options %}
+                <option value="{{ option.key }}"
+                    {% if option.key == sort %}selected{% endif %}>
+                    {{ option.label }}
+                </option>
+            {% endfor %}
+        </select>
+
+    </form>
+
+</section>
+
+<!-- GRID -->
+<section class="library-grid">
+
+    {% for s in subs %}
+    <a class="library-card" href="/story?url={{ s.url | urlencode }}">
+
+        <div class="card-cover">
+            <img
+                src="{{ '/cover?url=' + (s.cover_url | urlencode) if s.cover_url else '/static/images/cover-placeholder.svg' }}"
+            />
+
+            <div class="card-letter">
+                {{ s.thumbnail_letter }}
+            </div>
+        </div>
+
+        <div class="card-info">
+            <h3>{{ s.display_title }}</h3>
+            <p>{{ s.last_chapter }} chapters</p>
+        </div>
+
+    </a>
+    {% endfor %}
+
+</section>
+
+{% endblock %}

@@ -1,0 +1,18 @@
+html {
+  font-size: clamp(14px, 1.2vw, 18px);
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+
+  background: var(--bg);
+  color: var(--text);
+
+  padding-bottom: 6rem;
+}
+
+/* ICON FIX */
+i {
+  color: var(--text);
+}

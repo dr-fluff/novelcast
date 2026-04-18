@@ -1,101 +1,137 @@
-# src/novelcast/storage/db.py
 import sqlite3
 from pathlib import Path
 
 DB_PATH = Path("data/novelcast.db")
+MIGRATIONS_DIR = Path("src/novelcast/storage/migrations")
+
 
 class Database:
     def __init__(self):
         DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-        self.conn = sqlite3.connect(DB_PATH, check_same_thread=False)
-        self._init()
-        
 
-    def _init(self):
+        self.conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+        self.conn.row_factory = sqlite3.Row
+
+        self._init_migrations()
+        self.run_migrations()
+
+    # ─────────────────────────────
+    # MIGRATION SYSTEM BOOTSTRAP
+    # ─────────────────────────────
+    def _init_migrations(self):
         cur = self.conn.cursor()
 
         cur.execute("""
-        CREATE TABLE IF NOT EXISTS subscriptions (
+        CREATE TABLE IF NOT EXISTS migrations (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            url TEXT UNIQUE,
-            title TEXT,
-            last_chapter INTEGER DEFAULT 0,
-            requested_chapters INTEGER DEFAULT 0,
-            cover_url TEXT
+            name TEXT UNIQUE
         )
         """)
 
-        cur.execute("PRAGMA table_info(subscriptions)")
-        columns = {row[1] for row in cur.fetchall()}
-        if "requested_chapters" not in columns:
-            cur.execute("ALTER TABLE subscriptions ADD COLUMN requested_chapters INTEGER DEFAULT 0")
-        if "cover_url" not in columns:
-            cur.execute("ALTER TABLE subscriptions ADD COLUMN cover_url TEXT")
-        if "story_path" not in columns:
-            cur.execute("ALTER TABLE subscriptions ADD COLUMN story_path TEXT")
-        if "downloaded_chapters" not in columns:
-            cur.execute("ALTER TABLE subscriptions ADD COLUMN downloaded_chapters INTEGER DEFAULT 0")
-        if "available_chapters" not in columns:
-            cur.execute("ALTER TABLE subscriptions ADD COLUMN available_chapters INTEGER DEFAULT 0")
         self.conn.commit()
 
-    def add_subscription(self, url, title="Unknown", last_chapter=0, requested_chapters=0, cover_url=None):
-        self.conn.execute(
-            "INSERT OR IGNORE INTO subscriptions (url, title, last_chapter, requested_chapters, cover_url) VALUES (?, ?, ?, ?, ?)",
+    def run_migrations(self):
+        cur = self.conn.cursor()
+
+        applied = {
+            row["name"]
+            for row in cur.execute("SELECT name FROM migrations")
+        }
+
+        for file in sorted(MIGRATIONS_DIR.glob("*.sql")):
+            if file.name in applied:
+                continue
+
+            sql = file.read_text(encoding="utf-8")
+            cur.executescript(sql)
+
+            cur.execute(
+                "INSERT INTO migrations (name) VALUES (?)",
+                (file.name,)
+            )
+
+            self.conn.commit()
+
+    # ─────────────────────────────
+    # SUBSCRIPTIONS (runtime logic only)
+    # ─────────────────────────────
+    def add_subscription(self, url, title="Unknown", last_chapter=0,
+                         requested_chapters=0, cover_url=None):
+
+        self.conn.execute("""
+            INSERT OR IGNORE INTO subscriptions
             (url, title, last_chapter, requested_chapters, cover_url)
-        )
-        self.conn.commit()
+            VALUES (?, ?, ?, ?, ?)
+        """, (url, title, last_chapter, requested_chapters, cover_url))
 
-    def update_cover_url(self, url, cover_url):
-        self.conn.execute(
-            "UPDATE subscriptions SET cover_url=? WHERE url=?",
-            (cover_url, url)
-        )
         self.conn.commit()
 
     def get_subscription(self, url):
-        cur = self.conn.execute("SELECT id, url, title, last_chapter, requested_chapters, cover_url, story_path FROM subscriptions WHERE url = ?",(url,))
+        cur = self.conn.execute("""
+            SELECT *
+            FROM subscriptions
+            WHERE url = ?
+        """, (url,))
+
         row = cur.fetchone()
-        if row is None:
-            return None
-        
-        return {
-            "id": row[0],
-            "url": row[1],
-            "title": row[2],
-            "last_chapter": row[3],
-            "requested_chapters": row[4],
-            "cover_url": row[5],
-            "story_path": row[6] if len(row) > 6 else None,
-        }
+        return dict(row) if row else None
 
     def get_subscriptions(self):
-        cur = self.conn.execute(
-            "SELECT id, url, title, last_chapter, requested_chapters, cover_url, story_path FROM subscriptions"
-        )
-        rows = cur.fetchall()
-
-        return [
-            {
-                "id": r[0],
-                "url": r[1],
-                "title": r[2],
-                "last_chapter": r[3],
-                "cover_url": r[4],
-            }
-            for r in rows
-        ]
+        cur = self.conn.execute("SELECT * FROM subscriptions")
+        return [dict(r) for r in cur.fetchall()]
 
     def update_last_chapter(self, url, chapter):
-        self.conn.execute(
-            "UPDATE subscriptions SET last_chapter=? WHERE url=?",
-            (chapter, url)
-        )
+        self.conn.execute("""
+            UPDATE subscriptions
+            SET last_chapter = ?
+            WHERE url = ?
+        """, (chapter, url))
         self.conn.commit()
 
     def update_requested_chapters(self, url, chapters):
-        self.conn.execute(
-            "UPDATE subscriptions SET requested_chapters=? WHERE url=?",
-            (chapters, url)
-        )
+        self.conn.execute("""
+            UPDATE subscriptions
+            SET requested_chapters = ?
+            WHERE url = ?
+        """, (chapters, url))
+        self.conn.commit()
+
+    def update_cover_url(self, url, cover_url):
+        self.conn.execute("""
+            UPDATE subscriptions
+            SET cover_url = ?
+            WHERE url = ?
+        """, (cover_url, url))
+        self.conn.commit()
+
+    # ─────────────────────────────
+    # SETTINGS (moved to migrations too)
+    # ─────────────────────────────
+    def get_settings(self):
+        cur = self.conn.execute("""
+            SELECT theme, font_size, sort
+            FROM settings
+            WHERE user_id = 1
+        """)
+        row = cur.fetchone()
+
+        return dict(row) if row else {
+            "theme": "light",
+            "font_size": 16,
+            "sort": "title",
+        }
+
+    def update_settings(self, theme=None, font_size=None, sort=None):
+        current = self.get_settings()
+
+        self.conn.execute("""
+            UPDATE settings
+            SET theme = ?, font_size = ?, sort = ?
+            WHERE user_id = 1
+        """, (
+            theme or current["theme"],
+            font_size or current["font_size"],
+            sort or current["sort"],
+        ))
+
         self.conn.commit()
