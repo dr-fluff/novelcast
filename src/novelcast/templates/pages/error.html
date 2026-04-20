@@ -1,19 +1,42 @@
-<!DOCTYPE html>
-<html>
-    <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <link rel="stylesheet" href="/static/styles.css" />
-    </head>
-    <body>
-        <h1>Error</h1>
-        <p>{{ error }}</p>
+{% extends "layouts/base.html" %}
+
+{% block title %}Error {{ error_code }}{% endblock %}
+
+{% block content %}
+
+<section class="error-page">
+
+    <div class="error-card">
+
+        <div class="error-header">
+            <h1 class="error-title">Something went wrong</h1>
+            <span class="error-code">Error {{ error_code }}</span>
+        </div>
+
+        <p class="error-message">
+            {{ error_message }}
+        </p>
+
+        <div class="error-path">
+            <small>Path: {{ path }}</small>
+        </div>
+
         {% if log %}
-            <section>
-                <h2>Recent log output</h2>
-                <pre>{{ log | join("\n") }}</pre>
-            </section>
-        {% else %}
-            <p>No log output is available.</p>
+        <section class="error-log">
+            <h2>Recent log output</h2>
+            <pre>{{ log | join("\n") }}</pre>
+        </section>
         {% endif %}
-    </body>
-</html>
+
+        <div class="error-actions">
+            <a href="/" class="btn-primary">Go Home</a>
+            <button onclick="location.reload()" class="btn-secondary">
+                Retry
+            </button>
+        </div>
+
+    </div>
+
+</section>
+
+{% endblock %}
