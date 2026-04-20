@@ -7,8 +7,10 @@ import logging
 
 from novelcast.engine.updater import UpdateEngine
 from novelcast.core.render import render
+from novelcast.services.user_service import UserService
 
 router = APIRouter()
+service = UserService()
 logger = logging.getLogger(__name__)
 
 # ─────────────────────────────
@@ -191,3 +193,5 @@ def settings(request: Request):
         "pages/settings.html",
         {"request": request}
     )
+    
+

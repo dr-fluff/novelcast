@@ -1,16 +1,11 @@
-from fastapi import Request
+from novelcast.db.database import Database
+from novelcast.db. query_manager import QueryManager
 
-def build_global_context(request: Request) -> dict:
-    return {
-        "app_name": "NovelCast",
-        "request": request,
-        "sort_options": [
-            {"key": "title", "label": "Title"},
-            {"key": "last_chapter", "label": "Downloaded Chapters"},
-            {"key": "url", "label": "URL"},
-        ],
-        "chapter_sort_options": [
-            {"key": "name", "label": "Name"},
-            {"key": "reverse", "label": "Reverse"},
-        ],
-    }
+class AppContext:
+    def __init__(self):
+        self.db = None
+        self.qm = None
+
+    def init(self):
+        self.db = Database()
+        self.qm = QueryManager(self.db)
