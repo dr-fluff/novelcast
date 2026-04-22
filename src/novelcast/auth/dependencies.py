@@ -1,8 +1,4 @@
-from fastapi import Request, HTTPException
-from novelcast.core.context import AppContext
-
-ctx = AppContext()  # or inject later via app.state (we’ll improve later)
-
+from fastapi import Request
 
 def get_current_user(request: Request):
     token = request.cookies.get("session")
@@ -14,12 +10,9 @@ def get_current_user(request: Request):
     if not user_id:
         return None
 
-    user = ctx.qm.fetchone(
+    user = request.app.state.qm.fetchone(
         "users.get_by_id",
         (user_id,)
     )
-
-    if not user:
-        return None
 
     return user

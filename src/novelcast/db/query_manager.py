@@ -1,3 +1,4 @@
+# novelcast/db/query_manager.py
 import re
 from pathlib import Path
 

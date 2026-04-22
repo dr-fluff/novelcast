@@ -1,15 +1,16 @@
-setup:
-	uv sync
-	npm install
+run:
+	PYTHONPATH=src python -m novelcast.main
+dev:
+	PYTHONPATH=src python -m novelcast.main
+
+lint:
+	ruff src
 
 format:
-	npm run format
+	black src
 
-run:
-	uv run novelcast
+test:
+	pytest
 
-dev:
-	uv run novelcast
-
-prod:
-	uv run novelcast
+db:
+	python -m novelcast.db.migrate

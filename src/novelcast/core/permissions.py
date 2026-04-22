@@ -1,5 +1,6 @@
 from fastapi import Depends, HTTPException
 from novelcast.auth.dependencies import get_current_user
+from novelcast.api.deps import require_user
 
 class PermissionManager:
     def __init__(self, qm):
@@ -29,12 +30,6 @@ class PermissionManager:
             return True
 
         return bool(user_groups & file_groups)
-
-
-def require_user(user=Depends(get_current_user)):
-    if not user:
-        raise HTTPException(status_code=401, detail="Not logged in")
-    return user
 
 
 def require_admin(user=Depends(require_user)):

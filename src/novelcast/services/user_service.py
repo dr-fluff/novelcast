@@ -1,4 +1,4 @@
-from novelcast.core.context import AppContext
+# novelcast/services/user_service.py
 
 class UserService:
     def __init__(self, qm):

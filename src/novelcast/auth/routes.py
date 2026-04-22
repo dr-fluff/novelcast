@@ -1,33 +1,36 @@
+# novelcast/auth/routes.py
 from fastapi import APIRouter, Request, Form
 from fastapi.responses import RedirectResponse
 
-from novelcast.core.context import AppContext
 from .session import create_session_token
 
 router = APIRouter()
-ctx = AppContext()
+
+
+def qm(request: Request):
+    return request.app.state.qm
+
+
+def templates(request: Request):
+    return request.app.state.templates
 
 
 @router.get("/login")
 def login_page(request: Request):
-    return ctx.templates.TemplateResponse(
+    return templates(request).TemplateResponse(
         "pages/login.html",
         {"request": request}
     )
 
 
 @router.post("/login")
-def login(username: str = Form(...), password: str = Form(...)):
-    user = ctx.qm.fetchone(
+def login(request: Request, username: str = Form(...), password: str = Form(...)):
+    user = qm(request).fetchone(
         "users.get_by_username",
         (username,)
     )
 
-    if not user:
-        return RedirectResponse("/login", status_code=303)
-
-    # NOTE: replace with real password hashing check
-    if user["password"] != password:
+    if not user or user["password"] != password:
         return RedirectResponse("/login", status_code=303)
 
     token = create_session_token(user["id"])

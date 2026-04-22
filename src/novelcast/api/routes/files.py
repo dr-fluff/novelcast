@@ -1,12 +1,17 @@
-from fastapi import APIRouter
-from novelcast.services.file_service import FileService
+# api/routes/files.py
+
+from fastapi import APIRouter, Request
 
 router = APIRouter()
-service = FileService()
 
-def get_router():
-    return router
 
+def files(request: Request):
+    return request.app.state.files
+
+
+# ─────────────────────────────
+# Read file
+# ─────────────────────────────
 @router.get("/{file_id}")
-def read_file(file_id: int):
-    return {"content": service.get_file_content(file_id)}
+def read_file(request: Request, file_id: int):
+    return {"content": files(request).get_file_content(file_id)}

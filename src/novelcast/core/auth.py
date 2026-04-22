@@ -1,3 +1,5 @@
+# novelcast/services/auth_service.py
+
 from novelcast.core.context import AppContext
 
 class AuthService:

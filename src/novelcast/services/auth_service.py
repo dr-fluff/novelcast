@@ -1,11 +1,10 @@
-
-
+# novelcast/services/auth_service.py
 class AuthService:
     def __init__(self, qm):
         self.qm = qm
 
-    def create_user(self, username, password_hash, role="user"):
-        self.qm.run("users.create_user", (username, password_hash, role))
-
-    def get_user(self, username):
-        return self.qm.fetchone("users.get_by_username", (username,))
+    def get_user_from_username(self, username: str):
+        return self.qm.fetchone(
+            "users.get_by_username",
+            (username,)
+        )

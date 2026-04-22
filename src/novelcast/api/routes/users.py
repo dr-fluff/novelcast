@@ -1,25 +1,32 @@
-from fastapi import APIRouter
-from fastapi import Request
+# api/routes/users.py
 
-from novelcast.core.context import AppContext
+from fastapi import APIRouter, Request
 from novelcast.services.auth_service import AuthService
+from novelcast.services.user_service import UserService
 
 router = APIRouter()
-service = AuthService(AppContext().qm)
-
-def get_router():
-    return router
 
 
-def get_auth(request: Request):
+def users(request: Request) -> UserService:
+    return request.app.state.users
+
+
+def auth(request: Request) -> AuthService:
     return request.app.state.auth
 
+
+# ─────────────────────────────
+# Create user
+# ─────────────────────────────
 @router.post("/create")
-def create_user(username: str, password_hash: str):
-    service.create_user(username, password_hash)
+def create_user(request: Request, username: str, password_hash: str):
+    users(request).create_user(username, password_hash)
     return {"status": "created"}
 
 
+# ─────────────────────────────
+# Get user
+# ─────────────────────────────
 @router.get("/{username}")
-def get_user(username: str):
-    return service.get_user(username)
+def get_user(request: Request, username: str):
+    return users(request).get_user(username)

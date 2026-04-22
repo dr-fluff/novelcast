@@ -1,3 +1,4 @@
+# novelcast/auth/session.py
 import itsdangerous
 
 SECRET_KEY = "change-this-in-prod"
