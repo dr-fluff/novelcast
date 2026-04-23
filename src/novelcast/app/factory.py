@@ -11,6 +11,8 @@ from novelcast.core.logging import setup_logging
 from novelcast.services.user_service import UserService
 from novelcast.services.auth_service import AuthService
 
+from novelcast.api.routes import download
+
 from novelcast.api.errors import register_error_handlers
 from novelcast.api.middleware import AuthMiddleware, PermissionMiddleware
 
@@ -41,14 +43,14 @@ def create_app(config: AppConfig) -> FastAPI:
     from novelcast.api.routes.files import router as files_router
     from novelcast.api.routes.admin import router as admin_router
     from novelcast.api.routes.api import router as api_router
-    from novelcast.api.routes.subscriptions import router as subs_router
 
     app.include_router(pages_router)
     app.include_router(users_router, prefix="/users")
     app.include_router(files_router, prefix="/files")
     app.include_router(admin_router, prefix="/admin")
     app.include_router(api_router, prefix="/api")
-    app.include_router(subs_router)
+    
+    app.include_router(download.router)
 
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 

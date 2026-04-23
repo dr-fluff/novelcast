@@ -3,11 +3,6 @@ from fastapi import APIRouter, Request
 router = APIRouter()
 
 
-# ─────────────────────────────
-# Status API
-# ─────────────────────────────
-from .subscriptions import status
-
 
 @router.get("/status")
 def get_status():

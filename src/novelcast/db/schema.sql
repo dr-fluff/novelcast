@@ -20,12 +20,14 @@ CREATE TABLE IF NOT EXISTS user_groups (
     PRIMARY KEY (user_id, group_id)
 );
 
--- STORIES (LIBRARY CORE)
 CREATE TABLE IF NOT EXISTS stories (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     author TEXT,
     title TEXT NOT NULL,
     source_url TEXT UNIQUE,
+
+    local_path TEXT UNIQUE,
+    cover_path TEXT,
 
     total_chapters INTEGER DEFAULT 0,
     downloaded_chapters INTEGER DEFAULT 0,
@@ -33,10 +35,10 @@ CREATE TABLE IF NOT EXISTS stories (
     latest_online_chapter INTEGER,
     latest_downloaded_chapter INTEGER,
 
-    local_path TEXT UNIQUE,
+    online_chapters INTEGER DEFAULT 0,
 
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-    updated_at TEXT
+    last_updated TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
 -- CHAPTERS
@@ -44,9 +46,9 @@ CREATE TABLE IF NOT EXISTS chapters (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     story_id INTEGER NOT NULL,
 
-    chapter_number INTEGER,
+    chapter_number INTEGER NOT NULL,   -- ONLINE INDEX (1..N)
     title TEXT,
-    url TEXT,
+    url TEXT UNIQUE,                  -- CRITICAL STABLE KEY
 
     is_downloaded INTEGER DEFAULT 0,
     file_path TEXT,
