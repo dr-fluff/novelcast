@@ -1,11 +1,9 @@
-# novelcast/services/user_service.py
-
 class UserService:
-    def __init__(self, qm):
-        self.qm = qm
+    def __init__(self, repo):
+        self.repo = repo
 
-    def create_user(self, username, password_hash, role="user"):
-        self.qm.run("users.create_user", (username, password_hash, role))
+    def get_user(self, username: str):
+        return self.repo.get_by_username(username)
 
-    def get_user(self, username):
-        return self.qm.fetchone("users.get_by_username", (username,))
+    def create_user(self, username: str, password_hash: str):
+        return self.repo.create(username, password_hash)

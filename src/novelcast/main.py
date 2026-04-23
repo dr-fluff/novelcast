@@ -1,9 +1,10 @@
+# novelcast/main.py
 from novelcast.app.factory import create_app
 from novelcast.core.config import AppConfig
 import uvicorn
 
-app = create_app()
 config = AppConfig()
+app = create_app(config)
 
 if __name__ == "__main__":
     uvicorn.run(

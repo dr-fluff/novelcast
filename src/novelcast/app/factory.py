@@ -5,13 +5,14 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+from novelcast.core.config import AppConfig
 from novelcast.core.context import AppContext
+from novelcast.core.logging import setup_logging
 from novelcast.services.user_service import UserService
 from novelcast.services.auth_service import AuthService
 
 from novelcast.api.errors import register_error_handlers
 from novelcast.api.middleware import AuthMiddleware, PermissionMiddleware
-
 
 from novelcast.app.lifespan import lifespan
 
@@ -21,11 +22,12 @@ TEMPLATES_DIR = BASE_DIR / "templates"
 STATIC_DIR = BASE_DIR / "static"
 
 
-def create_app() -> FastAPI:
+def create_app(config: AppConfig) -> FastAPI:
     app = FastAPI(
         title="NovelCast",
         lifespan=lifespan,
     )
+    setup_logging(config) 
 
     app.state.templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
