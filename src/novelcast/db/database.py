@@ -62,12 +62,12 @@ class Database:
         try:
             cur = self.conn.execute(query, params)
             self.conn.commit()
-            return cur
+            return cur.lastrowid   # 🔥 FIX HERE
 
         finally:
             duration = (time.perf_counter() - start) * 1000
             logger.debug(f"EXEC {duration:.2f}ms")
-
+    
     # -------------------------
     # BULK INSERT (CRITICAL FOR CHAPTERS)
     # -------------------------
@@ -88,14 +88,15 @@ class Database:
     # -------------------------
     def fetchone(self, query, params=()):
         cur = self.conn.execute(query, params)
-        return cur.fetchone()
+        row = cur.fetchone()
+        return dict(row) if row else None
 
     # -------------------------
     # FETCH ALL
     # -------------------------
     def fetchall(self, query, params=()):
         cur = self.conn.execute(query, params)
-        return cur.fetchall()
+        return [dict(row) for row in cur.fetchall()]
 
     # -------------------------
     # OPTIONAL: dict conversion helper (VERY USEFUL)

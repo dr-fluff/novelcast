@@ -15,12 +15,12 @@ class AddStoryRequest(BaseModel):
 async def add_story(request: Request, body: AddStoryRequest):
     ctx = request.app.state.ctx
 
-    await anyio.to_thread.run_sync(
-        ctx.downloader.sync_story,
-        body.url
-    )
+    try:
+        result = await anyio.to_thread.run_sync(
+            ctx.story_download.add_story,
+            body.url
+        )
+        return {"status": "ok", "result": result}
 
-    return {
-        "status": "ok",
-        "url": body.url
-    }
+    except Exception as e:
+        raise e

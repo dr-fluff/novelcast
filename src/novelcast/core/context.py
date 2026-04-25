@@ -1,3 +1,5 @@
+# novelcast/core/context.py
+
 import logging
 
 from novelcast.db.database import Database
@@ -16,10 +18,12 @@ from novelcast.services.file_service import FileService
 from novelcast.services.page_service import PageService
 from novelcast.services.story_download_service import StoryDownloadService
 
-from novelcast.engine.download_engine import DownloadEngine
-from novelcast.engine.site_detector import SiteDetector
-from novelcast.engine.adapters.royalroad import RoyalRoadAdapter
-from novelcast.engine.adapters.generic import GenericAdapter
+from novelcast.engine.fanficfare_engine import FanFicFareEngine
+from novelcast.engine.engine_selector import EngineSelector
+
+from novelcast.parser.story_parser import StoryParser
+
+from novelcast.pipeline.story_pipeline import StoryPipeline
 
 from novelcast.utils.files import FileUtils
 
@@ -27,7 +31,6 @@ logger = logging.getLogger(__name__)
 
 
 class AppContext:
-
     def __init__(self):
         try:
             # -------------------------
@@ -49,7 +52,7 @@ class AppContext:
             self.sync_repo = SyncRepository(self.chapters_repo)
 
             # -------------------------
-            # SERVICES (CORE DOMAIN)
+            # SERVICES (simple domain services)
             # -------------------------
             self.stories = StoryService(self.stories_repo)
             self.users = UserService(self.users_repo)
@@ -58,38 +61,40 @@ class AppContext:
             self.pages = PageService(self.stories_repo)
 
             # -------------------------
-            # ENGINE DEPENDENCIES
+            # FILE UTILS
             # -------------------------
             self.file_utils = FileUtils()
-            self.site_detector = SiteDetector()
-
-            # IMPORTANT: adapters are instantiated here (runtime safe)
-            self.adapters = {
-                "royalroad": RoyalRoadAdapter(),
-                "generic": GenericAdapter(),
-                # future:
-                # "wattpad": WattpadAdapter(),
-                # "patreon": PatreonAdapter(),
-            }
 
             # -------------------------
-            # DOWNLOAD ENGINE (SCRAPING CORE)
+            # ENGINE LAYER (FETCH)
             # -------------------------
-            self.downloader = DownloadEngine(
+            self.fanficfare_engine = FanFicFareEngine()
+
+            self.engine_selector = EngineSelector(
+                fanficfare_engine=self.fanficfare_engine
+            )
+
+            # -------------------------
+            # PARSER LAYER (TRANSFORM)
+            # -------------------------
+            self.story_parser = StoryParser()
+
+            # -------------------------
+            # PIPELINE LAYER (PERSIST)
+            # -------------------------
+            self.story_pipeline = StoryPipeline(
                 stories_repo=self.stories_repo,
                 chapters_repo=self.chapters_repo,
-                sync_repo=self.sync_repo,
-                detector=self.site_detector,
-                adapters=self.adapters,
                 file_utils=self.file_utils,
             )
 
             # -------------------------
-            # HIGH-LEVEL DOWNLOAD SERVICE
+            # ORCHESTRATION SERVICE
             # -------------------------
             self.story_download = StoryDownloadService(
-                engine=self.downloader,
-                stories_repo=self.stories_repo
+                selector=self.engine_selector,
+                parser=self.story_parser,
+                pipeline=self.story_pipeline,
             )
 
             logger.info("AppContext ready")

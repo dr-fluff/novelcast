@@ -1,111 +1,125 @@
 import uuid
 import logging
 
-from fastapi import Request
-from fastapi.responses import JSONResponse
-from starlette.middleware.base import BaseHTTPMiddleware
-
+from starlette.responses import JSONResponse
 from novelcast.core.logging import request_id_ctx
 
 logger = logging.getLogger(__name__)
 
+class DebugMiddleware:
+    def __init__(self, app):
+        self.app = app
 
-# -------------------------
-# REQUEST ID MIDDLEWARE
-# -------------------------
-class RequestIDMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
-        request_id = request.headers.get("x-request-id", str(uuid.uuid4()))
+    async def __call__(self, scope, receive, send):
+        print("➡️ ENTER REQUEST", scope["path"])
+
+        async def wrapped_receive():
+            message = await receive()
+            print("📥 RECEIVE:", message["type"])
+            return message
+
+        await self.app(scope, wrapped_receive, send)
+
+class RequestIDMiddleware:
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            return await self.app(scope, receive, send)
+
+        headers = dict(scope["headers"])
+
+        request_id = headers.get(b"x-request-id")
+        if request_id:
+            request_id = request_id.decode()
+        else:
+            request_id = str(uuid.uuid4())
 
         token = request_id_ctx.set(request_id)
 
-        try:
-            response = await call_next(request)
-            response.headers["x-request-id"] = request_id
-            return response
+        async def send_wrapper(message):
+            if message["type"] == "http.response.start":
+                headers = message.setdefault("headers", [])
+                headers.append((b"x-request-id", request_id.encode()))
+            await send(message)
 
+        try:
+            await self.app(scope, receive, send_wrapper)
         finally:
             request_id_ctx.reset(token)
 
 
-# -------------------------
-# AUTH MIDDLEWARE
-# -------------------------
-class AuthMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
-        request.state.user = None
-        username = request.headers.get("x-user")
+class AuthMiddleware:
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            return await self.app(scope, receive, send)
+
+        headers = dict(scope["headers"])
+        username = headers.get(b"x-user")
+        user = None
 
         if username:
             try:
-                user_service = request.app.state.users
+                username = username.decode()
+                user_service = scope["app"].state.users
                 user = user_service.get_user(username)
-
-                request.state.user = user
 
                 if user is None:
                     logger.warning(
                         "User not found",
-                        extra={
-                            "extra_data": {
-                                "username": username,
-                            }
-                        },
+                        extra={"extra_data": {"username": username}},
                     )
 
             except KeyError:
                 logger.warning(
                     "User lookup failed (KeyError)",
-                    extra={
-                        "extra_data": {
-                            "username": username,
-                        }
-                    },
+                    extra={"extra_data": {"username": username.decode() if username else None}},
                 )
 
             except Exception:
                 logger.exception(
                     "Unexpected error during authentication",
-                    extra={
-                        "extra_data": {
-                            "username": username,
-                        }
-                    },
+                    extra={"extra_data": {"username": username.decode() if username else None}},
                 )
+                return await self._json_500(send)
 
-                return JSONResponse(
-                    status_code=500,
-                    content={"detail": "Authentication service error"},
-                )
+        scope.setdefault("state", {})
+        scope["state"]["user"] = user
 
-        try:
-            return await call_next(request)
+        return await self.app(scope, receive, send)
 
-        except Exception:
-            logger.exception(
-                "Unhandled error during request processing",
-                extra={
-                    "extra_data": {
-                        "path": request.url.path,
-                        "method": request.method,
-                    }
-                },
-            )
+    async def _json_500(self, send):
+        await send({
+            "type": "http.response.start",
+            "status": 500,
+            "headers": [(b"content-type", b"application/json")],
+        })
+        await send({
+            "type": "http.response.body",
+            "body": b'{"detail":"Authentication service error"}',
+        })
 
-            return JSONResponse(
-                status_code=500,
-                content={"detail": "Internal server error"},
-            )
 
-class PermissionMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
-        user = getattr(request.state, "user", None)
+class PermissionMiddleware:
+    def __init__(self, app):
+        self.app = app
 
-        # safe now
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            return await self.app(scope, receive, send)
+
+        state = scope.get("state", {})
+        user = state.get("user")
+
         if user and hasattr(user, "is_active") and not user.is_active:
-            return JSONResponse(
+            response = JSONResponse(
                 status_code=403,
                 content={"detail": "User is inactive"},
             )
+            return await response(scope, receive, send)
 
-        return await call_next(request)
+        return await self.app(scope, receive, send)

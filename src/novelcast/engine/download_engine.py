@@ -1,5 +1,3 @@
-from pathlib import Path
-from urllib.request import urlopen
 import logging
 
 logger = logging.getLogger(__name__)
@@ -7,129 +5,57 @@ logger = logging.getLogger(__name__)
 
 class DownloadEngine:
 
-    def __init__(self, stories_repo, chapters_repo, sync_repo, detector, adapters, file_utils):
-        self.stories = stories_repo
-        self.chapters = chapters_repo
-        self.sync = sync_repo
-        self.detector = detector
-        self.adapters = adapters
-        self.files = file_utils
+    def __init__(self, selector, stories_repo, chapters_repo, sync_repo, file_utils):
+        self.selector = selector
+        self.stories_repo = stories_repo
+        self.chapters_repo = chapters_repo
+        self.sync_repo = sync_repo
+        self.file_utils = file_utils
 
-    # -------------------------------------------------
-    # ADAPTER RESOLUTION
-    # -------------------------------------------------
-    def get_adapter(self, url: str):
-        site = self.detector.detect(url)
+    # -------------------------
+    # MAIN ENTRY
+    # -------------------------
+    def download_story(self, url: str) -> dict:
 
-        if site not in self.adapters:
-            raise ValueError(f"No adapter registered for site: {site}")
+        engine = self.selector.get_engine(url)
 
-        return self.adapters[site]
+        story_data = engine.download_story(url)
 
-    # -------------------------------------------------
-    # MAIN SYNC ENTRYPOINT
-    # -------------------------------------------------
-    def download_story(self, url: str):
-        """
-        Used by StoryDownloadService.add_story()
-        """
-
-        adapter = self.get_adapter(url)
-
-        logger.info(f"Syncing story: {url}")
-
-        html = urlopen(url).read().decode("utf-8", errors="ignore")
-        meta = adapter.get_metadata(html)
-
-        # 1. create or fetch story
-        story = self.stories.get_by_url(url)
-
-        if not story:
-            story_id = self.stories.create(
-                meta["title"],
-                meta.get("author"),
-                url
+        if not isinstance(story_data, dict):
+            raise TypeError(
+                f"Engine must return dict, got {type(story_data)}"
             )
-        else:
-            story_id = story["id"]
 
-        # 2. fetch chapter list from site
-        chapters = adapter.get_chapter_list(url)
+        story_id = self._persist_story(story_data)
 
-        # 3. upsert chapter index (NO DOWNLOAD YET)
-        for num, title, chap_url in chapters:
-            self.chapters.upsert(story_id, num, title, chap_url)
+        self._store_chapters(story_id, story_data.get("chapters", []))
 
-        # 4. detect missing chapters (important logic layer)
-        missing = self.sync.get_missing_chapters(story_id)
+        story_data["story_id"] = story_id
+        return story_data
 
-        logger.info(f"Missing chapters: {len(missing)}")
+    # -------------------------
+    # STORY DB INSERT
+    # -------------------------
+    def _persist_story(self, story_data: dict) -> int:
 
-        # 5. download only missing
-        for num in missing:
-            self.download_chapter(story_id, num, adapter)
-
-        # 6. update sync state
-        downloaded_numbers = self.chapters.get_downloaded_numbers(story_id)
-        online_numbers = self.chapters.get_all_numbers(story_id)
-
-        latest_downloaded, latest_online = self.sync.get_latest_numbers(story_id)
-
-        self.stories.update_sync_state(
-            story_id,
-            downloaded=len(downloaded_numbers),
-            online=len(online_numbers),
-            latest_downloaded=latest_downloaded,
-            latest_online=latest_online,
+        story_id = self.stories_repo.create(
+            title=story_data["title"],
+            author=story_data.get("author"),
+            url=story_data["url"],
         )
-
-        logger.info(f"Sync complete for story {story_id}")
 
         return story_id
 
-    # -------------------------------------------------
-    # CHAPTER DOWNLOAD
-    # -------------------------------------------------
-    def download_chapter(self, story_id: int, chapter_number: int, adapter):
+    # -------------------------
+    # CHAPTER STORAGE
+    # -------------------------
+    def _store_chapters(self, story_id: int, chapters: list):
 
-        chapter = self.chapters.get_by_number(story_id, chapter_number)
-        if not chapter:
-            logger.warning(f"Missing chapter entry {chapter_number}")
-            return
-
-        url = chapter["url"]
-        title = chapter["title"]
-
-        html = urlopen(url).read().decode("utf-8", errors="ignore")
-        content = adapter.get_chapter_content(html)
-
-        story = self.stories.get_by_id(story_id)
-
-        if not story:
-            logger.error(f"Story not found: {story_id}")
-            return
-
-        folder = Path(story["local_path"])
-        folder.mkdir(parents=True, exist_ok=True)
-
-        filename = self.files.safe(f"c{chapter_number:04d}-{title}.html")
-        path = folder / filename
-
-        # DO NOT overwrite existing
-        if path.exists():
-            return
-
-        out = f"""
-        <html>
-        <head><meta charset="utf-8"><title>{title}</title></head>
-        <body>{content}</body>
-        </html>
-        """
-
-        path.write_text(out, encoding="utf-8")
-
-        self.chapters.mark_downloaded(
-            story_id,
-            chapter_number,
-            str(path)
-        )
+        for ch in chapters:
+            self.chapters_repo.upsert(
+                story_id=story_id,
+                chapter_number=ch["number"],
+                title=ch.get("title"),
+                url=ch.get("url"),
+                file_path=ch.get("file_path"),
+            )
