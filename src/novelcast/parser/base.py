@@ -1,15 +1,30 @@
-from abc import ABC, abstractmethod
+# novelcast/parser/base.py
 
-class StoryParser(ABC):
+from abc import ABC, abstractmethod
+from typing import TypedDict, List, Optional
+
+
+class Chapter(TypedDict):
+    number: int
+    title: str
+    content: str
+
+
+class Story(TypedDict):
+    title: str
+    author: Optional[str]
+    chapters: List[Chapter]
+
+
+class BaseParser(ABC):
 
     @abstractmethod
-    def parse(self, data: dict) -> dict:
+    def parse(self, data: dict) -> Story:
         """
-        Returns normalized structure:
-        {
-            title,
-            author,
-            chapters: [{number, title, content}]
-        }
+        Convert raw engine output into normalized Story structure.
         """
+        pass
+    
+    @abstractmethod
+    def extract(self, data: dict) -> Story:
         pass

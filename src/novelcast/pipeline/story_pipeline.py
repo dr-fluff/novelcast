@@ -1,25 +1,37 @@
 # novelcast/pipeline/story_pipeline.py
-
 class StoryPipeline:
 
-    def __init__(self, engine, parser, db_writer, file_writer):
-        self.engine = engine
-        self.parser = parser
-        self.db = db_writer
-        self.files = file_writer
+    def __init__(self, stories_repo, chapters_repo, file_utils):
+        self.stories_repo = stories_repo
+        self.chapters_repo = chapters_repo
+        self.file_utils = file_utils
 
-    def run(self, url: str):
+    def persist(self, story: dict):
+        story_id = self.stories_repo.create(story)
 
-        # STAGE 1
-        download = self.engine.download_story(url)
+        base_dir = self.file_utils.story_dir(
+            story["author"],
+            story["title"]
+        )
 
-        # STAGE 2
-        story = self.parser.parse(download["file_path"])
+        chapter_paths = []
 
-        # STAGE 3
-        story_id = self.db.save_story(story, url)
+        for ch in story["chapters"]:
+            filename = f"chapter_{ch['number']}.html"
 
-        self.db.save_chapters(story_id, story["chapters"])
-        self.files.link_file(story_id, download["file_path"])
+            path = self.file_utils.write_chapter(
+                base_dir,
+                filename,
+                ch["content"]
+            )
+
+            chapter_paths.append(str(path))
+
+            self.chapters_repo.create({
+                "story_id": story_id,
+                "number": ch["number"],
+                "title": ch["title"],
+                "file_path": str(path)
+            })
 
         return story_id

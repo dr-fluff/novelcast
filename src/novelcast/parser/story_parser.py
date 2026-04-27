@@ -1,21 +1,17 @@
+# novelcast/parser/story_parser.py
+
+from novelcast.parser.registry import ParserRegistry
+
+
 class StoryParser:
 
+    def __init__(self, registry: ParserRegistry):
+        self.registry = registry
+
     def parse(self, raw: dict) -> dict:
+        format_name = raw.get("format", "epub")
 
-        if raw.get("format") == "epub":
-            return self._parse_epub(raw)
+        parser = self.registry.get(format_name)
+        story = parser.parse(raw)
 
-        return raw
-
-    def _parse_epub(self, raw: dict) -> dict:
-        from novelcast.parser.epub_parser import EpubParser
-
-        epub = EpubParser()
-        chapters = epub.extract(raw["file_path"])
-
-        return {
-            "title": raw["title"],
-            "author": raw["author"],
-            "url": raw["url"],
-            "chapters": chapters
-        }
+        return story

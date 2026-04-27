@@ -1,5 +1,7 @@
 # novelcast/engine/fanficfare_engine.py
 
+from curses import raw
+
 from .base import StoryEngine
 import subprocess
 import json
@@ -32,3 +34,16 @@ class FanFicFareEngine(StoryEngine):
             "author": raw.get("author"),
             "url": url,
         }
+    
+    def _extract_epub_path(self, raw: dict) -> str:
+        possible_keys = [
+            "output_filename",
+            "outfile",
+            "filename",
+        ]
+
+        for key in possible_keys:
+            if key in raw and raw[key]:
+                return raw[key]
+
+        raise RuntimeError(f"Could not find EPUB path in response: {raw.keys()}")

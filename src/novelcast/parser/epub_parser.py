@@ -1,11 +1,21 @@
-class EpubParser:
+# novelcast/parser/epub_parser.py
+
+from novelcast.parser.base import BaseParser, Story
+from pathlib import Path
+
+class EpubParser(BaseParser):
 
     def parse(self, data: dict) -> dict:
-        epub_path = data["epub_path"]
+        epub_path = Path(data["file_path"])
 
-        # later: extract chapters via ebooklib
+        chapters = self.extract(epub_path)
+
         return {
             "title": data["title"],
             "author": data["author"],
-            "chapters": []
+            "chapters": chapters
         }
+
+    def extract(self, epub_path: Path):
+        # later ebooklib logic
+        return []

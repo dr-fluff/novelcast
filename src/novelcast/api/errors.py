@@ -1,3 +1,4 @@
+# novelcast/api/errors.py
 import logging
 from fastapi import Request, FastAPI
 from fastapi.responses import JSONResponse
