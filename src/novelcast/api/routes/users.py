@@ -19,8 +19,8 @@ def auth(request: Request) -> AuthService:
 # Create user
 # ─────────────────────────────
 @router.post("/create")
-def create_user(request: Request, username: str, password_hash: str):
-    users(request).create_user(username, password_hash)
+def create_user(request: Request, username: str, password: str):
+    users(request).create_user(username, password)
     return {"status": "created"}
 
 

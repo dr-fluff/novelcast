@@ -66,7 +66,17 @@ class Database:
 
         finally:
             duration = (time.perf_counter() - start) * 1000
-            logger.debug(f"EXEC {duration:.2f}ms")
+            query_label = query.strip().split()[0].upper() if query.strip() else "SQL"
+            query_summary = " ".join(query.strip().splitlines()).strip()
+            if len(query_summary) > 120:
+                query_summary = query_summary[:117] + "..."
+            logger.debug(
+                "DB EXEC %s %.2fms | query=%s | params=%s",
+                query_label,
+                duration,
+                query_summary,
+                params,
+            )
     
     # -------------------------
     # BULK INSERT (CRITICAL FOR CHAPTERS)
@@ -81,7 +91,17 @@ class Database:
 
         finally:
             duration = (time.perf_counter() - start) * 1000
-            logger.debug(f"EXEC MANY {duration:.2f}ms")
+            query_label = query.strip().split()[0].upper() if query.strip() else "SQL"
+            query_summary = " ".join(query.strip().splitlines()).strip()
+            if len(query_summary) > 120:
+                query_summary = query_summary[:117] + "..."
+            logger.debug(
+                "DB EXEC MANY %s %.2fms | query=%s | batch=%s",
+                query_label,
+                duration,
+                query_summary,
+                len(seq_of_params),
+            )
 
     # -------------------------
     # FETCH ONE

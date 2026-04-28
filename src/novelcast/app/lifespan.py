@@ -30,8 +30,8 @@ async def lifespan(app: FastAPI):
         # -------------------------
         # SERVICES
         # -------------------------
-        user_service = UserService(ctx.qm)
-        auth_service = AuthService(ctx.qm)
+        user_service = ctx.users
+        auth_service = ctx.auth
 
         # -------------------------
         # APP STATE REGISTRATION

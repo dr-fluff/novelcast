@@ -1,7 +1,9 @@
 import uuid
 import logging
+from http.cookies import SimpleCookie
 
-from starlette.responses import JSONResponse
+from fastapi.responses import RedirectResponse, JSONResponse
+from novelcast.auth.session import decode_session_token
 from novelcast.core.logging import request_id_ctx
 
 logger = logging.getLogger(__name__)
@@ -51,6 +53,8 @@ class RequestIDMiddleware:
 
 
 class AuthMiddleware:
+    PUBLIC_PATHS = {"/login", "/signup", "/logout", "/favicon.ico"}
+
     def __init__(self, app):
         self.app = app
 
@@ -59,36 +63,36 @@ class AuthMiddleware:
             return await self.app(scope, receive, send)
 
         headers = dict(scope["headers"])
-        username = headers.get(b"x-user")
+        cookie_header = headers.get(b"cookie", b"").decode()
+        cookie = SimpleCookie()
+        cookie.load(cookie_header)
+
         user = None
+        session_token = cookie.get("session").value if "session" in cookie else None
+        user_id = decode_session_token(session_token) if session_token else None
 
-        if username:
+        if user_id:
             try:
-                username = username.decode()
-                user_service = scope["app"].state.users
-                user = user_service.get_user(username)
-
-                if user is None:
-                    logger.warning(
-                        "User not found",
-                        extra={"extra_data": {"username": username}},
-                    )
-
-            except KeyError:
-                logger.warning(
-                    "User lookup failed (KeyError)",
-                    extra={"extra_data": {"username": username.decode() if username else None}},
-                )
-
+                auth_service = scope["app"].state.auth
+                user = auth_service.get_user_by_id(user_id)
             except Exception:
                 logger.exception(
                     "Unexpected error during authentication",
-                    extra={"extra_data": {"username": username.decode() if username else None}},
+                    extra={"extra_data": {"user_id": user_id}},
                 )
                 return await self._json_500(send)
 
         scope.setdefault("state", {})
         scope["state"]["user"] = user
+
+        path = scope.get("path", "")
+        if user and path in self.PUBLIC_PATHS:
+            response = RedirectResponse("/", status_code=303)
+            return await response(scope, receive, send)
+
+        if not user and not path.startswith("/static") and path not in self.PUBLIC_PATHS:
+            response = RedirectResponse("/login", status_code=303)
+            return await response(scope, receive, send)
 
         return await self.app(scope, receive, send)
 

@@ -7,6 +7,7 @@ from novelcast.db.repositories.stories_repository import StoriesRepository
 from novelcast.db.repositories.users_repository import UsersRepository
 from novelcast.db.repositories.files_repository import FilesRepository
 from novelcast.db.repositories.chapters_repository import ChaptersRepository
+from novelcast.db.repositories.progress_repository import ProgressRepository
 from novelcast.db.repositories.sync_repository import SyncRepository
 
 from novelcast.services.story_service import StoryService
@@ -14,6 +15,8 @@ from novelcast.services.user_service import UserService
 from novelcast.services.auth_service import AuthService
 from novelcast.services.file_service import FileService
 from novelcast.services.page_service import PageService
+from novelcast.services.chapters_service import ChaptersService
+from novelcast.services.progress_service import ProgressService
 from novelcast.services.story_download_service import StoryDownloadService
 
 from novelcast.engine.fanficfare_engine import FanFicFareEngine
@@ -75,6 +78,7 @@ class AppContext:
             self.users_repo = UsersRepository(self.db)
             self.files_repo = FilesRepository(self.db)
             self.chapters_repo = ChaptersRepository(self.db)
+            self.progress_repo = ProgressRepository(self.qm)
             self.sync_repo = SyncRepository(self.chapters_repo)
         except Exception as e:
             logger.exception("Repository initialization failed")
@@ -91,6 +95,8 @@ class AppContext:
             self.auth = AuthService(self.users_repo)
             self.files = FileService(self.files_repo)
             self.pages = PageService(self.stories_repo)
+            self.chapters = ChaptersService(self.chapters_repo)
+            self.progress = ProgressService(self.progress_repo)
         except Exception as e:
             logger.exception("Service initialization failed")
             raise RuntimeError("Service layer failed") from e

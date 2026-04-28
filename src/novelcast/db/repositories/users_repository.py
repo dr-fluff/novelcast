@@ -8,6 +8,12 @@ class UsersRepository:
             (username,),
         )
 
+    def get_by_id(self, user_id: int):
+        return self.db.fetchone(
+            "SELECT * FROM users WHERE id = ?",
+            (user_id,),
+        )
+
     def create(self, username: str, password_hash: str):
         return self.db.execute(
             """

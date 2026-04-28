@@ -4,16 +4,28 @@ class ChaptersRepository:
     def __init__(self, db):
         self.db = db
 
-    def upsert(self, story_id: int, chapter_number: int, title: str, url: str):
+    def create(self, story_id: int, chapter_number: int, title: str | None, url: str | None, file_path: str | None = None, is_downloaded: int = 0):
         return self.db.execute(
             """
-            INSERT INTO chapters (story_id, chapter_number, title, url)
-            VALUES (?, ?, ?, ?)
-            ON CONFLICT(url) DO UPDATE SET
-                chapter_number = excluded.chapter_number,
-                title = excluded.title
+            INSERT INTO chapters (story_id, chapter_number, title, url, file_path, is_downloaded)
+            VALUES (?, ?, ?, ?, ?, ?)
             """,
-            (story_id, chapter_number, title, url),
+            (story_id, chapter_number, title, url, file_path, is_downloaded),
+        )
+
+    def upsert(self, story_id: int, chapter_number: int, title: str | None, url: str | None, file_path: str | None = None, is_downloaded: int = 0):
+        return self.db.execute(
+            """
+            INSERT INTO chapters (story_id, chapter_number, title, url, file_path, is_downloaded)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(url) DO UPDATE SET
+                story_id = excluded.story_id,
+                chapter_number = excluded.chapter_number,
+                title = excluded.title,
+                file_path = excluded.file_path,
+                is_downloaded = excluded.is_downloaded
+            """,
+            (story_id, chapter_number, title, url, file_path, is_downloaded),
         )
 
     def mark_downloaded(self, story_id: int, chapter_number: int, file_path: str):
@@ -33,6 +45,25 @@ class ChaptersRepository:
             (story_id,),
         )
         return {r[0] for r in rows}
+
+    def list_downloaded_by_story(self, story_id: int):
+        return self.db.fetchall(
+            "SELECT * FROM chapters WHERE story_id = ? AND is_downloaded = 1 ORDER BY chapter_number",
+            (story_id,),
+        )
+
+    def get_by_id(self, chapter_id: int):
+        return self.db.fetchone(
+            "SELECT * FROM chapters WHERE id = ?",
+            (chapter_id,),
+        )
+
+    def get_ids_by_story(self, story_id: int):
+        rows = self.db.fetchall(
+            "SELECT id FROM chapters WHERE story_id = ? AND is_downloaded = 1 ORDER BY chapter_number",
+            (story_id,),
+        )
+        return [r["id"] for r in rows]
 
     def get_downloaded_numbers(self, story_id: int):
         rows = self.db.fetchall(

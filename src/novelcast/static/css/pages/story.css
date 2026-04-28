@@ -1,0 +1,196 @@
+.story-page {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 2rem 2rem 3rem;
+}
+
+.story-summary,
+.chapter-list-card {
+  background: var(--card);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 24px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.12);
+}
+
+.story-summary {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 1.5rem;
+  padding: 2rem;
+  margin-bottom: 1.75rem;
+}
+
+.story-label {
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--muted);
+}
+
+.story-title {
+  margin: 0;
+  font-size: 2.5rem;
+  line-height: 1.05;
+}
+
+.story-author {
+  margin: 0.85rem 0 0;
+  color: var(--muted);
+  font-size: 1rem;
+}
+
+.story-description {
+  margin: 1rem 0 0;
+  color: var(--text);
+  line-height: 1.7;
+  font-size: 0.95rem;
+}
+
+.story-description a {
+  color: var(--text);
+  text-decoration: underline;
+}
+
+.story-statistics {
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+}
+
+.stat-card {
+  display: grid;
+  gap: 0.4rem;
+  padding: 1.2rem 1.25rem;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.stat-label {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.stat-card strong {
+  font-size: 1.7rem;
+  line-height: 1;
+}
+
+.chapter-list-card {
+  padding: 1.5rem;
+}
+
+.chapter-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.chapter-list-header h2 {
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+.chapter-list-header p {
+  margin: 0.35rem 0 0;
+  color: var(--muted);
+}
+
+.chapter-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.chapter-item {
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.chapter-item.chapter-read {
+  background: rgba(99, 102, 241, 0.08);
+}
+
+.chapter-link {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.chapter-link:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.chapter-main {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.chapter-number {
+  display: block;
+  font-size: 0.95rem;
+  color: var(--muted);
+}
+
+.chapter-name {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.chapter-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 90px;
+  border-radius: 999px;
+  padding: 0.6rem 0.9rem;
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--text);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.empty-state {
+  padding: 2rem;
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  border-radius: 1rem;
+  text-align: center;
+  color: var(--muted);
+}
+
+@media (max-width: 900px) {
+  .story-summary {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .story-page {
+    padding: 1.5rem 1rem 2rem;
+  }
+
+  .chapter-list-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .chapter-link {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .chapter-status {
+    width: 100%;
+    text-align: left;
+  }
+}

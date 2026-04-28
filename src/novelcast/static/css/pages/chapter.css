@@ -1,170 +1,241 @@
 .reader-header {
   position: sticky;
   top: 0;
-
-  background: var(--bg);
-  padding: 1rem 1.5rem;
+  z-index: 100;
 
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  gap: 1rem;
 
-  z-index: 100;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  padding: 1rem 1.5rem;
+}
+
+.reader-header h1 {
+  font-size: clamp(1.4rem, 2vw, 2rem);
+  margin: 0;
+  line-height: 1.05;
 }
 
 .book-info h1 {
-  font-size: 1.2rem;
   margin: 0;
+  font-family: Georgia, Cambria, "Times New Roman", Times, serif;
+  font-size: clamp(1.6rem, 2.4vw, 2.2rem);
+  letter-spacing: -0.03em;
 }
 
 .book-info p {
-  margin: 0;
-  font-size: 0.85rem;
+  margin: 0.5rem 0 0;
   color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.6;
 }
 
 .reading-progress-text {
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   color: var(--muted);
+  min-width: 98px;
+  text-align: right;
+}
+
+.reader-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.reader-controls button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 0.8rem;
+  border-radius: 14px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: var(--card);
+  color: var(--text);
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.reader-controls button:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.95);
 }
 
 .chapter-content {
-  font-size: 1.1rem;
-  line-height: 1.9;
-
+  position: relative;
+  max-width: 860px;
+  margin: 2.5rem auto 4.5rem;
+  padding: 2.5rem 2.75rem;
   background: var(--card);
-
-  max-width: 42rem;
-  margin: 3rem auto;
-  padding: 2.5rem;
-
-  border-radius: 1rem;
-
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+  border-radius: 32px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 30px 60px rgba(15, 23, 42, 0.08);
+  font-family: Georgia, Cambria, "Times New Roman", Times, serif;
+  font-size: clamp(1rem, 1.1vw, 1.12rem);
+  line-height: 1.88;
+  color: var(--text);
 }
 
 .chapter-title {
-  font-size: 1.5rem;
-  margin-bottom: 1rem;
-
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
+  margin: 0 0 1.5rem;
+  font-size: clamp(1.35rem, 2.4vw, 1.9rem);
+  letter-spacing: -0.02em;
 }
 
 .chapter-content hr {
   border: none;
-  border-top: 1px solid #e5e7eb;
-  margin: 1rem 0 2rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  margin: 1.5rem 0 2rem;
 }
 
-.desktop-nav {
-  position: fixed;
-  bottom: 1rem;
-  left: 50%;
-  transform: translateX(-50%);
+.chapter-content p,
+.chapter-content li,
+.chapter-content blockquote {
+  margin: 0 0 1.35rem;
+}
 
-  background: var(--card);
-  padding: 0.6rem;
+.chapter-content p:last-child,
+.chapter-content li:last-child,
+.chapter-content blockquote:last-child {
+  margin-bottom: 0;
+}
 
+.chapter-content p strong,
+.chapter-content p em,
+.chapter-content li strong,
+.chapter-content li em {
+  color: var(--text);
+}
+
+.chapter-content a {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.chapter-content img,
+.chapter-content video,
+.chapter-content figure {
+  max-width: 100%;
   border-radius: 1rem;
-
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-
-  display: flex;
-  gap: 0.5rem;
 }
 
-.nav-button {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-
-  padding: 0.6rem 0.9rem;
-
-  border-radius: 0.6rem;
-
-  background: #f3f4f6;
-  color: var(--text);
-
-  text-decoration: none;
+.chapter-content blockquote {
+  margin: 0 0 1.5rem;
+  padding: 1.25rem 1.5rem;
+  border-left: 4px solid rgba(59, 130, 246, 0.35);
+  background: rgba(59, 130, 246, 0.06);
 }
 
-.nav-button:hover {
-  background: #e5e7eb;
-}
-
-.reader-controls {
-  position: fixed;
-  right: 1rem;
-  top: 50%;
-  transform: translateY(-50%);
-
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-}
-
-.reader-controls button {
-  width: 3rem;
-  height: 3rem;
-
-  border-radius: 0.8rem;
-  border: none;
-
-  background: var(--card);
-  color: var(--text);
-
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-
-  font-weight: bold;
-  cursor: pointer;
+.chapter-content ul,
+.chapter-content ol {
+  margin: 0 0 1.35rem 1.35rem;
 }
 
 #progress-bar {
   position: fixed;
   top: 0;
   left: 0;
-
-  height: 4px;
   width: 0%;
-
+  height: 4px;
   background: linear-gradient(90deg, #3b82f6, #60a5fa);
-
   z-index: 9999;
 }
 
-.reader-ui.hidden {
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.2s ease;
+.chapter-nav.desktop-nav {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 1.25rem;
+  display: flex;
+  gap: 0.65rem;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(0, 0, 0, 0.07);
+  border-radius: 1.35rem;
+  padding: 0.65rem 0.9rem;
+  box-shadow: 0 25px 45px rgba(15, 23, 42, 0.12);
+  z-index: 80;
 }
 
-.chapter-transition-out {
-  opacity: 0;
-  transform: translateY(10px);
-  transition: 0.25s ease;
+.nav-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.75rem 1rem;
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--text);
+  text-decoration: none;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  font-weight: 600;
 }
 
-.chapter-transition-in {
-  opacity: 1;
-  transform: translateY(0);
-  transition: 0.25s ease;
+.nav-button:hover {
+  background: rgba(255, 255, 255, 0.94);
 }
 
-@media (max-width: 600px) {
+@media (max-width: 900px) {
   .chapter-content {
-    margin: 1rem;
-    padding: 1.5rem;
+    margin: 1.5rem auto 5rem;
+    padding: 2rem;
+  }
+
+  .reader-header {
+    padding: 1rem 1.25rem;
+  }
+}
+
+@media (max-width: 700px) {
+  .reader-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.85rem;
+  }
+
+  .reading-progress-text {
+    text-align: left;
   }
 
   .reader-controls {
-    right: 0.5rem;
+    justify-content: space-between;
   }
 
-  .desktop-nav {
-    bottom: 0.5rem;
-    width: calc(100% - 1rem);
-    justify-content: space-around;
+  .chapter-nav.desktop-nav {
+    bottom: 0.8rem;
+    width: calc(100% - 1.5rem);
+    left: 50%;
+    transform: translateX(-50%);
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 580px) {
+  .chapter-content {
+    margin: 1rem auto 6.5rem;
+    padding: 1.5rem;
+    border-radius: 24px;
+  }
+
+  .chapter-title {
+    font-size: 1.5rem;
+  }
+
+  .reader-controls button {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .nav-button {
+    flex: 1;
+    justify-content: center;
   }
 }

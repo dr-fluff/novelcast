@@ -24,7 +24,9 @@ class BaseParser(ABC):
         Convert raw engine output into normalized Story structure.
         """
         pass
-    
-    @abstractmethod
-    def extract(self, data: dict) -> Story:
-        pass
+
+    def extract(self, data: dict):
+        """
+        Optional helper for parser implementations that need to extract content from a file.
+        """
+        raise NotImplementedError("extract() is not implemented for this parser")

@@ -11,8 +11,10 @@ class FileUtils:
         name = re.sub(r'[<>:"/\\|?*]', '', name)
         return re.sub(r'\s+', '_', name).strip('_')
     
-    def story_dir(self, author: str, title: str) -> Path:
-        path = self.base_dir / self._safe(author) / self._safe(title)
+    def story_dir(self, author: str | None, title: str | None) -> Path:
+        safe_author = self._safe(author or "Unknown_Author")
+        safe_title = self._safe(title or "Unknown_Title")
+        path = self.base_dir / safe_author / safe_title
         path.mkdir(parents=True, exist_ok=True)
         return path
 

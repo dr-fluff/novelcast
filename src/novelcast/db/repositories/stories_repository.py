@@ -21,6 +21,12 @@ class StoriesRepository:
         )
 
     def create(self, title: str, author: str | None, url: str | None):
+        if url:
+            existing = self.get_by_url(url)
+            if existing:
+                self.update_metadata(existing["id"], title, author)
+                return existing["id"]
+
         return self.db.execute(
             """
             INSERT OR IGNORE INTO stories (title, author, source_url)
@@ -47,6 +53,16 @@ class StoriesRepository:
             WHERE id = ?
             """,
             (local_path, cover_path, story_id),
+        )
+
+    def update_chapter_stats(self, story_id: int, total_chapters: int, downloaded_chapters: int, latest_downloaded_chapter: int | None = None, latest_online_chapter: int | None = None, online_chapters: int | None = None):
+        return self.db.execute(
+            """
+            UPDATE stories
+            SET total_chapters = ?, downloaded_chapters = ?, latest_downloaded_chapter = ?, latest_online_chapter = ?, online_chapters = ?
+            WHERE id = ?
+            """,
+            (total_chapters, downloaded_chapters, latest_downloaded_chapter, latest_online_chapter, online_chapters, story_id),
         )
 
     def delete(self, story_id: int):

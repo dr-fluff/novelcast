@@ -1,4 +1,6 @@
 # novelcast/pipeline/story_pipeline.py
+from pathlib import Path
+
 class StoryPipeline:
 
     def __init__(self, stories_repo, chapters_repo, file_utils):
@@ -7,17 +9,35 @@ class StoryPipeline:
         self.file_utils = file_utils
 
     def persist(self, story: dict):
-        story_id = self.stories_repo.create(story)
-
-        base_dir = self.file_utils.story_dir(
-            story["author"],
-            story["title"]
+        story_id = self.stories_repo.create(
+            story["title"],
+            story.get("author"),
+            story.get("source_url") or story.get("url")
         )
 
+        base_dir = self.file_utils.story_dir(
+            story.get("author"),
+            story.get("title")
+        )
+
+        self.stories_repo.update_paths(story_id, str(base_dir))
+
+        epub_source_path = story.get("source_file_path")
+        if epub_source_path:
+            epub_source = Path(epub_source_path)
+            if epub_source.exists():
+                epub_dest = base_dir / self.file_utils.safe(epub_source.name)
+                epub_source.replace(epub_dest)
+                self.stories_repo.update_paths(story_id, str(base_dir))
+
         chapter_paths = []
+        story_url = story.get("source_url") or story.get("url") or ""
+
+        chapter_numbers = []
 
         for ch in story["chapters"]:
-            filename = f"chapter_{ch['number']}.html"
+            title_safe = self.file_utils.safe(ch.get("title") or "")
+            filename = f"{ch['number']:03d}_{title_safe or f'chapter_{ch['number']:03d}'}.html"
 
             path = self.file_utils.write_chapter(
                 base_dir,
@@ -26,12 +46,27 @@ class StoryPipeline:
             )
 
             chapter_paths.append(str(path))
+            chapter_numbers.append(ch["number"])
 
-            self.chapters_repo.create({
-                "story_id": story_id,
-                "number": ch["number"],
-                "title": ch["title"],
-                "file_path": str(path)
-            })
+            chapter_url = f"{story_url}#chapter-{ch['number']}" if story_url else f"file://{str(path)}"
+            self.chapters_repo.upsert(
+                story_id,
+                ch["number"],
+                ch.get("title"),
+                chapter_url,
+                str(path),
+                1,
+            )
+
+        total_chapters = len(chapter_numbers)
+        latest_downloaded = max(chapter_numbers) if chapter_numbers else None
+        self.stories_repo.update_chapter_stats(
+            story_id,
+            total_chapters,
+            total_chapters,
+            latest_downloaded,
+            total_chapters,
+            total_chapters,
+        )
 
         return story_id

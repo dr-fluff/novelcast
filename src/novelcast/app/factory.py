@@ -15,6 +15,7 @@ from novelcast.api.routes import download
 
 from novelcast.api.errors import register_error_handlers
 from novelcast.api.middleware import AuthMiddleware, PermissionMiddleware
+from novelcast.auth.routes import router as auth_router
 
 from novelcast.app.lifespan import lifespan
 
@@ -44,6 +45,7 @@ def create_app(config: AppConfig) -> FastAPI:
     from novelcast.api.routes.admin import router as admin_router
     from novelcast.api.routes.api import router as api_router
 
+    app.include_router(auth_router)
     app.include_router(pages_router)
     app.include_router(users_router, prefix="/users")
     app.include_router(files_router, prefix="/files")

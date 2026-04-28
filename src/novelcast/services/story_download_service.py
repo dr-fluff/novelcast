@@ -20,13 +20,11 @@ class StoryDownloadService:
             logger.debug(f"Raw data fetched: {list(raw.keys())}", extra={"url": url})
 
             parsed = self.parser.parse(raw)
+            parsed["source_url"] = raw.get("url")
+            parsed["source_file_path"] = raw.get("file_path")
             logger.debug(f"Parsed story data: title={parsed.get('title')}, author={parsed.get('author')}", extra={"url": url})
 
-            story_id = self.pipeline.persist(
-                parsed,
-                file_path=raw["file_path"],
-                source_url=raw["url"],  # or just `url`
-            )
+            story_id = self.pipeline.persist(parsed)
             logger.debug(f"Story persisted with ID: {story_id}", extra={"url": url})
 
             return story_id

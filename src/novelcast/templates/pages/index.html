@@ -6,15 +6,13 @@
 
 {% include "partials/library_header.html" %}
 
-<!-- FILTER BAR -->
 <section class="library-filters">
-
     <form action="/" method="get" class="search-sort-bar">
-
         <input
             type="text"
             name="q"
             placeholder="Search library..."
+            value="{{ query }}"
         />
 
         <select name="sort" onchange="this.form.submit()">
@@ -25,35 +23,34 @@
                 </option>
             {% endfor %}
         </select>
-
     </form>
-
 </section>
 
-<!-- GRID -->
 <section class="library-grid">
-
-    {% for s in subs %}
-    <a class="library-card" href="/story?url={{ s.url | urlencode }}">
-
-        <div class="card-cover">
-            <img
-                src="{{ '/cover?url=' + (s.cover_url | urlencode) if s.cover_url else '/static/images/cover-placeholder.svg' }}"
-            />
-
-            <div class="card-letter">
-                {{ s.thumbnail_letter }}
-            </div>
+    {% if stories %}
+        {% for s in stories %}
+            <a class="library-card" href="{{ s.url }}">
+                <div class="card-cover">
+                    <img
+                        src="{{ s.cover_url or '/static/images/cover-placeholder.svg' }}"
+                        alt="{{ s.display_title }} cover"
+                    />
+                    <div class="card-letter">{{ s.thumbnail_letter }}</div>
+                </div>
+                <div class="card-info">
+                    <h3>{{ s.display_title }}</h3>
+                    <p class="card-meta">
+                        {% if s.author %}{{ s.author }} · {% endif %}
+                        {{ s.last_chapter }} chapters
+                    </p>
+                </div>
+            </a>
+        {% endfor %}
+    {% else %}
+        <div class="empty-state">
+            <p>No stories found in your library.</p>
         </div>
-
-        <div class="card-info">
-            <h3>{{ s.display_title }}</h3>
-            <p>{{ s.last_chapter }} chapters</p>
-        </div>
-
-    </a>
-    {% endfor %}
-
+    {% endif %}
 </section>
 
 {% endblock %}

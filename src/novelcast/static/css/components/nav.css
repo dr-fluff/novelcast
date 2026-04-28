@@ -7,6 +7,11 @@
   background: var(--bg);
 }
 
+.library-header a {
+  text-decoration: none;
+  color: inherit;
+}
+
 .library-title h1 {
   margin: 0;
   font-size: 1.6rem;
@@ -49,4 +54,16 @@
 
 .icon-button:hover {
   background: rgba(0,0,0,0.06);
+}
+
+.icon-button i {
+    font-size: 1.1rem;
+}
+
+.library-title i {
+    margin-right: 0.4rem;
+}
+
+button i {
+    margin-right: 0.3rem;
 }

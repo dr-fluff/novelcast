@@ -1,49 +1,69 @@
 {% extends "layouts/base.html" %}
 
-{% block title %}{{ title }} - NovelCast{% endblock %}
+{% block title %}{{ story["title"] }} · NovelCast{% endblock %}
 
 {% block content %}
 
-<div class="subscription-form">
-    <h1>📖 {{ title }}</h1>
-    <p>By: {{ author }}</p>
-    <p>Chapters available: {{ chapters | length }}</p>
+{% include "partials/library_header.html" %}
 
-    <a href="/">← Back to Dashboard</a>
+<section class="story-page">
+    <div class="story-summary">
+        <div class="story-summary-left">
+            <p class="story-label">Story details</p>
+            <h1 class="story-title">{{ story["title"] }}</h1>
+            <p class="story-author">{{ story["author"] or "Unknown author" }}</p>
+            {% if story["source_url"] %}
+                <p class="story-description">Source: <a href="{{ story["source_url"] }}" target="_blank" rel="noreferrer">{{ story["source_url"] }}</a></p>
+            {% else %}
+                <p class="story-description">No source URL available.</p>
+            {% endif %}
+        </div>
 
-    <form action="/story" method="get" class="sort-form">
-        <input type="hidden" name="url" value="{{ url }}" />
+        <div class="story-statistics">
+            <div class="stat-card">
+                <span class="stat-label">Downloaded</span>
+                <strong>{{ story["downloaded_chapters"] or 0 }}</strong>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">Total chapters</span>
+                <strong>{{ story["total_chapters"] or 0 }}</strong>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">Last read</span>
+                <strong>{{ last_read_title or "Not started" }}</strong>
+            </div>
+        </div>
+    </div>
 
-        <label for="sort">Sort chapters by:</label>
-        <select name="sort" id="sort" onchange="this.form.submit()">
-            {% for option in sort_options %}
-                <option value="{{ option.key }}"
-                        {% if option.key == sort %}selected{% endif %}>
-                    {{ option.label }}
-                </option>
-            {% endfor %}
-        </select>
-    </form>
-</div>
+    <section class="chapter-list-card">
+        <div class="chapter-list-header">
+            <div>
+                <h2>Downloaded chapters</h2>
+                <p>{{ chapters | length }} chapters in library</p>
+            </div>
+            <a href="/" class="btn-secondary">← Back to library</a>
+        </div>
 
-<div class="subscriptions">
-    <h2>Chapters</h2>
-
-    <ul class="chapter-list">
-        {% for chapter in chapters %}
-            <li>
-                <a href="/chapter?url={{ url | urlencode }}&chapter={{ chapter | urlencode }}">
-                    {{ chapter }}
-                </a>
-            </li>
-        {% endfor %}
-    </ul>
-</div>
-
-<!-- Notification container -->
-<div id="notification" class="notification">
-    <div id="notification-message"></div>
-    <div id="notification-progress"></div>
-</div>
+        {% if chapters %}
+            <ul class="chapter-list">
+                {% for chapter in chapters %}
+                    <li class="chapter-item {% if chapter["id"] in read_chapters %}chapter-read{% endif %}">
+                        <a href="/chapter?story_id={{ story["id"] }}&chapter_id={{ chapter["id"] }}" class="chapter-link">
+                            <div class="chapter-main">
+                                <span class="chapter-number">Chapter {{ chapter["chapter_number"] }}</span>
+                                <span class="chapter-name">{{ chapter["title"] or "Untitled chapter" }}</span>
+                            </div>
+                            <span class="chapter-status">{% if chapter["id"] in read_chapters %}Read{% else %}Unread{% endif %}</span>
+                        </a>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <div class="empty-state">
+                <p>No downloaded chapters found for this story yet.</p>
+            </div>
+        {% endif %}
+    </section>
+</section>
 
 {% endblock %}

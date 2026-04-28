@@ -1,22 +1,22 @@
 <nav class="chapter-nav desktop-nav">
 
     <a class="nav-button back"
-       href="/story?url={{ url | urlencode }}">
+       href="/story?story_id={{ story_id }}">
         <i class="fa-solid fa-list"></i>
         Chapters
     </a>
 
-    {% if prev_chapter %}
+    {% if prev_chapter_id %}
     <a class="nav-button prev"
-       href="/chapter?url={{ url | urlencode }}&chapter={{ prev_chapter | urlencode }}">
+       href="/chapter?story_id={{ story_id }}&chapter_id={{ prev_chapter_id }}">
         <i class="fa-solid fa-arrow-left"></i>
         Previous
     </a>
     {% endif %}
 
-    {% if next_chapter %}
+    {% if next_chapter_id %}
     <a class="nav-button next"
-       href="/chapter?url={{ url | urlencode }}&chapter={{ next_chapter | urlencode }}">
+       href="/chapter?story_id={{ story_id }}&chapter_id={{ next_chapter_id }}">
         Next
         <i class="fa-solid fa-arrow-right"></i>
     </a>

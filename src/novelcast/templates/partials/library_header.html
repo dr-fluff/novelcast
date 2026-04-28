@@ -2,14 +2,16 @@
 
     <!-- LEFT: BRAND -->
     <div class="library-title">
-        <h1>📚 NovelCast</h1>
+        <a href="/">
+            <h1><i class="fa-solid fa-book"></i> NovelCast</h1>
+        </a>
         <p>Your reading library</p>
     </div>
 
     <!-- CENTER: ACTIONS -->
     <div class="library-actions">
 
-        <!-- ADD STORY (JS HANDLED) -->
+        <!-- ADD STORY -->
         <form class="inline-form" onsubmit="addStory(event)">
             <input
                 id="story-url"
@@ -17,13 +19,15 @@
                 required
                 autocomplete="off"
             />
-            <button type="submit">➕ Add</button>
+            <button type="submit">
+                <i class="fa-solid fa-plus"></i> Add
+            </button>
         </form>
 
         <!-- SYNC ALL -->
         <form action="/api/sync/all" method="post">
             <button type="submit" title="Sync all stories">
-                ⟳ Sync
+                <i class="fa-solid fa-rotate"></i>
             </button>
         </form>
 
@@ -34,20 +38,17 @@
 
         <!-- SETTINGS -->
         <a class="icon-button" href="/settings" title="Settings">
-            ⚙️
+            <i class="fa-solid fa-gear"></i>
         </a>
 
         <!-- USER MENU -->
         <button class="icon-button" onclick="toggleUserMenu()" title="User menu">
-            👤
+            <i class="fa-solid fa-user"></i>
         </button>
 
-        <!-- STATUS INDICATOR -->
+        <!-- STATUS -->
         <div class="status-dot" id="sync-status" title="Idle"></div>
 
     </div>
 
 </header>
-
-<!-- JS IMPORT -->
-<script src="/static/js/library_header.js"></script>
