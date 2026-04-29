@@ -69,11 +69,24 @@ def signup(
         return RedirectResponse("/signup?error=invalid", status_code=303)
 
     user_service = request.app.state.users
+    config_service = getattr(request.app.state, "settings", None)
+
     existing = user_service.get_user(username)
     if existing:
         return RedirectResponse("/signup?error=exists", status_code=303)
 
-    user_service.create_user(username, password)
+    user_count = user_service.count_users()
+    accept_signup = True
+    if config_service:
+        raw_accept = config_service.get_server_setting("users.accept_signup")
+        if raw_accept is not None:
+            accept_signup = raw_accept == "1"
+
+    is_first_user = user_count == 0
+    if not accept_signup and not is_first_user:
+        return RedirectResponse("/signup?error=closed", status_code=303)
+
+    user_service.create_user(username, password, is_root=is_first_user)
     return RedirectResponse("/login?success=created", status_code=303)
 
 

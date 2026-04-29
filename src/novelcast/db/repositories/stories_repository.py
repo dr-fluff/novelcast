@@ -27,13 +27,15 @@ class StoriesRepository:
                 self.update_metadata(existing["id"], title, author)
                 return existing["id"]
 
-        return self.db.execute(
+        story_id = self.db.execute(
             """
-            INSERT OR IGNORE INTO stories (title, author, source_url)
+            INSERT INTO stories (title, author, source_url)
             VALUES (?, ?, ?)
             """,
             (title, author, url),
         )
+
+        return story_id
 
     def update_metadata(self, story_id: int, title: str, author: str | None):
         return self.db.execute(
@@ -65,8 +67,30 @@ class StoriesRepository:
             (total_chapters, downloaded_chapters, latest_downloaded_chapter, latest_online_chapter, online_chapters, story_id),
         )
 
-    def delete(self, story_id: int):
-        return self.db.execute(
-            "DELETE FROM stories WHERE id = ?",
+    def get_chapter_file_paths(self, story_id: int):
+        rows = self.db.fetchall(
+            "SELECT file_path FROM chapters WHERE story_id = ? AND COALESCE(file_path, '') != ''",
             (story_id,),
         )
+        return [row.get("file_path") for row in rows if row.get("file_path")]
+
+    def delete_with_relations(self, story_id: int):
+        with self.db.transaction():
+            self.db.execute("DELETE FROM reading_progress WHERE story_id = ?", (story_id,))
+            self.db.execute("DELETE FROM story_permissions WHERE story_id = ?", (story_id,))
+            self.db.execute("DELETE FROM update_jobs WHERE story_id = ?", (story_id,))
+            self.db.execute("DELETE FROM chapters WHERE story_id = ?", (story_id,))
+            return self.db.execute("DELETE FROM stories WHERE id = ?", (story_id,))
+
+    def delete(self, story_id: int):
+        self.db.execute("DELETE FROM chapters WHERE story_id = ?", (story_id,))
+        return self.db.execute("DELETE FROM stories WHERE id = ?", (story_id,))
+    
+    def get_chapter_numbers(self, story_id: int):
+        return [
+            row["number"]
+            for row in self.db.fetchall(
+                "SELECT number FROM chapters WHERE story_id = ?",
+                (story_id,)
+            )
+        ]

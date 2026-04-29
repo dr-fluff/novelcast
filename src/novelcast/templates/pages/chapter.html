@@ -4,11 +4,15 @@
 
 {% block content %}
 
+<head> 
+    <link rel="stylesheet" href="/static/css/pages/chapter.css" />
+</head>
+
 <!-- PROGRESS BAR -->
 <div id="progress-bar"></div>
 
 <!-- READER UI -->
-<div class="reader-ui">
+<div class="reader-ui" data-story-id="{{ story_id }}" data-first-unread-id="{{ first_unread_chapter_id | default('') }}">
 
     {% include "components/reader_header.html" %}
 
@@ -31,5 +35,11 @@
 </main>
 
 {% include "components/chapter_nav.html" %}
+
+{% block scripts %}
+<script src="/static/js/chapter_page.js" defer></script>
+{% endblock %}
+
+
 
 {% endblock %}

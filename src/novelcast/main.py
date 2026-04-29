@@ -12,5 +12,8 @@ if __name__ == "__main__":
         host=config.host,
         port=config.port,
         reload=config.reload,
+        reload_dirs=["src"],
+        reload_excludes=["*.pyc", "__pycache__/*"],
         log_level=config.log_level,
+        ws="websockets",
     )

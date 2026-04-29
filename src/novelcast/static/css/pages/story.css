@@ -58,6 +58,50 @@
   align-content: start;
 }
 
+.story-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  grid-column: 1 / -1;
+}
+
+.story-action-row .btn-primary,
+.story-action-row .btn-danger {
+  padding: 0.95rem 1.25rem;
+  border-radius: 999px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.story-action-row .btn-primary:hover,
+.story-action-row .btn-danger:hover {
+  transform: translateY(-1px);
+}
+
+.story-action-row .btn-danger {
+  background: #dc2626;
+  color: white;
+}
+
+.story-action-row .btn-danger:hover {
+  background: #b91c1c;
+}
+
+.story-action-row .btn-primary {
+  background: #6366f1;
+  color: white;
+}
+
+.story-action-row .btn-primary:hover {
+  background: #4f46e5;
+}
+
 .stat-card {
   display: grid;
   gap: 0.4rem;

@@ -12,7 +12,7 @@ requires-python = ">=3.11,<3.14"
 dependencies = [
     "fastapi>=0.110,<0.120",
     "starlette<1.0.0",
-    "uvicorn",
+    "uvicorn[standard]",
     "jinja2",
     "python-multipart",
     "pydantic",

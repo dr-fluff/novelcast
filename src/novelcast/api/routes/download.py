@@ -6,7 +6,6 @@ import anyio
 
 router = APIRouter()
 
-
 class AddStoryRequest(BaseModel):
     url: str
 
@@ -20,3 +19,4 @@ async def add_story(request: Request, body: AddStoryRequest):
     )
 
     return {"status": "ok", "result": result}
+

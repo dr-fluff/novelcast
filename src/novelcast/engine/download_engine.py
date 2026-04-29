@@ -1,3 +1,4 @@
+# novelcast/engine/download_engine.py
 import logging
 
 logger = logging.getLogger(__name__)
@@ -5,7 +6,8 @@ logger = logging.getLogger(__name__)
 
 class DownloadEngine:
 
-    def __init__(self, selector, stories_repo, chapters_repo, sync_repo, file_utils):
+    def __init__(self, selector, stories_repo, chapters_repo, sync_repo, file_utils, notifier=None):
+        self.notifier = notifier
         self.selector = selector
         self.stories_repo = stories_repo
         self.chapters_repo = chapters_repo
@@ -50,8 +52,9 @@ class DownloadEngine:
     # CHAPTER STORAGE
     # -------------------------
     def _store_chapters(self, story_id: int, chapters: list):
+        total = len(chapters)
 
-        for ch in chapters:
+        for i, ch in enumerate(chapters, start=1):
             self.chapters_repo.upsert(
                 story_id=story_id,
                 chapter_number=ch["number"],
@@ -59,3 +62,12 @@ class DownloadEngine:
                 url=ch.get("url"),
                 file_path=ch.get("file_path"),
             )
+
+            if self.notifier:
+                self.notifier({
+                    "type": "download_progress",
+                    "download_id": story_id,
+                    "progress": int(i / total * 100),
+                    "current": i,
+                    "total": total,
+                })

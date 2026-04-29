@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from fastapi import APIRouter, Request, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi import APIRouter, Request, HTTPException, Form
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 
 router = APIRouter()
 
@@ -87,6 +87,7 @@ def story(request: Request, story_id: int | None = None):
     last_chapter_id = None
     last_read_title = None
     read_chapters = set()
+    first_unread_chapter_id = None
     user = getattr(request.state, "user", None)
     if user and user.get("id"):
         progress = ctx.progress.get_progress(user["id"], story_id)
@@ -102,6 +103,11 @@ def story(request: Request, story_id: int | None = None):
                     if chapter["id"] <= last_chapter_id
                 }
 
+    for chapter_item in chapters:
+        if chapter_item["id"] not in read_chapters:
+            first_unread_chapter_id = chapter_item["id"]
+            break
+
     return render(
         request,
         "pages/story.html",
@@ -111,6 +117,7 @@ def story(request: Request, story_id: int | None = None):
             "read_chapters": read_chapters,
             "last_chapter_id": last_chapter_id,
             "last_read_title": last_read_title,
+            "first_unread_chapter_id": first_unread_chapter_id,
         },
     )
 
@@ -140,8 +147,25 @@ def chapter(request: Request, story_id: int | None = None, chapter_id: int | Non
     next_chapter_id = chapter_ids[current_index + 1] if current_index is not None and current_index < len(chapter_ids) - 1 else None
 
     user = getattr(request.state, "user", None)
+    last_chapter_id = None
+    read_chapters = set()
     if user and user.get("id"):
+        progress = ctx.progress.get_progress(user["id"], story_id)
+        if progress:
+            last_chapter_id = progress.get("last_chapter_id")
+            if last_chapter_id:
+                read_chapters = {
+                    chapter_item["id"]
+                    for chapter_item in chapters
+                    if chapter_item["id"] <= last_chapter_id
+                }
         ctx.progress.set_progress(user["id"], story_id, chapter_id, 0)
+
+    first_unread_chapter_id = None
+    for chapter_item in chapters:
+        if chapter_item["id"] not in read_chapters:
+            first_unread_chapter_id = chapter_item["id"]
+            break
 
     return render(
         request,
@@ -155,13 +179,76 @@ def chapter(request: Request, story_id: int | None = None, chapter_id: int | Non
             "chapter_id": chapter_id,
             "prev_chapter_id": prev_chapter_id,
             "next_chapter_id": next_chapter_id,
+            "first_unread_chapter_id": first_unread_chapter_id,
         },
     )
 
+@router.get("/favicon.ico")
+def favicon():
+    favicon_path = Path(__file__).resolve().parent.parent / "static" / "images" / "favicon.svg"
+    return FileResponse(favicon_path, media_type="image/svg+xml")
+
+
 @router.get("/settings")
 def settings(request: Request):
+    ctx = request.app.state.ctx
+    user = getattr(request.state, "user", None)
+
+    user_settings = None
+    server_settings = {}
+    users = []
+
+    if user:
+        user_settings = ctx.settings.get_user_settings(user["id"])
+        if user.get("is_root"):
+            server_settings = ctx.settings.get_server_settings()
+            users = ctx.users.get_all_users()
+
     return render(
         request,
         "pages/settings.html",
-        {}
+        {
+            "user": user,
+            "user_settings": user_settings,
+            "server_settings": server_settings,
+            "users": users,
+        }
     )
+
+
+@router.post("/settings")
+def save_settings(
+    request: Request,
+    theme: str = Form(...),
+    font_size: int = Form(...),
+    line_height: float = Form(...),
+    auto_update: int = Form(0),
+    data_file_path: str | None = Form(None),
+    db_file_path: str | None = Form(None),
+    users_accept_signup: int = Form(0),
+    misc_mode: str | None = Form(None),
+):
+    ctx = request.app.state.ctx
+    user = getattr(request.state, "user", None)
+
+    if not user:
+        raise HTTPException(status_code=403, detail="Authentication required")
+
+    ctx.settings.save_user_settings(
+        user["id"],
+        theme,
+        font_size,
+        line_height,
+        auto_update,
+    )
+
+    if user.get("is_root"):
+        if data_file_path is not None:
+            ctx.settings.set_server_setting("library.data_path", data_file_path)
+        if db_file_path is not None:
+            ctx.settings.set_server_setting("library.db_path", db_file_path)
+        ctx.settings.set_server_setting("users.accept_signup", str(int(bool(users_accept_signup))))
+        if misc_mode is not None:
+            ctx.settings.set_server_setting("misc.mode", misc_mode)
+
+    return RedirectResponse("/settings?success=1", status_code=303)

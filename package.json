@@ -2,22 +2,19 @@
   "name": "novelcast",
   "version": "1.0.0",
   "description": "podcast like app for web-series",
-  "main": "index.js",
+  "type": "commonjs",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "predev": "npx kill-port 8001 3000",
+    "backend": "uv run python -m novelcast.main",
+    "frontend": "browser-sync start --config bs-config.js",
+    "dev": "concurrently -k -n BACKEND,FRONTEND -c auto \"npm run backend\" \"npm run frontend\"",
     "format": "prettier --write ."
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/dr-fluff/novelcast.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
-  "bugs": {
-    "url": "https://github.com/dr-fluff/novelcast/issues"
-  },
-  "homepage": "https://github.com/dr-fluff/novelcast#readme",
-  "devDependencies": {}
+  "devDependencies": {
+    "browser-sync": "^3.0.4",
+    "concurrently": "^9.2.1",
+    "dotenv": "^16.4.5",
+    "kill-port": "^2.0.1",
+    "prettier": "^3.2.5"
+  }
 }

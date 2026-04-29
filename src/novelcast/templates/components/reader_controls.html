@@ -1,7 +1,28 @@
 <div class="reader-controls">
-    <button onclick="changeFont(-1)">A-</button>
-    <button onclick="changeFont(1)">A+</button>
-    <button onclick="setTheme('light')">☀</button>
-    <button onclick="setTheme('dark')">🌙</button>
-    <button onclick="setTheme('sepia')">📖</button>
+    <button onclick="changeFont(-1)">
+        <i class="fa-solid fa-minus"></i>
+    </button>
+
+    <button onclick="changeFont(1)">
+        <i class="fa-solid fa-plus"></i>
+    </button>
+
+    <button onclick="setTheme('light')">
+        <i class="fa-regular fa-sun"></i>
+    </button>
+
+    <button onclick="setTheme('dark')">
+        <i class="fa-regular fa-moon"></i>
+    </button>
+
+    <button onclick="setTheme('sepia')">
+        <i class="fa-solid fa-book"></i>
+    </button>
+
+    {% if first_unread_chapter_id and first_unread_chapter_id != chapter_id %}
+    <button class="btn-primary" onclick="goToFirstUnread()">
+        <i class="fa-solid fa-forward-step"></i>
+        Read
+    </button>
+    {% endif %}
 </div>

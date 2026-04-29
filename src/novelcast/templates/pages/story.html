@@ -6,7 +6,11 @@
 
 {% include "partials/library_header.html" %}
 
-<section class="story-page">
+<head> 
+    <link rel="stylesheet" href="/static/css/pages/story.css" />
+</head>
+
+<section class="story-page" data-story-id="{{ story["id"] }}" data-first-unread-id="{{ first_unread_chapter_id | default('') }}">
     <div class="story-summary">
         <div class="story-summary-left">
             <p class="story-label">Story details</p>
@@ -32,6 +36,13 @@
                 <span class="stat-label">Last read</span>
                 <strong>{{ last_read_title or "Not started" }}</strong>
             </div>
+        </div>
+
+        <div class="story-action-row">
+            {% if first_unread_chapter_id %}
+                <button class="btn-primary" onclick="goToFirstUnread()">Read</button>
+            {% endif %}
+            <button class="btn-danger" onclick="confirmDeleteStory()">Delete</button>
         </div>
     </div>
 
@@ -65,5 +76,9 @@
         {% endif %}
     </section>
 </section>
+
+{% block scripts %}
+<script src="/static/js/story_page.js" defer></script>
+{% endblock %}
 
 {% endblock %}

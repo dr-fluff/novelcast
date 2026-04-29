@@ -9,6 +9,7 @@ from novelcast.db.repositories.files_repository import FilesRepository
 from novelcast.db.repositories.chapters_repository import ChaptersRepository
 from novelcast.db.repositories.progress_repository import ProgressRepository
 from novelcast.db.repositories.sync_repository import SyncRepository
+from novelcast.db.repositories.settings_repository import SettingsRepository
 
 from novelcast.services.story_service import StoryService
 from novelcast.services.user_service import UserService
@@ -18,6 +19,7 @@ from novelcast.services.page_service import PageService
 from novelcast.services.chapters_service import ChaptersService
 from novelcast.services.progress_service import ProgressService
 from novelcast.services.story_download_service import StoryDownloadService
+from novelcast.services.settings_service import SettingsService
 
 from novelcast.engine.fanficfare_engine import FanFicFareEngine
 from novelcast.engine.engine_selector import EngineSelector
@@ -80,6 +82,7 @@ class AppContext:
             self.chapters_repo = ChaptersRepository(self.db)
             self.progress_repo = ProgressRepository(self.qm)
             self.sync_repo = SyncRepository(self.chapters_repo)
+            self.settings_repo = SettingsRepository(self.db, self.qm)
         except Exception as e:
             logger.exception("Repository initialization failed")
             raise RuntimeError("Repository layer failed") from e
@@ -97,6 +100,7 @@ class AppContext:
             self.pages = PageService(self.stories_repo)
             self.chapters = ChaptersService(self.chapters_repo)
             self.progress = ProgressService(self.progress_repo)
+            self.settings = SettingsService(self.settings_repo)
         except Exception as e:
             logger.exception("Service initialization failed")
             raise RuntimeError("Service layer failed") from e

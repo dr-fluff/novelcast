@@ -11,5 +11,8 @@ VALUES (?, ?, ?);
 -- name: list
 SELECT * FROM users;
 
+-- name: set_root
+UPDATE users SET is_root = 1 WHERE id = ?;
+
 -- name: delete
 DELETE FROM users WHERE id = ?;

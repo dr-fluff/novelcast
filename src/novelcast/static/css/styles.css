@@ -178,8 +178,9 @@ i {
 }
 
 .reader-controls button {
-  width: 3rem;
+  min-width: 3rem;
   height: 3rem;
+  padding: 0 0.8rem;
 
   border-radius: 0.8rem;
   border: none;
@@ -191,6 +192,24 @@ i {
 
   font-weight: bold;
   cursor: pointer;
+}
+
+.reader-controls button.btn-primary {
+  background: #6366f1;
+  color: white;
+}
+
+.reader-controls button.btn-primary:hover {
+  background: #4f46e5;
+}
+
+.reader-controls button.btn-danger {
+  background: #dc2626;
+  color: white;
+}
+
+.reader-controls button.btn-danger:hover {
+  background: #b91c1c;
 }
 
 /* =========================

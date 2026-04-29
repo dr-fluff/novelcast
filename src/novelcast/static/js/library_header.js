@@ -9,7 +9,7 @@ window.addStory = async function (event) {
     setStatus("adding");
 
     try {
-        const res = await fetch("/download/story", {
+        const res = await fetch("/api/download/story", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
@@ -21,14 +21,28 @@ window.addStory = async function (event) {
             const err = await res.text();
             console.error("Download failed:", err);
             setStatus("error");
+            if (typeof showNotification === "function") {
+                showNotification(`Download failed: ${err}`, "error", 8000);
+            }
             return;
         }
 
         const data = await res.json();
         console.log("Story added:", data);
 
+        if (data.status !== "ok") {
+            setStatus("error");
+            if (typeof showNotification === "function") {
+                showNotification(`Download failed: ${data.error || "Unexpected response"}`, "error", 8000);
+            }
+            return;
+        }
+
         input.value = "";
         setStatus("done");
+        if (typeof showNotification === "function") {
+            showNotification("Story download started. Notifications will appear shortly.", "success", 5000);
+        }
 
     } catch (err) {
         console.error(err);
@@ -61,5 +75,29 @@ window.setStatus = function (state) {
 
 window.toggleUserMenu = function () {
     console.log("User menu toggle");
+};
+
+window.startSync = async function () {
+    try {
+        const res = await fetch("/api/sync/all", {
+            method: "POST",
+        });
+
+        const data = await res.json();
+        console.log("Sync started:", data);
+
+        window.showSyncStatus("Sync running...");
+    } catch (error) {
+        console.error("Sync failed:", error);
+        window.showSyncStatus("Sync failed");
+    }
+};
+
+window.showSyncStatus = function (status) {
+    const dot = document.getElementById("sync-status");
+    if (!dot) return;
+
+    dot.style.background = status === "Sync failed" ? "red" : "orange";
+    dot.title = status;
 };
 

@@ -3,6 +3,11 @@
 {% block title %}Settings - NovelCast{% endblock %}
 
 {% block content %}
+<head>
+    <link rel="stylesheet" href="/static/css/pages/settings.css" />
+</head>
+
+{% include "partials/library_header.html" %}
 
 <div class="settings-layout">
 
@@ -12,9 +17,14 @@
         <h2>Settings</h2>
 
         <nav>
-            <a href="#general" class="active">General</a>
+            <a href="#user">User</a>
             <a href="#reader">Reader</a>
             <a href="#appearance">Appearance</a>
+            {% if user and user.is_root %}
+                <a href="#library">Library</a>
+                <a href="#users">Users</a>
+                <a href="#misc">Misc</a>
+            {% endif %}
         </nav>
 
     </aside>
@@ -22,54 +32,128 @@
     <!-- CONTENT -->
     <main class="settings-content">
 
-        <!-- GENERAL -->
-        <section id="general" class="settings-section">
-            <h3>General</h3>
+        {% if request.query_params.get('success') %}
+            <div class="notification success">Settings saved successfully.</div>
+        {% endif %}
 
-            <div class="settings-card">
-                <label>Default sort</label>
-                <select>
-                    <option>Title</option>
-                    <option>Last chapter</option>
-                </select>
+        <form method="post" action="/settings">
+
+            <!-- USER -->
+            <section id="user" class="settings-section">
+                <h3>User settings</h3>
+
+                <div class="settings-card">
+                    <label for="theme">Theme</label>
+                    <select id="theme" name="theme">
+                        <option value="light" {% if user_settings.theme == 'light' %}selected{% endif %}>Light</option>
+                        <option value="dark" {% if user_settings.theme == 'dark' %}selected{% endif %}>Dark</option>
+                        <option value="sepia" {% if user_settings.theme == 'sepia' %}selected{% endif %}>Sepia</option>
+                    </select>
+                </div>
+
+                <div class="settings-card">
+                    <label for="font_size">Font size</label>
+                    <input id="font_size" type="number" name="font_size" min="12" max="32" value="{{ user_settings.font_size }}" />
+                </div>
+
+                <div class="settings-card">
+                    <label for="line_height">Line height</label>
+                    <input id="line_height" type="number" step="0.1" min="1" max="2" name="line_height" value="{{ user_settings.line_height }}" />
+                </div>
+
+                <div class="settings-card checkbox-card">
+                    <label>
+                        <input type="checkbox" name="auto_update" value="1" {% if user_settings.auto_update %}checked{% endif %} />
+                        Auto update library data
+                    </label>
+                </div>
+            </section>
+
+            <!-- READER -->
+            <section id="reader" class="settings-section">
+                <h3>Reader settings</h3>
+
+                <div class="settings-card">
+                    <p>Customize your reading experience.</p>
+                    <small>These settings apply only to your account.</small>
+                </div>
+            </section>
+
+            <!-- APPEARANCE -->
+            <section id="appearance" class="settings-section">
+                <h3>Appearance</h3>
+
+                <div class="settings-card">
+                    <label for="misc_mode">Server mode</label>
+                    <select id="misc_mode" name="misc_mode">
+                        <option value="default" {% if server_settings.get('misc.mode') == 'default' %}selected{% endif %}>Default</option>
+                        <option value="compact" {% if server_settings.get('misc.mode') == 'compact' %}selected{% endif %}>Compact</option>
+                    </select>
+                </div>
+            </section>
+
+            {% if user and user.is_root %}
+                <!-- LIBRARY -->
+                <section id="library" class="settings-section">
+                    <h3>Library</h3>
+
+                    <div class="settings-card">
+                        <label for="data_file_path">Data file path</label>
+                        <input id="data_file_path" name="data_file_path" type="text" value="{{ server_settings.get('library.data_path', 'data') }}" />
+                    </div>
+
+                    <div class="settings-card">
+                        <label for="db_file_path">Database file path</label>
+                        <input id="db_file_path" name="db_file_path" type="text" value="{{ server_settings.get('library.db_path', 'data/novelcast.db') }}" />
+                    </div>
+                </section>
+
+                <!-- USERS -->
+                <section id="users" class="settings-section">
+                    <h3>Users</h3>
+
+                    <div class="settings-card checkbox-card">
+                        <label>
+                            <input type="checkbox" name="users_accept_signup" value="1" {% if server_settings.get('users.accept_signup', '1') == '1' %}checked{% endif %} />
+                            Accept signup requests automatically
+                        </label>
+                        <p class="hint">When disabled, only the first user or an existing admin can create new users.</p>
+                    </div>
+
+                    <div class="settings-card">
+                        <h4>Accounts</h4>
+                        <ul class="user-list">
+                            {% for account in users %}
+                                <li>
+                                    <span>{{ account.username }}</span>
+                                    {% if account.is_root %}
+                                        <strong class="badge">Admin</strong>
+                                    {% else %}
+                                        <form method="post" action="/admin/users/{{ account.id }}/promote" class="inline-form">
+                                            <button type="submit">Make admin</button>
+                                        </form>
+                                    {% endif %}
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </section>
+
+                <!-- MISC -->
+                <section id="misc" class="settings-section">
+                    <h3>Misc</h3>
+
+                    <div class="settings-card">
+                        <label>Server mode</label>
+                        <p>{{ server_settings.get('misc.mode', 'default') }}</p>
+                    </div>
+                </section>
+            {% endif %}
+
+            <div class="settings-actions">
+                <button type="submit" class="primary">Save settings</button>
             </div>
-
-            <div class="settings-card">
-                <label>Auto update subscriptions</label>
-                <input type="checkbox" />
-            </div>
-        </section>
-
-        <!-- READER -->
-        <section id="reader" class="settings-section">
-            <h3>Reader</h3>
-
-            <div class="settings-card">
-                <label>Default font size</label>
-                <input type="range" min="12" max="24" />
-            </div>
-
-            <div class="settings-card">
-                <label>Progress sync</label>
-                <input type="checkbox" />
-            </div>
-        </section>
-
-        <!-- APPEARANCE -->
-        <section id="appearance" class="settings-section">
-            <h3>Appearance</h3>
-
-            <div class="settings-card">
-                <label>Theme</label>
-
-                <select onchange="setTheme(this.value)">
-                    <option value="light">Light</option>
-                    <option value="dark">Dark</option>
-                    <option value="sepia">Sepia</option>
-                </select>
-            </div>
-
-        </section>
+        </form>
 
     </main>
 

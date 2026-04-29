@@ -45,7 +45,8 @@ class ChaptersRepository:
             (story_id,),
         )
         return {r[0] for r in rows}
-
+    def get_numbers(self, story_id: int):
+        return self.get_all_numbers(story_id)
     def list_downloaded_by_story(self, story_id: int):
         return self.db.fetchall(
             "SELECT * FROM chapters WHERE story_id = ? AND is_downloaded = 1 ORDER BY chapter_number",

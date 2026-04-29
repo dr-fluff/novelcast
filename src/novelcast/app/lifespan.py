@@ -4,71 +4,53 @@ from fastapi import FastAPI
 
 from novelcast.core.context import AppContext
 from novelcast.core.config import AppConfig
-from novelcast.services.user_service import UserService
-from novelcast.services.auth_service import AuthService
+
+from novelcast.api.ws.notifications import manager as ws_manager
 
 logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    config = None
     ctx = None
 
     try:
-        # -------------------------
-        # CONFIG + CORE CONTEXT
-        # -------------------------
         config = AppConfig()
         ctx = AppContext()
 
-        logger.info(
-            "Initializing application context",
-            extra={"extra_data": {"env": config.env}},
-        )
-
-        # -------------------------
-        # SERVICES
-        # -------------------------
-        user_service = ctx.users
-        auth_service = ctx.auth
-
-        # -------------------------
-        # APP STATE REGISTRATION
-        # -------------------------
-        app.state.ctx = ctx
-        app.state.db = ctx.db
-        app.state.qm = ctx.qm
-
-        app.state.users = user_service
-        app.state.auth = auth_service
-        app.state.config = config
-
-        # -------------------------
-        # CONFIG LOGGING (NO PRINT)
-        # -------------------------
-        logger.info(
-            "Application configuration loaded",
+        logger.debug(
+            "Application starting",
             extra={
                 "extra_data": {
-                    k: v for k, v in config.model_dump().items()
+                    "env": config.env,
                 }
             },
         )
+
+        app.state.ws_manager = ws_manager
+        ctx.story_download.ws_manager = ws_manager
+
+        app.state.ctx = ctx
+        app.state.db = ctx.db
+        app.state.qm = ctx.qm
+        app.state.users = ctx.users
+        app.state.auth = ctx.auth
+        app.state.settings = ctx.settings
+        app.state.config = config
 
         logger.info("Application startup complete")
 
         yield
 
     except Exception:
-        logger.exception("Fatal error during application startup")
+        logger.exception("Application failed to start")
         raise
 
     finally:
         try:
             if ctx and ctx.db:
                 ctx.db.close()
-                logger.info("Database connection closed cleanly")
+                logger.info("Database connection closed")
 
         except Exception:
-            logger.exception("Error while closing database connection")
+            logger.exception("Error during shutdown cleanup")

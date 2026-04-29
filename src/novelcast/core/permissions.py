@@ -26,13 +26,13 @@ class PermissionManager:
 
         user = self.qm.fetchone("users.get_by_id", (user_id,))
 
-        if user and user["role"] == "admin":
+        if user and user.get("is_root"):
             return True
 
         return bool(user_groups & file_groups)
 
 
 def require_admin(user=Depends(require_user)):
-    if user["role"] != "admin":
+    if not user or not user.get("is_root"):
         raise HTTPException(status_code=403, detail="Admins only")
     return user
