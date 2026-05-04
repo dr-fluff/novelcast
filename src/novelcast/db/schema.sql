@@ -105,3 +105,23 @@ CREATE TABLE IF NOT EXISTS update_jobs (
     next_run TEXT,
     error TEXT
 );
+
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    token TEXT UNIQUE NOT NULL,
+    expires_at TEXT NOT NULL,
+    used INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+/* -- DEFAULT SERVER SETTINGS (IDEMPOTENT)
+INSERT OR IGNORE INTO server_settings (key, value) VALUES
+('fanficfare.config_path', './config/fanficfare.ini'),
+('fanficfare.defaults.output_format', 'epub'),
+('fanficfare.defaults.include_images', 'true'),
+('fanficfare.defaults.is_adult', 'true'),
+('fanficfare.defaults.language', 'en'),
+('fanficfare.defaults.timeout', '60'),
+('fanficfare.defaults.retries', '3');
+ */

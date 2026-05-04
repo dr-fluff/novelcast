@@ -1,14 +1,25 @@
 # novelcast/main.py
-from novelcast.app.factory import create_app
-from novelcast.core.config import AppConfig
+
 import uvicorn
 
-config = AppConfig()
-app = create_app(config)
+from novelcast.app.factory import create_app
+from novelcast.core.config import AppConfig
+
+
+def get_app():
+    config = AppConfig()
+    return create_app(config)
+
+
+# This is what ASGI servers (uvicorn, gunicorn) will use
+app = get_app()
+
 
 if __name__ == "__main__":
+    config = AppConfig()
+
     uvicorn.run(
-        "novelcast.main:app",
+        "novelcast.main:app",  # string form required for reload
         host=config.host,
         port=config.port,
         reload=config.reload,

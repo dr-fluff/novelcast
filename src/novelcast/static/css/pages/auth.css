@@ -91,3 +91,25 @@
   color: #a7f3d0;
   border: 1px solid rgba(52, 211, 153, 0.24);
 }
+
+.auth-subtitle {
+  color: #94a3b8;
+  margin-bottom: 1.25rem;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.auth-links {
+  margin-top: 1rem;
+  text-align: center;
+}
+
+.auth-links a {
+  color: #93c5fd;
+  font-size: 0.9rem;
+  text-decoration: none;
+}
+
+.auth-links a:hover {
+  text-decoration: underline;
+}

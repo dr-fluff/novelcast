@@ -6,9 +6,9 @@
 
 {% include "partials/library_header.html" %}
 
-<head> 
+{% block head %}
     <link rel="stylesheet" href="/static/css/pages/story.css" />
-</head>
+{% endblock %}
 
 <section class="story-page" data-story-id="{{ story["id"] }}" data-first-unread-id="{{ first_unread_chapter_id | default('') }}">
     <div class="story-summary">

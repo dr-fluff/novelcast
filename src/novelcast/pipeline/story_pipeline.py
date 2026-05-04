@@ -115,3 +115,34 @@ class StoryPipeline:
             new_chapter_numbers.append(ch["number"])
 
         return new_chapter_numbers
+    
+    def _persist_cover(self, base_dir: Path, story: dict) -> str | None:
+        cover_bytes = story.get("cover_image")
+        cover_url = story.get("cover_url")
+
+        if not cover_bytes and not cover_url:
+            return None
+
+        cover_path = base_dir / "cover.jpg"
+
+        # Case 1: raw image bytes (most common with parsers)
+        if cover_bytes:
+            with open(cover_path, "wb") as f:
+                f.write(cover_bytes)
+            return str(cover_path)
+
+        # Case 2: download from URL
+        if cover_url:
+            try:
+                import requests
+                resp = requests.get(cover_url, timeout=10)
+                resp.raise_for_status()
+
+                with open(cover_path, "wb") as f:
+                    f.write(resp.content)
+
+                return str(cover_path)
+            except Exception:
+                return None
+
+        return None

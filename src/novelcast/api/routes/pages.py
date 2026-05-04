@@ -1,4 +1,6 @@
+# novelcast/api/routes/pages.py
 from pathlib import Path
+from urllib.parse import quote
 
 from fastapi import APIRouter, Request, HTTPException, Form
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
@@ -47,8 +49,11 @@ def home(request: Request):
         title = s.get("title") or "Untitled"
         cover_path = s.get("cover_path")
         cover_url = None
-        if cover_path and (cover_path.startswith("http://") or cover_path.startswith("https://") or cover_path.startswith("/static/")):
+        
+        if cover_path.startswith(("http://", "https://", "/static/")):
             cover_url = cover_path
+        elif cover_path:
+            cover_url = f"/covers?path={quote(cover_path)}"
 
         cards.append({
             "id": s.get("id"),
@@ -183,7 +188,7 @@ def chapter(request: Request, story_id: int | None = None, chapter_id: int | Non
         },
     )
 
-@router.get("/favicon.ico")
+@router.get("/favicon.svg")
 def favicon():
     favicon_path = Path(__file__).resolve().parent.parent / "static" / "images" / "favicon.svg"
     return FileResponse(favicon_path, media_type="image/svg+xml")
@@ -252,3 +257,13 @@ def save_settings(
             ctx.settings.set_server_setting("misc.mode", misc_mode)
 
     return RedirectResponse("/settings?success=1", status_code=303)
+
+
+@router.get("/covers")
+def get_cover(path: str):
+    file_path = Path(path)
+
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Cover not found")
+
+    return FileResponse(file_path)

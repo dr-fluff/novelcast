@@ -14,11 +14,13 @@ class EpubParser(BaseParser):
     def parse(self, data: dict) -> Story:
         epub_path = Path(data["file_path"])
         chapters = self.extract(epub_path)
+        cover = self._extract_cover(epub_path)
 
         return {
             "title": data.get("title", "Unknown"),
             "author": data.get("author"),
-            "chapters": chapters
+            "chapters": chapters,
+            "cover_image": cover
         }
 
     def extract(self, epub_path: Path):
@@ -53,6 +55,36 @@ class EpubParser(BaseParser):
 
             return chapters
 
+    def _extract_cover(self, epub_path: Path) -> bytes | None:
+        try:
+            with ZipFile(epub_path, "r") as epub:
+                # First try: explicit cover id in OPF (best way)
+                rootfile_path = self._find_rootfile_path(epub)
+                package_data = epub.read(rootfile_path)
+                root = ET.fromstring(package_data)
+
+                cover_id = None
+                for meta in root.iter():
+                    if meta.tag.endswith("meta") and meta.attrib.get("name") == "cover":
+                        cover_id = meta.attrib.get("content")
+
+                if cover_id:
+                    for item in root.iter():
+                        if item.tag.endswith("item") and item.attrib.get("id") == cover_id:
+                            href = item.attrib.get("href")
+                            if href:
+                                base = Path(rootfile_path).parent
+                                return epub.read((base / href).as_posix())
+
+                # Fallback: brute-force search
+                for name in epub.namelist():
+                    if "cover" in name.lower() and name.lower().endswith((".jpg", ".jpeg", ".png")):
+                        return epub.read(name)
+        except Exception:
+            return None
+
+        return None
+    
     def _find_rootfile_path(self, epub: ZipFile) -> str:
         try:
             container_data = epub.read("META-INF/container.xml")

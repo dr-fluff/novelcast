@@ -11,6 +11,7 @@ from novelcast.db.repositories.progress_repository import ProgressRepository
 from novelcast.db.repositories.sync_repository import SyncRepository
 from novelcast.db.repositories.settings_repository import SettingsRepository
 
+from novelcast.services.fanficfare_config_service import FanFicFareConfigService
 from novelcast.services.story_service import StoryService
 from novelcast.services.user_service import UserService
 from novelcast.services.auth_service import AuthService
@@ -101,6 +102,9 @@ class AppContext:
             self.chapters = ChaptersService(self.chapters_repo)
             self.progress = ProgressService(self.progress_repo)
             self.settings = SettingsService(self.settings_repo)
+            
+            self.fanficfare_config = FanFicFareConfigService(self.settings_repo)
+            
         except Exception as e:
             logger.exception("Service initialization failed")
             raise RuntimeError("Service layer failed") from e
@@ -122,7 +126,7 @@ class AppContext:
     def _init_engine(self):
         try:
             logger.info("Initializing engine layer...")
-            self.fanficfare_engine = FanFicFareEngine()
+            self.fanficfare_engine = FanFicFareEngine(self.settings_repo, self.fanficfare_config)
 
             self.engine_selector = EngineSelector(
                 fanficfare_engine=self.fanficfare_engine

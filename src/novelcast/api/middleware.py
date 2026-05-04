@@ -1,35 +1,20 @@
-# api/middleware.py
+# novelcast/api/middleware.py
 
 import uuid
 import logging
-import traceback
 from http.cookies import SimpleCookie
 
-from fastapi.responses import RedirectResponse, JSONResponse
+from starlette.responses import RedirectResponse, JSONResponse
 
 from novelcast.auth.session import decode_session_token
 from novelcast.core.logging import request_id_ctx
 
 logger = logging.getLogger(__name__)
 
-class DebugMiddleware:
-    def __init__(self, app):
-        self.app = app
 
-    async def __call__(self, scope, receive, send):
-        if scope["type"] != "http":
-            return await self.app(scope, receive, send)
-
-        logger.debug("➡️ ENTER REQUEST %s", scope.get("path"))
-
-        async def wrapped_receive():
-            message = await receive()
-            logger.debug("📥 RECEIVE: %s", message.get("type"))
-            return message
-
-        return await self.app(scope, wrapped_receive, send)
-
-
+# ─────────────────────────────
+# REQUEST ID MIDDLEWARE
+# ─────────────────────────────
 class RequestIDMiddleware:
     def __init__(self, app):
         self.app = app
@@ -60,47 +45,18 @@ class RequestIDMiddleware:
             request_id_ctx.reset(token)
 
 
-class ExceptionMiddleware:
-    def __init__(self, app, debug: bool = False):
-        self.app = app
-        self.debug = debug
-
-    async def __call__(self, scope, receive, send):
-        if scope["type"] != "http":
-            return await self.app(scope, receive, send)
-
-        try:
-            return await self.app(scope, receive, send)
-
-        except Exception as exc:
-            request_id = None
-
-            try:
-                headers = dict(scope.get("headers", []))
-                request_id = headers.get(b"x-request-id", b"").decode()
-            except Exception:
-                pass
-
-            logger.exception(
-                "Unhandled exception in request pipeline",
-                extra={
-                    "request_id": request_id,
-                    "path": scope.get("path"),
-                },
-            )
-
-            body = {"detail": "Internal Server Error"}
-
-            if self.debug:
-                body["error"] = str(exc)
-                body["trace"] = traceback.format_exc()
-
-            response = JSONResponse(status_code=500, content=body)
-            return await response(scope, receive, send)
-
-
+# ─────────────────────────────
+# AUTH MIDDLEWARE
+# ─────────────────────────────
 class AuthMiddleware:
-    PUBLIC_PATHS = {"/login", "/signup", "/logout", "/favicon.ico"}
+    PUBLIC_PATHS = {
+        "/login",
+        "/signup",
+        "/logout",
+        "/forgot-password",
+        "/reset-password",
+        "/favicon.svg",
+    }
 
     def __init__(self, app):
         self.app = app
@@ -111,7 +67,7 @@ class AuthMiddleware:
 
         path = scope.get("path", "")
 
-        headers = dict(scope["headers"])
+        headers = dict(scope.get("headers", []))
         cookie_header = headers.get(b"cookie", b"").decode()
 
         cookie = SimpleCookie()
@@ -129,32 +85,39 @@ class AuthMiddleware:
                     user = auth_service.get_user_by_id(user_id)
 
         except Exception:
-            logger.exception(
-                "Authentication error during session validation",
-                extra={"path": path},
-            )
-            return JSONResponse(
+            logger.exception("Auth error during session validation")
+
+            response = JSONResponse(
                 status_code=500,
                 content={"detail": "Authentication service error"},
             )
+            return await response(scope, receive, send)
 
         scope.setdefault("state", {})
         scope["state"]["user"] = user
 
-        # Redirect authenticated users away from auth pages
+        # logged-in users should not see auth pages
         if user and path in self.PUBLIC_PATHS:
-            return RedirectResponse("/", status_code=303)
+            response = RedirectResponse("/", status_code=303)
+            return await response(scope, receive, send)
 
-        # Redirect unauthenticated users to login
+        # protect private routes
         if (
             not user
             and path not in self.PUBLIC_PATHS
             and not path.startswith("/static")
+            and not path.startswith("/api")
+            and not path.startswith("/ws")
         ):
-            return RedirectResponse("/login", status_code=303)
+            response = RedirectResponse("/signup", status_code=303)
+            return await response(scope, receive, send)
 
         return await self.app(scope, receive, send)
 
+
+# ─────────────────────────────
+# PERMISSION MIDDLEWARE
+# ─────────────────────────────
 class PermissionMiddleware:
     def __init__(self, app):
         self.app = app
@@ -165,7 +128,7 @@ class PermissionMiddleware:
 
         user = scope.get("state", {}).get("user")
 
-        if user and getattr(user, "is_active", True) is False:
+        if user and user.get("is_active") is False:
             response = JSONResponse(
                 status_code=403,
                 content={"detail": "User is inactive"},

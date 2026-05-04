@@ -2,31 +2,44 @@
 
 {% block title %}Login{% endblock %}
 
-<head> 
-    <link rel="stylesheet" href="/static/css/pages/auth.css" />
-</head>
+{% block head %}
+<link rel="stylesheet" href="/static/css/pages/auth.css" />
+{% endblock %}
 
 {% block content %}
-    <section class="login-page">
-        <div class="login-card">
-            <h1 class="login-title">Welcome Back</h1>
-            {% if error == 'invalid' %}
-                <div class="alert alert-error">Incorrect username or password.</div>
-            {% elif success == 'created' %}
-                <div class="alert alert-success">Account created successfully. Please log in.</div>
-            {% endif %}
-            <form class="login-form" action="/login" method="post">
-                <div class="form-group">
-                    <label for="username">Username</label>
-                    <input type="text" id="username" name="username" required>
-                </div>
-                <div class="form-group">
-                    <label for="password">Password</label>
-                    <input type="password" id="password" name="password" required>
-                </div>
-                <button type="submit" class="btn-primary">Login</button>
-            </form>
-            <p class="auth-footer">New here? <a href="/signup">Create an account</a>.</p>
-        </div>
-    </section>
+<section class="login-page">
+    <div class="login-card">
+        <h1 class="login-title">Welcome Back</h1>
+
+        {% if error == 'invalid' %}
+            <div class="alert alert-error">Incorrect username or password.</div>
+        {% elif success == 'created' %}
+            <div class="alert alert-success">Account created successfully. Please log in.</div>
+        {% elif success == 'reset_sent' %}
+            <div class="alert alert-success">If the user exists, a reset link has been sent.</div>
+        {% endif %}
+
+        <form class="login-form" action="/login" method="post">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+
+            <button type="submit" class="btn-primary">Login</button>
+        </form>
+
+        <p class="auth-footer">
+            Forgot password? <a href="/forgot-password">Request password reset</a>
+        </p>
+
+        <p class="auth-footer">
+            New here? <a href="/signup">Create an account</a>.
+        </p>
+    </div>
+</section>
 {% endblock %}

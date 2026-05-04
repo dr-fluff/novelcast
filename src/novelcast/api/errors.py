@@ -1,11 +1,13 @@
 # novelcast/api/errors.py
+
 import logging
 from fastapi import Request, FastAPI
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 logger = logging.getLogger(__name__)
+
 
 def wants_json(request: Request) -> bool:
     accept = request.headers.get("accept", "").lower()
@@ -38,10 +40,8 @@ def render_html_error(request: Request, status_code: int, message: str):
         logger.error(
             "Templates not configured",
             extra={
-                "extra_data": {
-                    "path": request.url.path,
-                    "method": request.method,
-                }
+                "path": request.url.path,
+                "method": request.method,
             },
         )
         return render_json_error(status_code, message)
@@ -64,14 +64,15 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
     logger.warning(
         "HTTP exception",
         extra={
-            "extra_data": {
-                "status_code": exc.status_code,
-                "message": message,
-                "path": request.url.path,
-                "method": request.method,
-            }
+            "status_code": exc.status_code,
+            "message": message,
+            "path": request.url.path,
+            "method": request.method,
         },
     )
+
+    if exc.status_code in (401, 403) and not wants_json(request):
+        return RedirectResponse("/login", status_code=303)
 
     if wants_json(request):
         return render_json_error(exc.status_code, message)
@@ -83,10 +84,8 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
     logger.exception(
         "Unhandled exception occurred",
         extra={
-            "extra_data": {
-                "path": request.url.path,
-                "method": request.method,
-            }
+            "path": request.url.path,
+            "method": request.method,
         },
     )
 

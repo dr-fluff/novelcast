@@ -4,6 +4,10 @@ import time
 from pathlib import Path
 from contextlib import contextmanager
 
+from PIL.ImageFont import core
+
+from novelcast.core import defaults
+
 logger = logging.getLogger(__name__)
 
 
@@ -32,6 +36,8 @@ class Database:
 
         self.conn.executescript(sql)
         self.conn.commit()
+        
+        self.seed_defaults()
     
     # -------------------------
     # WAL MODE
@@ -134,3 +140,27 @@ class Database:
     # -------------------------
     def close(self):
         self.conn.close()
+        
+    def seed_defaults(self):
+        def serialize(value):
+            if isinstance(value, bool):
+                return "true" if value else "false"
+            if isinstance(value, list):
+                return ",".join(map(str, value))
+            return str(value)
+
+        def flatten(prefix, d):
+            for key, value in d.items():
+                new_key = f"{prefix}.{key}" if prefix else key
+                if isinstance(value, dict):
+                    yield from flatten(new_key, value)
+                else:
+                    yield (new_key, serialize(value))
+
+        pairs = list(flatten("", defaults.DEFAULT_SETTINGS))
+
+        self.executemany(
+            "INSERT OR IGNORE INTO server_settings (key, value) VALUES (?, ?)",
+            pairs
+        )
+        self.conn.commit()
