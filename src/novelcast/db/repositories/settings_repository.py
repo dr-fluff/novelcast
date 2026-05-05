@@ -6,9 +6,10 @@ from novelcast.db.database import Database
 import json
 
 class SettingsRepository:
-    def __init__(self, db: Database, qm: QueryManager):
+    def __init__(self, db: Database, qm: QueryManager, on_change=None):
         self.db = db
         self.qm = qm
+        self.on_change = on_change
 
     def _deserialize(self, value):
         try:
@@ -28,11 +29,15 @@ class SettingsRepository:
         }
 
     def set_server_setting(self, key: str, value):
-        import json
-        return self.db.execute(
+        result = self.db.execute(
             self.qm.sql("settings.set_server_setting"),
             (key, json.dumps(value)),
         )
+
+        if self.on_change:
+            self.on_change(key)
+
+        return result
     
     def get_user_settings(self, user_id: int):
         return self.db.fetchone(

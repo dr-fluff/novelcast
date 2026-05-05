@@ -270,6 +270,22 @@ async def save_settings(request: Request):
     return RedirectResponse("/settings?success=1", status_code=303)
 
 
+@router.get("/authors")
+def authors(request: Request):
+    ctx = request.app.state.ctx
+    stories = ctx.stories.get_all_stories()
+
+    authors = {}
+    for s in stories:
+        author = s.get("author") or "Unknown"
+        authors.setdefault(author, []).append(s)
+
+    sorted_authors = sorted(authors.items(), key=lambda x: x[0].lower())
+
+    return render(request, "pages/authors.html", {
+        "authors": sorted_authors,
+    })
+
 # ─────────────────────────────
 # COVERS (SAFE FILE ACCESS)
 # ─────────────────────────────

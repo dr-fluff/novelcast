@@ -18,28 +18,27 @@ async def lifespan(app: FastAPI):
     ctx = None
 
     try:
-        config = app.state.config
-
-        logger.debug(
-            "Application starting",
-            extra={"env": config.env},
-        )
+        logger.info("Application starting...")
 
         # ─────────────────────────────
         # CONTEXT
         # ─────────────────────────────
         ctx = AppContext()
 
+        # inject websocket system
+        ctx.ws_manager = ws_manager
+        ctx.story_download.ws_manager = ws_manager
+
+        # expose to app
         app.state.ctx = ctx
         app.state.db = ctx.db
         app.state.qm = ctx.qm
-
         app.state.users = ctx.users
         app.state.auth = ctx.auth
         app.state.settings = ctx.settings
 
         # ─────────────────────────────
-        # PASSWORD RESET SERVICE (FIXED)
+        # PASSWORD RESET SERVICE
         # ─────────────────────────────
         password_reset_repo = PasswordResetRepository(ctx.db)
 
@@ -55,7 +54,6 @@ async def lifespan(app: FastAPI):
         # WEBSOCKETS
         # ─────────────────────────────
         app.state.ws_manager = ws_manager
-        ctx.story_download.ws_manager = ws_manager
 
         logger.info("Application startup complete")
 
@@ -71,4 +69,4 @@ async def lifespan(app: FastAPI):
                 ctx.db.close()
                 logger.info("Database connection closed")
         except Exception:
-            logger.exception("Error during shutdown cleanup")
+            logger.exception("Shutdown cleanup failed")

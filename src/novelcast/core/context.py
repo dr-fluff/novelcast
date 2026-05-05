@@ -1,4 +1,7 @@
+# novelcast/core/context.py
+
 import logging
+import asyncio
 
 from novelcast.db.database import Database
 from novelcast.db.query_manager import QueryManager
@@ -42,13 +45,16 @@ class AppContext:
     def __init__(self):
         logger.info("Starting AppContext initialization")
 
+        self.ws_manager = None  # injected later
+
         self._init_database()
         self._init_repositories()
         self._init_services()
+        self._init_fanficfare_config()
+
         self._init_utils()
         self._init_engine()
 
-        # IMPORTANT: registry must exist BEFORE parser
         self._init_parser_registry()
         self._init_parser()
 
@@ -59,164 +65,149 @@ class AppContext:
 
         logger.info("AppContext ready")
 
-    # -------------------------
+    # ─────────────────────────────
+    # EVENTS
+    # ─────────────────────────────
+    def emit(self, event_type: str, payload: dict):
+        """
+        Safe global event emitter → websocket
+        """
+        if not self.ws_manager:
+            return
+
+        import asyncio
+
+        async def _send():
+            try:
+                await self.ws_manager.send({
+                    "type": event_type,
+                    **payload,
+                })
+            except Exception:
+                logger.exception("WebSocket emit failed")
+
+        asyncio.create_task(_send())
+
+    # ─────────────────────────────
     # DATABASE
-    # -------------------------
+    # ─────────────────────────────
     def _init_database(self):
-        try:
-            logger.info("Initializing database...")
-            self.db = Database()
-            self.db.init_schema()
-            self.qm = QueryManager(self.db)
-        except Exception as e:
-            logger.exception("Database initialization failed")
-            raise RuntimeError("Database layer failed") from e
+        logger.info("Initializing database...")
+        self.db = Database()
+        self.db.init_schema()
+        self.qm = QueryManager(self.db)
 
-    # -------------------------
+    # ─────────────────────────────
     # REPOSITORIES
-    # -------------------------
+    # ─────────────────────────────
     def _init_repositories(self):
-        try:
-            logger.info("Initializing repositories...")
-            self.stories_repo = StoriesRepository(self.db)
-            self.users_repo = UsersRepository(self.db)
-            self.files_repo = FilesRepository(self.db)
-            self.chapters_repo = ChaptersRepository(self.db)
-            self.progress_repo = ProgressRepository(self.qm)
-            self.sync_repo = SyncRepository(self.chapters_repo)
-            self.settings_repo = SettingsRepository(self.db, self.qm)
-        except Exception as e:
-            logger.exception("Repository initialization failed")
-            raise RuntimeError("Repository layer failed") from e
+        logger.info("Initializing repositories...")
 
-    # -------------------------
+        self.stories_repo = StoriesRepository(self.db)
+        self.users_repo = UsersRepository(self.db)
+        self.files_repo = FilesRepository(self.db)
+        self.chapters_repo = ChaptersRepository(self.db)
+
+        self.progress_repo = ProgressRepository(self.qm)
+        self.sync_repo = SyncRepository(self.chapters_repo)
+
+        self.settings_repo = SettingsRepository(self.db, self.qm)
+
+    # ─────────────────────────────
     # SERVICES
-    # -------------------------
+    # ─────────────────────────────
     def _init_services(self):
-        try:
-            logger.info("Initializing services...")
-            self.stories = StoryService(self.stories_repo)
-            self.users = UserService(self.users_repo)
-            self.auth = AuthService(self.users_repo)
-            self.files = FileService(self.files_repo)
-            self.pages = PageService(self.stories_repo)
-            self.chapters = ChaptersService(self.chapters_repo)
-            self.progress = ProgressService(self.progress_repo)
-            self.settings = SettingsService(self.settings_repo, settings_schema=SETTINGS)
-            
-            self.fanficfare_config = FanFicFareConfigService(self.settings_repo)
-            
-        except Exception as e:
-            logger.exception("Service initialization failed")
-            raise RuntimeError("Service layer failed") from e
+        logger.info("Initializing services...")
 
-    # -------------------------
+        self.stories = StoryService(self.stories_repo)
+        self.users = UserService(self.users_repo)
+        self.auth = AuthService(self.users_repo)
+
+        self.files = FileService(self.files_repo)
+        self.pages = PageService(self.stories_repo)
+        self.chapters = ChaptersService(self.chapters_repo)
+        self.progress = ProgressService(self.progress_repo)
+
+        self.settings = SettingsService(
+            self.settings_repo,
+            settings_schema=SETTINGS
+        )
+
+    # ─────────────────────────────
+    # FANFICFARE CONFIG
+    # ─────────────────────────────
+    def _init_fanficfare_config(self):
+        logger.info("Initializing FanFicFare config...")
+
+        self.fanficfare_config = FanFicFareConfigService(self.settings)
+        self.fanficfare_config.write_config(force=True)
+
+        self.settings_repo.on_change = self._on_settings_change
+
+    def _on_settings_change(self, key: str):
+        if key.startswith("fanficfare."):
+            self.fanficfare_config.write_config(force=True)
+
+    # ─────────────────────────────
     # UTILS
-    # -------------------------
+    # ─────────────────────────────
     def _init_utils(self):
-        try:
-            logger.info("Initializing file utilities...")
-            self.file_utils = FileUtils()
-        except Exception as e:
-            logger.exception("FileUtils initialization failed")
-            raise RuntimeError("File utils failed") from e
+        self.file_utils = FileUtils()
 
-    # -------------------------
+    # ─────────────────────────────
     # ENGINE
-    # -------------------------
+    # ─────────────────────────────
     def _init_engine(self):
-        try:
-            logger.info("Initializing engine layer...")
-            self.fanficfare_engine = FanFicFareEngine(self.settings_repo, self.fanficfare_config)
+        self.fanficfare_engine = FanFicFareEngine(
+            self.settings_repo,
+            self.fanficfare_config
+        )
 
-            self.engine_selector = EngineSelector(
-                fanficfare_engine=self.fanficfare_engine
-            )
+        self.engine_selector = EngineSelector(
+            fanficfare_engine=self.fanficfare_engine
+        )
 
-        except Exception as e:
-            logger.exception("Engine initialization failed")
-            raise RuntimeError("Engine layer failed") from e
-
-    # -------------------------
+    # ─────────────────────────────
     # PARSER REGISTRY
-    # -------------------------
+    # ─────────────────────────────
     def _init_parser_registry(self):
-        try:
-            logger.info("Initializing parser registry...")
+        self.parser_registry = ParserRegistry()
 
-            self.parser_registry = ParserRegistry()
+        self.parser_registry.register("fanficfare", FanFicFareParser())
+        self.parser_registry.register("epub", EpubParser())
+        self.parser_registry.register("html", HtmlParser())
 
-            # register parsers
-            self.parser_registry.register("fanficfare", FanFicFareParser())
-            self.parser_registry.register("epub", EpubParser())
-            self.parser_registry.register("html", HtmlParser())
-
-        except Exception as e:
-            logger.exception("Parser registry initialization failed")
-            raise RuntimeError("Parser registry failed") from e
-
-    # -------------------------
-    # PARSER (dispatcher)
-    # -------------------------
+    # ─────────────────────────────
+    # PARSER
+    # ─────────────────────────────
     def _init_parser(self):
-        try:
-            logger.info("Initializing parser...")
+        self.story_parser = StoryParser(self.parser_registry)
 
-            self.story_parser = StoryParser(
-                registry=self.parser_registry
-            )
-
-        except Exception as e:
-            logger.exception("Parser initialization failed")
-            raise RuntimeError("Parser layer failed") from e
-
-    # -------------------------
+    # ─────────────────────────────
     # PIPELINE
-    # -------------------------
+    # ─────────────────────────────
     def _init_pipeline(self):
-        try:
-            logger.info("Initializing pipeline...")
+        self.story_pipeline = StoryPipeline(
+            stories_repo=self.stories_repo,
+            chapters_repo=self.chapters_repo,
+            file_utils=self.file_utils,
+        )
 
-            self.story_pipeline = StoryPipeline(
-                stories_repo=self.stories_repo,
-                chapters_repo=self.chapters_repo,
-                file_utils=self.file_utils,
-            )
-
-        except Exception as e:
-            logger.exception("Pipeline initialization failed")
-            raise RuntimeError("Pipeline layer failed") from e
-
-    # -------------------------
+    # ─────────────────────────────
     # ORCHESTRATION
-    # -------------------------
+    # ─────────────────────────────
     def _init_orchestration(self):
-        try:
-            logger.info("Initializing StoryDownloadService...")
+        self.story_download = StoryDownloadService(
+            selector=self.engine_selector,
+            parser=self.story_parser,
+            pipeline=self.story_pipeline,
+        )
 
-            self.story_download = StoryDownloadService(
-                selector=self.engine_selector,
-                parser=self.story_parser,
-                pipeline=self.story_pipeline,
-            )
-
-        except Exception as e:
-            logger.exception(
-                "StoryDownloadService initialization failed",
-                extra={
-                    "selector": type(self.engine_selector).__name__,
-                    "parser": type(self.story_parser).__name__,
-                },
-            )
-            raise RuntimeError("Orchestration layer failed") from e
-
-    # -------------------------
+    # ─────────────────────────────
     # VALIDATION
-    # -------------------------
+    # ─────────────────────────────
     def _validate(self):
-        logger.debug("Validating AppContext...")
-
-        required_attrs = [
+        required = [
             "db",
             "stories_repo",
             "users_repo",
@@ -225,6 +216,6 @@ class AppContext:
             "story_parser",
         ]
 
-        for attr in required_attrs:
-            if getattr(self, attr, None) is None:
-                raise RuntimeError(f"AppContext validation failed: {attr} is missing")
+        for r in required:
+            if not getattr(self, r, None):
+                raise RuntimeError(f"Missing AppContext attr: {r}")

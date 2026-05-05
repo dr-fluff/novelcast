@@ -1,0 +1,24 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}NovelCast{% endblock %}
+
+{% block content %}
+
+{% include "partials/library_header.html" %}
+
+{% block head %}
+    <link rel="stylesheet" href="/static/css/pages/author.css" />
+{% endblock %}
+
+<section class="">
+    <h2 class="author-name">{{ author }}</h2>
+    <div class="author-stories">
+        {% if stories %}
+            {% for s in stories %}
+                <p>hej</p>
+            {% endfor %}
+        {% else %}
+
+        {% endif %}
+    </div>
+</section>

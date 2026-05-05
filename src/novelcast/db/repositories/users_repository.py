@@ -2,51 +2,42 @@ class UsersRepository:
     def __init__(self, db):
         self.db = db
 
-    def _normalize_user(self, row):
-        if not row:
-            return None
-        row["role"] = "admin" if row.get("is_root") else "user"
-        return row
+    # ---------- internal mapping ----------
+
+    def _map(self, row):
+        return row  # no domain logic here
+
+    # ---------- reads ----------
 
     def get_by_username(self, username: str):
-        row = self.db.fetchone(
-            "SELECT * FROM users WHERE username = ?",
-            (username,),
-        )
-        return self._normalize_user(row)
+        row = self.db.fetchone("users.get_by_username", (username,))
+        return self._map(row)
 
     def get_by_id(self, user_id: int):
-        row = self.db.fetchone(
-            "SELECT * FROM users WHERE id = ?",
-            (user_id,),
-        )
-        return self._normalize_user(row)
+        row = self.db.fetchone("users.get_by_id", (user_id,))
+        return self._map(row)
 
     def list(self):
-        rows = self.db.fetchall(
-            "SELECT * FROM users",
-            (),
-        )
-        return [self._normalize_user(row) for row in rows]
+        rows = self.db.fetchall("users.list")
+        return [self._map(r) for r in rows]
 
     def count(self):
-        row = self.db.fetchone(
-            "SELECT COUNT(*) as total FROM users",
-            (),
-        )
+        row = self.db.fetchone("users.count")
         return row["total"] if row else 0
+
+    # ---------- writes ----------
 
     def create(self, username: str, password_hash: str, is_root: int = 0):
         return self.db.execute(
-            """
-            INSERT INTO users (username, password_hash, is_root)
-            VALUES (?, ?, ?)
-            """,
+            "users.create",
             (username, password_hash, is_root),
         )
 
     def set_root(self, user_id: int):
         return self.db.execute(
-            "UPDATE users SET is_root = 1 WHERE id = ?",
+            "users.set_root",
             (user_id,),
         )
+
+    def delete(self, user_id: int):
+        return self.db.execute("users.delete", (user_id,))
