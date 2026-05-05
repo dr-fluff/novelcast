@@ -23,15 +23,15 @@ class RequestIDMiddleware:
         if scope["type"] != "http":
             return await self.app(scope, receive, send)
 
-        headers = dict(scope["headers"])
+        headers = dict(scope.get("headers", []))
 
         request_id = headers.get(b"x-request-id")
         request_id = request_id.decode() if request_id else str(uuid.uuid4())
 
         token = request_id_ctx.set(request_id)
 
-        scope.setdefault("state", {})
-        scope["state"]["request_id"] = request_id
+        state = scope.setdefault("state", {})
+        state["request_id"] = request_id
 
         async def send_wrapper(message):
             if message["type"] == "http.response.start":
@@ -73,7 +73,8 @@ class AuthMiddleware:
         cookie = SimpleCookie()
         cookie.load(cookie_header)
 
-        session_token = cookie.get("session").value if "session" in cookie else None
+        session_cookie = cookie.get("session")
+        session_token = session_cookie.value if session_cookie else None
 
         user = None
 
@@ -93,8 +94,8 @@ class AuthMiddleware:
             )
             return await response(scope, receive, send)
 
-        scope.setdefault("state", {})
-        scope["state"]["user"] = user
+        state = scope.setdefault("state", {})
+        state["user"] = user
 
         # logged-in users should not see auth pages
         if user and path in self.PUBLIC_PATHS:
@@ -126,7 +127,8 @@ class PermissionMiddleware:
         if scope["type"] != "http":
             return await self.app(scope, receive, send)
 
-        user = scope.get("state", {}).get("user")
+        state = scope.get("state", {})
+        user = state.get("user")
 
         if user and user.get("is_active") is False:
             response = JSONResponse(

@@ -1,5 +1,3 @@
-# novelcast/api/errors.py
-
 import logging
 from fastapi import Request, FastAPI
 from fastapi.responses import JSONResponse, RedirectResponse
@@ -9,12 +7,12 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 logger = logging.getLogger(__name__)
 
 
+# ─────────────────────────────
+# HELPERS
+# ─────────────────────────────
 def wants_json(request: Request) -> bool:
     accept = request.headers.get("accept", "").lower()
-    return (
-        "application/json" in accept
-        or request.url.path.startswith("/api")
-    )
+    return "application/json" in accept or request.url.path.startswith("/api")
 
 
 def render_json_error(status_code: int, message: str):
@@ -30,18 +28,16 @@ def render_json_error(status_code: int, message: str):
 
 
 def render_html_error(request: Request, status_code: int, message: str):
-    templates: Jinja2Templates = getattr(
-        request.app.state,
-        "templates",
-        None
-    )
+    templates: Jinja2Templates = getattr(request.app.state, "templates", None)
 
     if not templates:
         logger.error(
             "Templates not configured",
             extra={
-                "path": request.url.path,
-                "method": request.method,
+                "extra_data": {
+                    "path": request.url.path,
+                    "method": request.method,
+                }
             },
         )
         return render_json_error(status_code, message)
@@ -58,16 +54,21 @@ def render_html_error(request: Request, status_code: int, message: str):
     )
 
 
+# ─────────────────────────────
+# HTTP EXCEPTIONS
+# ─────────────────────────────
 async def http_exception_handler(request: Request, exc: StarletteHTTPException):
     message = exc.detail or "HTTP Error"
 
     logger.warning(
-        "HTTP exception",
+        "HTTP exception occurred",
         extra={
-            "status_code": exc.status_code,
-            "message": message,
-            "path": request.url.path,
-            "method": request.method,
+            "extra_data": {
+                "status_code": exc.status_code,
+                "message": message,
+                "path": request.url.path,
+                "method": request.method,
+            }
         },
     )
 
@@ -80,12 +81,18 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
     return render_html_error(request, exc.status_code, message)
 
 
+# ─────────────────────────────
+# UNHANDLED EXCEPTIONS
+# ─────────────────────────────
 async def unhandled_exception_handler(request: Request, exc: Exception):
     logger.exception(
         "Unhandled exception occurred",
         extra={
-            "path": request.url.path,
-            "method": request.method,
+            "extra_data": {
+                "path": request.url.path,
+                "method": request.method,
+                "error": str(exc),
+            }
         },
     )
 
@@ -95,6 +102,9 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
     return render_html_error(request, 500, "Internal Server Error")
 
 
+# ─────────────────────────────
+# REGISTER
+# ─────────────────────────────
 def register_error_handlers(app: FastAPI):
     app.add_exception_handler(StarletteHTTPException, http_exception_handler)
     app.add_exception_handler(Exception, unhandled_exception_handler)

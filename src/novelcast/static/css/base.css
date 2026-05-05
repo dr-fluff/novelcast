@@ -16,3 +16,7 @@ body {
 i {
   color: var(--text);
 }
+
+* {
+  box-sizing: border-box;
+}

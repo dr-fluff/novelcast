@@ -7,8 +7,9 @@ SET theme = ?
 WHERE user_id = ?;
 
 -- name: set_server_setting
-INSERT OR REPLACE INTO server_settings (key, value)
-VALUES (?, ?);
+INSERT INTO server_settings (key, value)
+VALUES (?, ?)
+ON CONFLICT(key) DO UPDATE SET value = excluded.value;
 
 -- name: get_server_setting
 SELECT value FROM server_settings WHERE key = ?;

@@ -33,6 +33,7 @@ from novelcast.parser.registry import ParserRegistry
 
 from novelcast.pipeline.story_pipeline import StoryPipeline
 from novelcast.utils.files import FileUtils
+from novelcast.core.defaults import SETTINGS
 
 logger = logging.getLogger(__name__)
 
@@ -101,7 +102,7 @@ class AppContext:
             self.pages = PageService(self.stories_repo)
             self.chapters = ChaptersService(self.chapters_repo)
             self.progress = ProgressService(self.progress_repo)
-            self.settings = SettingsService(self.settings_repo)
+            self.settings = SettingsService(self.settings_repo, settings_schema=SETTINGS)
             
             self.fanficfare_config = FanFicFareConfigService(self.settings_repo)
             

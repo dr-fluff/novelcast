@@ -1,0 +1,86 @@
+{% macro render_field(section, key, meta, value) %}
+
+<div class="settings-card">
+
+    <label for="{{ section }}.{{ key }}">
+        {{ meta.label or key }}
+    </label>
+
+    <!-- STRING -->
+    {% if meta.type == "string" %}
+
+        <input
+            type="text"
+            id="{{ section }}.{{ key }}"
+            name="{{ section }}.{{ key }}"
+            value="{{ value or '' }}"
+        />
+
+    <!-- NUMBER -->
+    {% elif meta.type == "number" %}
+
+        <input
+            type="number"
+            id="{{ section }}.{{ key }}"
+            name="{{ section }}.{{ key }}"
+            value="{{ value }}"
+            {% if meta.min is defined %}min="{{ meta.min }}"{% endif %}
+            {% if meta.max is defined %}max="{{ meta.max }}"{% endif %}
+            {% if meta.step is defined %}step="{{ meta.step }}"{% endif %}
+        />
+
+        {% if meta.min is defined or meta.max is defined %}
+            <small class="hint">
+                {% if meta.min is defined %}Min: {{ meta.min }} {% endif %}
+                {% if meta.max is defined %}Max: {{ meta.max }}{% endif %}
+            </small>
+        {% endif %}
+
+    <!-- BOOLEAN -->
+    {% elif meta.type == "bool" %}
+
+        <label class="checkbox">
+            <input
+                type="checkbox"
+                name="{{ section }}.{{ key }}"
+                value="1"
+                {% if value in [true, 1, "1", "true"] %}checked{% endif %}
+            />
+            Enabled
+        </label>
+
+    <!-- SELECT -->
+    {% elif meta.type == "select" %}
+
+        <select id="{{ section }}.{{ key }}" name="{{ section }}.{{ key }}">
+
+            {% for opt in meta.options %}
+                <option
+                    value="{{ opt }}"
+                    {% if value == opt %}selected{% endif %}
+                >
+                    {{ opt }}
+                </option>
+            {% endfor %}
+
+        </select>
+
+    <!-- FALLBACK -->
+    {% else %}
+
+        <input
+            type="text"
+            id="{{ section }}.{{ key }}"
+            name="{{ section }}.{{ key }}"
+            value="{{ value or '' }}"
+        />
+
+        <small class="hint">
+            Unknown type: {{ meta.type }}
+        </small>
+
+    {% endif %}
+
+</div>
+
+{% endmacro %}
