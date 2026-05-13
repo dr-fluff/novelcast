@@ -23,31 +23,29 @@ async def lifespan(app: FastAPI):
         # ─────────────────────────────
         # CONTEXT
         # ─────────────────────────────
-        ctx = AppContext()
+        ctx = AppContext(app.state.config)
 
         # inject websocket system
         ctx.ws_manager = ws_manager
         ctx.story_download.ws_manager = ws_manager
 
         # expose to app
-        app.state.ctx = ctx
-        app.state.db = ctx.db
-        app.state.qm = ctx.qm
-        app.state.users = ctx.users
-        app.state.auth = ctx.auth
+        app.state.ctx      = ctx
+        app.state.db       = ctx.SessionLocal   # ← now a factory, not a connection
+        app.state.users    = ctx.users
+        app.state.auth     = ctx.auth
         app.state.settings = ctx.settings
 
         # ─────────────────────────────
         # PASSWORD RESET SERVICE
         # ─────────────────────────────
-        password_reset_repo = PasswordResetRepository(ctx.db)
+        password_reset_repo = PasswordResetRepository(ctx.SessionLocal)
 
         ctx.password_reset = PasswordResetService(
             repo=password_reset_repo,
-            users_repo=ctx.users,
+            users_repo=ctx.users_repo,       # ← was ctx.users (a service), should be the repo
             auth_service=ctx.auth,
         )
-
         app.state.password_reset = ctx.password_reset
 
         # ─────────────────────────────
@@ -64,9 +62,10 @@ async def lifespan(app: FastAPI):
         raise
 
     finally:
+        logger.info("Application shutting down...")
         try:
-            if ctx and ctx.db:
-                ctx.db.close()
-                logger.info("Database connection closed")
+            if ctx and ctx.engine:
+                ctx.engine.dispose()        # cleanly close the connection pool
+                logger.info("Database engine disposed")
         except Exception:
             logger.exception("Shutdown cleanup failed")

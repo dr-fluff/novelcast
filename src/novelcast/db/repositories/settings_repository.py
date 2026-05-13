@@ -1,50 +1,63 @@
 # novelcast/db/repositories/settings_repository.py
 
-from novelcast.db.query_manager import QueryManager
-from novelcast.db.database import Database
-
 import json
 
-class SettingsRepository:
-    def __init__(self, db: Database, qm: QueryManager, on_change=None):
-        self.db = db
-        self.qm = qm
-        self.on_change = on_change
+from sqlalchemy import select
+from sqlalchemy.dialects.sqlite import insert
 
-    def _deserialize(self, value):
-        try:
-            return json.loads(value)
-        except (TypeError, json.JSONDecodeError):
-            return value  # fallback safety
+from novelcast.db.repositories.base import BaseRepository
+from novelcast.db.models.settings import ServerSetting, UserSetting
+
+
+class SettingsRepository(BaseRepository):
+
+    def __init__(self, session_factory, on_change=None):
+        super().__init__(session_factory)
+        self.on_change = on_change  # callable(key: str) | None
+
+    # ── server settings ───────────────────────────────────────────────────
 
     def get_server_setting(self, key: str):
-        row = self.db.fetchone(self.qm.sql("settings.get_server_setting"), (key,))
-        return self._deserialize(row["value"]) if row else None
+        with self.session_no_commit() as db:
+            row = db.get(ServerSetting, key)
+            return _deserialize(row.value) if row else None
 
-    def get_all_server_settings(self):
-        rows = self.db.fetchall(self.qm.sql("settings.get_all"), ())
-        return {
-            row["key"]: self._deserialize(row["value"])
-            for row in rows
-        }
+    def get_all_server_settings(self) -> dict:
+        with self.session_no_commit() as db:
+            rows = db.scalars(select(ServerSetting)).all()
+            return {row.key: _deserialize(row.value) for row in rows}
 
-    def set_server_setting(self, key: str, value):
-        result = self.db.execute(
-            self.qm.sql("settings.set_server_setting"),
-            (key, json.dumps(value)),
-        )
+    def set_server_setting(self, key: str, value) -> None:
+        with self.session() as db:
+            stmt = (
+                insert(ServerSetting)
+                .values(key=key, value=json.dumps(value))
+                .on_conflict_do_update(
+                    index_elements=["key"],
+                    set_={"value": json.dumps(value)},
+                )
+            )
+            db.execute(stmt)
 
         if self.on_change:
             self.on_change(key)
 
-        return result
-    
-    def get_user_settings(self, user_id: int):
-        return self.db.fetchone(
-            self.qm.sql("settings.get_user_settings"),
-            (user_id,),
-        )
+    # ── user settings ─────────────────────────────────────────────────────
 
+    def get_user_settings(self, user_id: int) -> dict | None:
+        with self.session_no_commit() as db:
+            rows = db.scalars(
+                select(UserSetting).where(UserSetting.user_id == user_id)
+            ).all()
+
+            if not rows:
+                return None
+
+            # reconstruct the flat dict the SettingsService expects
+            result = {"user_id": user_id}
+            for row in rows:
+                result[row.name] = _deserialize(row.value)
+            return result
 
     def save_user_settings(
         self,
@@ -53,8 +66,37 @@ class SettingsRepository:
         font_size: int,
         line_height: float,
         auto_update: int,
-    ):
-        return self.db.execute(
-            self.qm.sql("settings.upsert_user_settings"),
-            (user_id, theme, font_size, line_height, auto_update),
-        )
+    ) -> None:
+        settings = {
+            "theme":       (theme,        "display", "str"),
+            "font_size":   (font_size,    "display", "int"),
+            "line_height": (line_height,  "display", "float"),
+            "auto_update": (auto_update,  "display", "int"),
+        }
+        with self.session() as db:
+            for name, (value, category, type_) in settings.items():
+                stmt = (
+                    insert(UserSetting)
+                    .values(
+                        user_id=user_id,
+                        name=name,
+                        value=json.dumps(value),
+                        category=category,
+                        type=type_,
+                    )
+                    .on_conflict_do_update(
+                        # unique on (user_id, name) — add this constraint to the model
+                        index_elements=["user_id", "name"],
+                        set_={"value": json.dumps(value)},
+                    )
+                )
+                db.execute(stmt)
+
+
+# ── helpers ───────────────────────────────────────────────────────────────
+
+def _deserialize(value: str):
+    try:
+        return json.loads(value)
+    except (TypeError, json.JSONDecodeError):
+        return value

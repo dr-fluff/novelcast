@@ -44,13 +44,13 @@ clean:
 	find . -type d -name "__pycache__" -exec rm -r {} + || true
 	find . -type d -name ".pytest_cache" -exec rm -r {} + || true
 
-clean-generated: clean-db, clean-log, clean-config
+clean-generated: clean-db clean-log clean-config
 
 clean-db:
-	rm -f data/
+	rm -rf data/
 
 clean-log:
-	rm -f logs/
+	rm -rf logs/
 
 clean-config:
-	rm -f config/
+	rm -rf config/

@@ -1,10 +1,10 @@
 # novelcast/core/context.py
 
 import logging
-import asyncio
 
-from novelcast.db.database import Database
-from novelcast.db.query_manager import QueryManager
+from novelcast.db.init_db import init_db
+from novelcast.db.session import SessionLocal
+from novelcast.db.engine import engine
 
 from novelcast.db.repositories.stories_repository import StoriesRepository
 from novelcast.db.repositories.users_repository import UsersRepository
@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 
 
 class AppContext:
-    def __init__(self):
+    def __init__(self, app_config):
         logger.info("Starting AppContext initialization")
 
         self.ws_manager = None  # injected later
@@ -51,16 +51,12 @@ class AppContext:
         self._init_repositories()
         self._init_services()
         self._init_fanficfare_config()
-
         self._init_utils()
         self._init_engine()
-
         self._init_parser_registry()
         self._init_parser()
-
         self._init_pipeline()
         self._init_orchestration()
-
         self._validate()
 
         logger.info("AppContext ready")
@@ -69,23 +65,14 @@ class AppContext:
     # EVENTS
     # ─────────────────────────────
     def emit(self, event_type: str, payload: dict):
-        """
-        Safe global event emitter → websocket
-        """
         if not self.ws_manager:
             return
-
         import asyncio
-
         async def _send():
             try:
-                await self.ws_manager.send({
-                    "type": event_type,
-                    **payload,
-                })
+                await self.ws_manager.send({"type": event_type, **payload})
             except Exception:
                 logger.exception("WebSocket emit failed")
-
         asyncio.create_task(_send())
 
     # ─────────────────────────────
@@ -93,9 +80,18 @@ class AppContext:
     # ─────────────────────────────
     def _init_database(self):
         logger.info("Initializing database...")
-        self.db = Database()
-        self.db.init_schema()
-        self.qm = QueryManager(self.db)
+        init_db()                        # create_all + seed defaults
+        self.SessionLocal = SessionLocal # factory — repos call this themselves
+        self.engine = engine             # exposed for lifespan shutdown
+
+    def get_db(self):
+        """
+        Return a fresh session. Caller is responsible for commit/close.
+        Use this in background tasks and one-off operations.
+
+        For FastAPI routes use the get_session dependency from session.py instead.
+        """
+        return self.SessionLocal()
 
     # ─────────────────────────────
     # REPOSITORIES
@@ -103,15 +99,18 @@ class AppContext:
     def _init_repositories(self):
         logger.info("Initializing repositories...")
 
-        self.stories_repo = StoriesRepository(self.db)
-        self.users_repo = UsersRepository(self.db)
-        self.files_repo = FilesRepository(self.db)
-        self.chapters_repo = ChaptersRepository(self.db)
+        # Repos receive the session factory, not a session.
+        # Each repo method opens and closes its own session.
+        # This is safe for background tasks and the request lifecycle.
+        sf = self.SessionLocal
 
-        self.progress_repo = ProgressRepository(self.qm)
-        self.sync_repo = SyncRepository(self.chapters_repo)
-
-        self.settings_repo = SettingsRepository(self.db, self.qm)
+        self.stories_repo   = StoriesRepository(sf)
+        self.users_repo     = UsersRepository(sf)
+        self.files_repo     = FilesRepository(sf)
+        self.chapters_repo  = ChaptersRepository(sf)
+        self.progress_repo  = ProgressRepository(sf)
+        self.sync_repo      = SyncRepository(self.chapters_repo)
+        self.settings_repo  = SettingsRepository(sf)
 
     # ─────────────────────────────
     # SERVICES
@@ -119,29 +118,22 @@ class AppContext:
     def _init_services(self):
         logger.info("Initializing services...")
 
-        self.stories = StoryService(self.stories_repo)
-        self.users = UserService(self.users_repo)
-        self.auth = AuthService(self.users_repo)
-
-        self.files = FileService(self.files_repo)
-        self.pages = PageService(self.stories_repo)
+        self.stories  = StoryService(self.stories_repo)
+        self.users    = UserService(self.users_repo)
+        self.auth     = AuthService(self.users_repo)
+        self.files    = FileService(self.files_repo)
+        self.pages    = PageService(self.stories_repo)
         self.chapters = ChaptersService(self.chapters_repo)
         self.progress = ProgressService(self.progress_repo)
-
-        self.settings = SettingsService(
-            self.settings_repo,
-            settings_schema=SETTINGS
-        )
+        self.settings = SettingsService(self.settings_repo, settings_schema=SETTINGS)
 
     # ─────────────────────────────
     # FANFICFARE CONFIG
     # ─────────────────────────────
     def _init_fanficfare_config(self):
         logger.info("Initializing FanFicFare config...")
-
         self.fanficfare_config = FanFicFareConfigService(self.settings)
         self.fanficfare_config.write_config(force=True)
-
         self.settings_repo.on_change = self._on_settings_change
 
     def _on_settings_change(self, key: str):
@@ -159,20 +151,15 @@ class AppContext:
     # ─────────────────────────────
     def _init_engine(self):
         self.fanficfare_engine = FanFicFareEngine(
-            self.settings_repo,
-            self.fanficfare_config
+            self.settings_repo, self.fanficfare_config
         )
-
-        self.engine_selector = EngineSelector(
-            fanficfare_engine=self.fanficfare_engine
-        )
+        self.engine_selector = EngineSelector(fanficfare_engine=self.fanficfare_engine)
 
     # ─────────────────────────────
     # PARSER REGISTRY
     # ─────────────────────────────
     def _init_parser_registry(self):
         self.parser_registry = ParserRegistry()
-
         self.parser_registry.register("fanficfare", FanFicFareParser())
         self.parser_registry.register("epub", EpubParser())
         self.parser_registry.register("html", HtmlParser())
@@ -208,14 +195,14 @@ class AppContext:
     # ─────────────────────────────
     def _validate(self):
         required = [
-            "db",
+            "engine",
+            "SessionLocal",
             "stories_repo",
             "users_repo",
             "story_download",
             "parser_registry",
             "story_parser",
         ]
-
         for r in required:
             if not getattr(self, r, None):
                 raise RuntimeError(f"Missing AppContext attr: {r}")

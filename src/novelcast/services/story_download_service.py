@@ -1,6 +1,10 @@
 # novelcast/services/story_download_service.py
+
 import logging
 import uuid
+import anyio
+
+from novelcast.utils.url_normalizer import normalize_story_url
 
 logger = logging.getLogger(__name__)
 
@@ -24,27 +28,56 @@ class StoryDownloadService:
     # ----------------------------
     def add_story(self, url: str):
         logger.info("Starting story download", extra={"url": url})
+
+        normalized_url = normalize_story_url(url)
+
+        existing = self.pipeline.stories_repo.get_by_url(normalized_url)
+        if existing:
+            logger.info(
+                "Story already exists",
+                extra={"story_id": existing["id"]}
+            )
+
+            self._send({
+                "type": "story_exists",
+                "story_id": existing["id"],
+                "source_url": normalized_url,
+            })
+
+            return existing["id"]
+
         download_id = str(uuid.uuid4())
-        self._notify_download_start(url, download_id)
+
+        self._notify_download_start(normalized_url, download_id)
 
         try:
-            engine = self.selector.get_engine(url)
+            engine = self.selector.get_engine(normalized_url)
 
-            raw = engine.fetch(url)
+            raw = engine.fetch(normalized_url)
             parsed = self.parser.parse(raw)
 
-            parsed["source_url"] = raw.get("url")
+            parsed["source_url"] = normalize_story_url(
+                raw.get("url") or normalized_url
+            )
+
             parsed["source_file_path"] = raw.get("file_path")
 
             story_id = self.pipeline.persist(parsed)
-            print(raw)
+
             self._notify_story_added(story_id, parsed, download_id)
             self._notify_download_finished(download_id, story_id, parsed)
+
             return story_id
 
         except Exception as e:
             logger.error("Error during story download", exc_info=e)
-            self._notify_download_failed(download_id, url, str(e))
+
+            self._notify_download_failed(
+                download_id,
+                normalized_url,
+                str(e)
+            )
+
             raise RuntimeError(str(e)) from e
 
     # ----------------------------
@@ -157,7 +190,6 @@ class StoryDownloadService:
         try:
             manager = self.ws_manager
             if manager:
-                import anyio
-                anyio.from_thread.run(manager.send, payload)
+                anyio.from_thread.run(manager.broadcast, payload)
         except Exception as e:
             logger.warning(f"WS notify failed: {e}")
