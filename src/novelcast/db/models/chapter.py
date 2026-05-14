@@ -1,8 +1,5 @@
-"""
-novelcast/db/models/chapter.py
+# novelcast/db/models/chapter.py
 
-Chapter and ChapterFile live together — ChapterFile is meaningless without Chapter.
-"""
 
 from datetime import datetime
 from typing import Optional, TYPE_CHECKING

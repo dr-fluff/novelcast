@@ -1,6 +1,5 @@
-"""
-novelcast/db/models/author.py
-"""
+# novelcast/db/models/author.py
+
 
 from typing import Optional, TYPE_CHECKING
 

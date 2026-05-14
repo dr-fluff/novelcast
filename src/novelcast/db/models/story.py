@@ -1,6 +1,5 @@
-"""
-novelcast/db/models/story.py
-"""
+# novelcast/db/models/story.py
+
 
 from datetime import datetime
 from typing import Optional, TYPE_CHECKING

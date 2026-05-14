@@ -7,7 +7,7 @@ from novelcast.core.config import AppConfig
 from novelcast.core.logging import setup_logging
 
 from novelcast.api.errors import register_error_handlers
-from novelcast.api.middleware import (
+from novelcast.api import (
     RequestIDMiddleware,
     AuthMiddleware,
     PermissionMiddleware,

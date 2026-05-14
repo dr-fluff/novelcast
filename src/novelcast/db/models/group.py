@@ -1,6 +1,4 @@
-"""
-novelcast/db/models/group.py
-"""
+# novelcast/db/models/group.py
 
 from typing import Optional, TYPE_CHECKING
 

@@ -6,33 +6,40 @@ from novelcast.db.init_db import init_db
 from novelcast.db.session import SessionLocal
 from novelcast.db.engine import engine
 
-from novelcast.db.repositories.stories_repository import StoriesRepository
-from novelcast.db.repositories.users_repository import UsersRepository
-from novelcast.db.repositories.files_repository import FilesRepository
-from novelcast.db.repositories.chapters_repository import ChaptersRepository
-from novelcast.db.repositories.progress_repository import ProgressRepository
-from novelcast.db.repositories.sync_repository import SyncRepository
-from novelcast.db.repositories.settings_repository import SettingsRepository
+from novelcast.db.repositories import (
+    StoriesRepository,
+    UsersRepository,
+    FilesRepository,
+    ChaptersRepository,
+    ProgressRepository,
+    SyncRepository,
+    SettingsRepository,
+)
 
-from novelcast.services.fanficfare_config_service import FanFicFareConfigService
-from novelcast.services.story_service import StoryService
-from novelcast.services.user_service import UserService
-from novelcast.services.auth_service import AuthService
-from novelcast.services.file_service import FileService
-from novelcast.services.page_service import PageService
-from novelcast.services.chapters_service import ChaptersService
-from novelcast.services.progress_service import ProgressService
-from novelcast.services.story_download_service import StoryDownloadService
-from novelcast.services.settings_service import SettingsService
+from novelcast.services import (
+    AuthService,
+    ChaptersService,
+    FanFicFareConfigService,
+    FileService,
+    ProgressService,
+    SettingsService,
+    StoryDownloadService,
+    StoryService,
+    UserService,
+)
 
-from novelcast.engine.fanficfare_engine import FanFicFareEngine
-from novelcast.engine.engine_selector import EngineSelector
+from novelcast.engine import (
+    FanFicFareEngine,
+    EngineSelector,
+)
 
-from novelcast.parser.story_parser import StoryParser
-from novelcast.parser.epub_parser import EpubParser
-from novelcast.parser.fanficfare_parser import FanFicFareParser
-from novelcast.parser.html_parser import HtmlParser
-from novelcast.parser.registry import ParserRegistry
+from novelcast.parser import (
+    StoryParser,
+    EpubParser,
+    FanFicFareParser,
+    HtmlParser,
+    ParserRegistry
+)
 
 from novelcast.pipeline.story_pipeline import StoryPipeline
 from novelcast.utils.files import FileUtils
@@ -122,7 +129,6 @@ class AppContext:
         self.users    = UserService(self.users_repo)
         self.auth     = AuthService(self.users_repo)
         self.files    = FileService(self.files_repo)
-        self.pages    = PageService(self.stories_repo)
         self.chapters = ChaptersService(self.chapters_repo)
         self.progress = ProgressService(self.progress_repo)
         self.settings = SettingsService(self.settings_repo, settings_schema=SETTINGS)
