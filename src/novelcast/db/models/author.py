@@ -20,11 +20,7 @@ class Author(Base):
     bio: Mapped[Optional[str]] = mapped_column(Text)
     profile_url: Mapped[Optional[str]] = mapped_column(String)
 
-    stories: Mapped[list["Story"]] = relationship(
-        "Story",
-        secondary="story_author",
-        back_populates="authors",
-    )
+    stories: Mapped[list["Story"]] = relationship("Story",secondary="story_author",back_populates="authors",)
 
     def __repr__(self) -> str:
         return f"<Author id={self.id} name={self.name!r}>"

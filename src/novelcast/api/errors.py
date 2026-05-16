@@ -1,8 +1,9 @@
 import logging
-from fastapi import Request, FastAPI
-from fastapi.responses import JSONResponse, RedirectResponse
+
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
-from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.exceptions import HTTPException as HTTPException
 
 logger = logging.getLogger(__name__)
 
@@ -12,35 +13,52 @@ logger = logging.getLogger(__name__)
 # ─────────────────────────────
 def wants_json(request: Request) -> bool:
     accept = request.headers.get("accept", "").lower()
-    return "application/json" in accept or request.url.path.startswith("/api")
 
-
-def render_json_error(status_code: int, message: str):
-    return JSONResponse(
-        status_code=status_code,
-        content={
-            "error": {
-                "code": status_code,
-                "message": message,
-            }
-        },
+    return (
+        "application/json" in accept
+        or request.url.path.startswith("/api")
     )
 
 
-def render_html_error(request: Request, status_code: int, message: str):
-    templates: Jinja2Templates = getattr(request.app.state, "templates", None)
+def error_response(
+    request: Request,
+    status_code: int,
+    message: str,
+) -> Response:
+    """
+    Return either JSON or HTML error response
+    based on request expectations.
+    """
 
-    if not templates:
-        logger.error(
-            "Templates not configured",
-            extra={
-                "extra_data": {
-                    "path": request.url.path,
-                    "method": request.method,
+    if wants_json(request):
+        return JSONResponse(
+            status_code=status_code,
+            content={
+                "error": {
+                    "code": status_code,
+                    "message": message,
                 }
             },
         )
-        return render_json_error(status_code, message)
+
+    templates: Jinja2Templates | None = getattr(
+        request.app.state,
+        "templates",
+        None,
+    )
+
+    if not templates:
+        logger.error("Templates not configured")
+
+        return JSONResponse(
+            status_code=status_code,
+            content={
+                "error": {
+                    "code": status_code,
+                    "message": message,
+                }
+            },
+        )
 
     return templates.TemplateResponse(
         "pages/error.html",
@@ -55,9 +73,12 @@ def render_html_error(request: Request, status_code: int, message: str):
 
 
 # ─────────────────────────────
-# HTTP EXCEPTIONS
+# EXCEPTION HANDLERS
 # ─────────────────────────────
-async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+async def http_exception_handler(
+    request: Request,
+    exc: HTTPException,
+):
     message = exc.detail or "HTTP Error"
 
     logger.warning(
@@ -72,19 +93,26 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
         },
     )
 
-    if exc.status_code in (401, 403) and not wants_json(request):
-        return RedirectResponse("/login", status_code=303)
+    if (
+        exc.status_code in {401, 403}
+        and not wants_json(request)
+    ):
+        return RedirectResponse(
+            url="/login",
+            status_code=303,
+        )
 
-    if wants_json(request):
-        return render_json_error(exc.status_code, message)
+    return error_response(
+        request,
+        exc.status_code,
+        message,
+    )
 
-    return render_html_error(request, exc.status_code, message)
 
-
-# ─────────────────────────────
-# UNHANDLED EXCEPTIONS
-# ─────────────────────────────
-async def unhandled_exception_handler(request: Request, exc: Exception):
+async def unhandled_exception_handler(
+    request: Request,
+    exc: Exception,
+):
     logger.exception(
         "Unhandled exception occurred",
         extra={
@@ -96,15 +124,21 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
         },
     )
 
-    if wants_json(request):
-        return render_json_error(500, "Internal Server Error")
-
-    return render_html_error(request, 500, "Internal Server Error")
+    return error_response(
+        request,
+        500,
+        "Internal Server Error",
+    )
 
 
 # ─────────────────────────────
 # REGISTER
 # ─────────────────────────────
-def register_error_handlers(app: FastAPI):
-    app.add_exception_handler(StarletteHTTPException, http_exception_handler)
-    app.add_exception_handler(Exception, unhandled_exception_handler)
+def register_error_handlers(app: FastAPI) -> None:
+    app.exception_handler(HTTPException)(
+        http_exception_handler
+    )
+
+    app.exception_handler(Exception)(
+        unhandled_exception_handler
+    )

@@ -181,7 +181,7 @@ def settings(
     all_users = []
 
     if current_user.get("is_root"):
-        server_settings = settings.get_resolved_server_settings()
+        server_settings = settings.get_display_server_settings()
         all_users = users.get_all_users()
 
     return templates.TemplateResponse("pages/settings.html", {

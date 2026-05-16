@@ -1,5 +1,5 @@
-# novelcast/engine/base.py
 from abc import ABC, abstractmethod
+
 
 class StoryEngine(ABC):
 
@@ -8,11 +8,15 @@ class StoryEngine(ABC):
         pass
 
     @abstractmethod
-    def fetch(self, url: str) -> dict:
+    def fetch(self, url: str, progress_callback=None) -> dict:
         """
-        Returns RAW data:
-        - title
-        - author
-        - optional epub_path OR raw chapters
+        Must return:
+        {
+            title,
+            author,
+            url,
+            chapters | None,
+            file_path | None
+        }
         """
         pass

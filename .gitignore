@@ -8,9 +8,9 @@ __pycache__/
 *.db
 uv.lock
 data/*
-data/novelcast.db
 node_modules/
 package-lock.json
+config/*
 
 # C extensions
 *.so

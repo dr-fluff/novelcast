@@ -1,6 +1,5 @@
-# novelcast/core/context.py
-
 import logging
+from queue import Queue
 
 from novelcast.db.init_db import init_db
 from novelcast.db.session import SessionLocal
@@ -19,18 +18,21 @@ from novelcast.db.repositories import (
 from novelcast.services import (
     AuthService,
     ChaptersService,
-    FanFicFareConfigService,
     FileService,
     ProgressService,
     SettingsService,
-    StoryDownloadService,
     StoryService,
     UserService,
+    FanFicFareConfigService,
+    PatreonConfigService,
+    StoryDownloadService,
 )
 
 from novelcast.engine import (
     FanFicFareEngine,
+    PatreonEngine,
     EngineSelector,
+    StoryDownloadOrchestrator,
 )
 
 from novelcast.parser import (
@@ -38,7 +40,7 @@ from novelcast.parser import (
     EpubParser,
     FanFicFareParser,
     HtmlParser,
-    ParserRegistry
+    ParserRegistry,
 )
 
 from novelcast.pipeline.story_pipeline import StoryPipeline
@@ -52,18 +54,21 @@ class AppContext:
     def __init__(self, app_config):
         logger.info("Starting AppContext initialization")
 
-        self.ws_manager = None  # injected later
+        self.app_config = app_config
+        self.event_queue = Queue()        
+        self.ws_manager = None
 
         self._init_database()
         self._init_repositories()
         self._init_services()
-        self._init_fanficfare_config()
+        self._init_engine_config()
         self._init_utils()
         self._init_engine()
         self._init_parser_registry()
         self._init_parser()
         self._init_pipeline()
-        self._init_orchestration()
+        self._init_orchestrator()
+        self._init_service_layer()
         self._validate()
 
         logger.info("AppContext ready")
@@ -74,30 +79,20 @@ class AppContext:
     def emit(self, event_type: str, payload: dict):
         if not self.ws_manager:
             return
-        import asyncio
-        async def _send():
-            try:
-                await self.ws_manager.send({"type": event_type, **payload})
-            except Exception:
-                logger.exception("WebSocket emit failed")
-        asyncio.create_task(_send())
+
+        self.event_queue.put((event_type, payload))
 
     # ─────────────────────────────
     # DATABASE
     # ─────────────────────────────
     def _init_database(self):
         logger.info("Initializing database...")
-        init_db()                        # create_all + seed defaults
-        self.SessionLocal = SessionLocal # factory — repos call this themselves
-        self.engine = engine             # exposed for lifespan shutdown
+        init_db()
+
+        self.SessionLocal = SessionLocal
+        self.engine = engine
 
     def get_db(self):
-        """
-        Return a fresh session. Caller is responsible for commit/close.
-        Use this in background tasks and one-off operations.
-
-        For FastAPI routes use the get_session dependency from session.py instead.
-        """
         return self.SessionLocal()
 
     # ─────────────────────────────
@@ -106,45 +101,63 @@ class AppContext:
     def _init_repositories(self):
         logger.info("Initializing repositories...")
 
-        # Repos receive the session factory, not a session.
-        # Each repo method opens and closes its own session.
-        # This is safe for background tasks and the request lifecycle.
         sf = self.SessionLocal
 
-        self.stories_repo   = StoriesRepository(sf)
-        self.users_repo     = UsersRepository(sf)
-        self.files_repo     = FilesRepository(sf)
-        self.chapters_repo  = ChaptersRepository(sf)
-        self.progress_repo  = ProgressRepository(sf)
-        self.sync_repo      = SyncRepository(self.chapters_repo)
-        self.settings_repo  = SettingsRepository(sf)
+        self.stories_repo = StoriesRepository(sf)
+        self.users_repo = UsersRepository(sf)
+        self.files_repo = FilesRepository(sf)
+        self.chapters_repo = ChaptersRepository(sf)
+        self.progress_repo = ProgressRepository(sf)
+        self.sync_repo = SyncRepository(self.chapters_repo)
+        self.settings_repo = SettingsRepository(sf)
 
     # ─────────────────────────────
-    # SERVICES
+    # SERVICES (business logic)
     # ─────────────────────────────
     def _init_services(self):
         logger.info("Initializing services...")
 
-        self.stories  = StoryService(self.stories_repo)
-        self.users    = UserService(self.users_repo)
-        self.auth     = AuthService(self.users_repo)
-        self.files    = FileService(self.files_repo)
+        self.stories = StoryService(self.stories_repo)
+        self.users = UserService(self.users_repo)
+        self.auth = AuthService(self.users_repo)
+        self.files = FileService(self.files_repo)
         self.chapters = ChaptersService(self.chapters_repo)
         self.progress = ProgressService(self.progress_repo)
-        self.settings = SettingsService(self.settings_repo, settings_schema=SETTINGS)
+
+        self.settings = SettingsService(
+            self.settings_repo,
+            settings_schema=SETTINGS,
+            secret_key=self.app_config.secret_key,
+        )
+        self.settings.migrate_server_secrets()
 
     # ─────────────────────────────
-    # FANFICFARE CONFIG
+    # ENGINE CONFIG (writers)
     # ─────────────────────────────
-    def _init_fanficfare_config(self):
-        logger.info("Initializing FanFicFare config...")
-        self.fanficfare_config = FanFicFareConfigService(self.settings)
-        self.fanficfare_config.write_config(force=True)
+    def _init_engine_config(self):
+        logger.info("Initializing engine config...")
+
+        self.engines_config = {
+            "fanficfare": {
+                "prefix": "fanficfare.",
+                "writer": FanFicFareConfigService(self.settings),
+            },
+            "patreon": {
+                "prefix": "patreon.",
+                "writer": PatreonConfigService(self.settings),
+            },
+        }
+
+        for cfg in self.engines_config.values():
+            cfg["writer"].write_config(force=True)
+
         self.settings_repo.on_change = self._on_settings_change
 
     def _on_settings_change(self, key: str):
-        if key.startswith("fanficfare."):
-            self.fanficfare_config.write_config(force=True)
+        for cfg in self.engines_config.values():
+            if key.startswith(cfg["prefix"]):
+                cfg["writer"].write_config(force=False)
+                return
 
     # ─────────────────────────────
     # UTILS
@@ -153,13 +166,25 @@ class AppContext:
         self.file_utils = FileUtils()
 
     # ─────────────────────────────
-    # ENGINE
+    # ENGINE (fetch only)
     # ─────────────────────────────
     def _init_engine(self):
+        logger.info("Initializing engines...")
+
         self.fanficfare_engine = FanFicFareEngine(
-            self.settings_repo, self.fanficfare_config
+            self.settings_repo,
+            self.engines_config["fanficfare"]["writer"],
         )
-        self.engine_selector = EngineSelector(fanficfare_engine=self.fanficfare_engine)
+
+        self.patreon_engine = PatreonEngine(
+            self.settings_repo,
+            self.engines_config["patreon"]["writer"],
+        )
+
+        self.engine_selector = EngineSelector([
+            self.fanficfare_engine,
+            self.patreon_engine,
+        ])
 
     # ─────────────────────────────
     # PARSER REGISTRY
@@ -177,9 +202,11 @@ class AppContext:
         self.story_parser = StoryParser(self.parser_registry)
 
     # ─────────────────────────────
-    # PIPELINE
+    # PIPELINE (DB + filesystem persistence)
     # ─────────────────────────────
     def _init_pipeline(self):
+        logger.info("Initializing pipeline...")
+
         self.story_pipeline = StoryPipeline(
             stories_repo=self.stories_repo,
             chapters_repo=self.chapters_repo,
@@ -187,13 +214,27 @@ class AppContext:
         )
 
     # ─────────────────────────────
-    # ORCHESTRATION
+    # ORCHESTRATOR (engine coordination only)
     # ─────────────────────────────
-    def _init_orchestration(self):
-        self.story_download = StoryDownloadService(
+    def _init_orchestrator(self):
+        logger.info("Initializing orchestrator...")
+
+        self.story_orchestrator = StoryDownloadOrchestrator(
             selector=self.engine_selector,
-            parser=self.story_parser,
+        )
+
+    # ─────────────────────────────
+    # SERVICE LAYER (API entrypoint)
+    # ─────────────────────────────
+    def _init_service_layer(self):
+        logger.info("Initializing story download service...")
+        
+        self.story_download = StoryDownloadService(
+            orchestrator=self.story_orchestrator,
             pipeline=self.story_pipeline,
+            parser=self.story_parser,
+            stories_repo=self.stories_repo,
+            notifier=self.emit,
         )
 
     # ─────────────────────────────
@@ -201,14 +242,16 @@ class AppContext:
     # ─────────────────────────────
     def _validate(self):
         required = [
-            "engine",
             "SessionLocal",
             "stories_repo",
             "users_repo",
             "story_download",
             "parser_registry",
             "story_parser",
+            "engine_selector",
+            "story_pipeline",
         ]
+
         for r in required:
-            if not getattr(self, r, None):
+            if not hasattr(self, r):
                 raise RuntimeError(f"Missing AppContext attr: {r}")

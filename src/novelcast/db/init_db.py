@@ -14,15 +14,7 @@ from novelcast.db.session import SessionLocal
 from novelcast.core import defaults
 
 # --- import every model so SQLAlchemy knows about them before create_all ---
-from novelcast.db.models.user import User, PasswordResetToken
-from novelcast.db.models.author import Author
-from novelcast.db.models.story import Story
-from novelcast.db.models.chapter import Chapter, ChapterFile
-from novelcast.db.models.group import Group, StoryPermission
-from novelcast.db.models.progress import ReadingProgress
-from novelcast.db.models.settings import ServerSetting, UserSetting, StorySetting
-from novelcast.db.models.jobs import UpdateJob
-from novelcast.db.models.relationships import story_author, user_groups  # association tables
+from novelcast.db.models import *  # noqa: F401, F403 - re-exported in __init__.py
 
 logger = logging.getLogger(__name__)
 

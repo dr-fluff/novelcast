@@ -69,3 +69,12 @@ def setup_logging(config):
         handlers.append(file_handler)
 
     root.handlers = handlers
+
+    for noisy_logger in (
+        "websockets",
+        "websockets.server",
+        "websockets.protocol",
+        "uvicorn.protocols.websockets",
+        "uvicorn.protocols.websockets.websockets_impl",
+    ):
+        logging.getLogger(noisy_logger).setLevel(logging.WARNING)

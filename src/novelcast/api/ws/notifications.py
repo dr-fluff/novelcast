@@ -15,6 +15,18 @@ class ConnectionManager:
         if websocket in self.active_connections:
             self.active_connections.remove(websocket)
 
+    async def send(self, message: dict):
+        dead = []
+
+        for connection in self.active_connections:
+            try:
+                await connection.send_json(message)
+            except Exception:
+                dead.append(connection)
+
+        for d in dead:
+            self.disconnect(d)
+
     async def broadcast(self, event_type: str, payload=None):
         message = {
             "type": event_type,

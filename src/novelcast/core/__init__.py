@@ -1,7 +1,0 @@
-#self.engine_selector = EngineSelector(...)
-#self.story_parser = StoryParser(...)
-#self.story_pipeline = StoryPipeline(
-#    stories_repo=self.stories_repo,
-#    chapters_repo=self.chapters_repo,
-#    file_utils=self.file_utils,
-#)

@@ -1,5 +1,20 @@
 {
     "cSpell.words": [
         "PYTHONPATH"
-    ]
+    ],
+    "files.exclude": {
+        "**/.venv": true,
+        "**/node_modules": true,
+        "**/__pycache__": true
+    },
+    "search.exclude": {
+        "**/.venv": true,
+        "**/node_modules": true,
+        "**/__pycache__": true
+    },
+    "files.watcherExclude": {
+        "**/.venv/**": true,
+        "**/node_modules/**": true,
+        "**/__pycache__/**": true
+    }
 }

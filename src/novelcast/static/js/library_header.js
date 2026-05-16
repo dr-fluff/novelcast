@@ -32,17 +32,11 @@ window.addStory = async function (event) {
 
         if (data.status !== "ok") {
             setStatus("error");
-            if (typeof showNotification === "function") {
-                showNotification(`Download failed: ${data.error || "Unexpected response"}`, "error", 8000);
-            }
             return;
         }
 
         input.value = "";
         setStatus("done");
-        if (typeof showNotification === "function") {
-            showNotification("Story download started. Notifications will appear shortly.", "success", 5000);
-        }
 
     } catch (err) {
         console.error(err);
@@ -100,4 +94,3 @@ window.showSyncStatus = function (status) {
     dot.style.background = status === "Sync failed" ? "red" : "orange";
     dot.title = status;
 };
-

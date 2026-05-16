@@ -6,7 +6,7 @@ from sqlalchemy.dialects.sqlite import insert
 
 from novelcast.db.repositories.base import BaseRepository
 from novelcast.db.models.story import Story
-from novelcast.db.models.chapter import Chapter
+from novelcast.db.models.chapter import Chapter, ChapterFile
 
 
 class StoriesRepository(BaseRepository):
@@ -29,14 +29,16 @@ class StoriesRepository(BaseRepository):
 
     def get_chapter_file_paths(self, story_id: int) -> list[str]:
         with self.session_no_commit() as db:
-            rows = db.scalars(
-                select(Chapter.file_path).where(
+            rows = db.execute(
+                select(ChapterFile.file_path)
+                .join(Chapter, Chapter.id == ChapterFile.chapter_id)
+                .where(
                     Chapter.story_id == story_id,
-                    Chapter.file_path.isnot(None),
-                    Chapter.file_path != "",
+                    ChapterFile.file_path.isnot(None),
+                    ChapterFile.file_path != "",
                 )
             ).all()
-            return list(rows)
+            return [row[0] for row in rows]
 
     def get_chapter_numbers(self, story_id: int) -> list[int]:
         with self.session_no_commit() as db:

@@ -1,33 +1,51 @@
 # novelcast/pipeline/story_pipeline.py
+
 from pathlib import Path
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class StoryPipeline:
+    """
+    Pure persistence layer.
+
+    Responsibility:
+    - write chapters to disk
+    - store metadata in DB
+    - update stats
+
+    NO:
+    - fetching
+    - parsing
+    - downloading
+    - business logic
+    """
 
     def __init__(self, stories_repo, chapters_repo, file_utils):
         self.stories_repo = stories_repo
         self.chapters_repo = chapters_repo
         self.file_utils = file_utils
 
-    def persist(self, story: dict):
-        story_id = self.stories_repo.create(
-            story["title"],
-            story.get("author"),
-            story.get("source_url") or story.get("url")
-        )
+    # ─────────────────────────────
+    # STORY CONTENT PERSISTENCE
+    # ─────────────────────────────
+    def persist(self, story_id: int, story: dict) -> None:
+        """
+        story_id must already exist. The service layer owns story creation.
+        story must already be fully parsed.
+        """
 
         base_dir = self.file_utils.story_dir(
             story.get("author"),
-            story.get("title")
+            story.get("title"),
         )
 
-        cover_path = self._persist_cover(base_dir, story)
+        cover_path = self._write_cover(base_dir, story.get("cover_image"))
 
         epub_source_path = story.get("source_file_path")
         if epub_source_path:
-            epub_source = Path(epub_source_path)
-            if epub_source.exists():
-                epub_dest = base_dir / self.file_utils.safe(epub_source.name)
-                epub_source.replace(epub_dest)
+            self._move_epub(epub_source_path, base_dir)
 
         self.stories_repo.update_paths(
             story_id,
@@ -35,114 +53,102 @@ class StoryPipeline:
             str(cover_path) if cover_path else None,
         )
 
-        story_url = story.get("source_url") or story.get("url") or ""
         chapter_numbers = []
 
-        for ch in story["chapters"]:
-            title_safe = self.file_utils.safe(ch.get("title") or "")
-            filename = f"{ch['number']:03d}_{title_safe or f'chapter_{ch['number']:03d}'}.html"
-
-            path = self.file_utils.write_chapter(
-                base_dir,
-                filename,
-                ch["content"]
+        for ch in story.get("chapters", []):
+            chapter_numbers.append(
+                self._persist_chapter(story_id, base_dir, story, ch)
             )
 
-            chapter_numbers.append(ch["number"])
-            chapter_url = f"{story_url}#chapter-{ch['number']}" if story_url else f"file://{str(path)}"
-            self.chapters_repo.upsert(
-                story_id,
-                ch["number"],
-                ch.get("title"),
-                chapter_url,
-                str(path),
-                1,
-            )
+        self._update_stats(story_id, chapter_numbers)
 
-        total_chapters = len(chapter_numbers)
-        latest_downloaded = max(chapter_numbers) if chapter_numbers else None
-        self.stories_repo.update_chapter_stats(
-            story_id,
-            total_chapters,
-            total_chapters,
-            latest_downloaded,
-            total_chapters,
-            total_chapters,
-        )
-
-        return story_id
     
+    def get_story_by_url(self, url: str):
+        return self.stories_repo.get_by_url(url)
+    
+    # ─────────────────────────────
+    # APPEND CHAPTERS ONLY
+    # ─────────────────────────────
     def append_new_chapters(self, story_id: int, story: dict):
         base_dir = self.file_utils.story_dir(
             story.get("author"),
-            story.get("title")
+            story.get("title"),
+        )
+
+        existing = self.chapters_repo.get_chapter_numbers(story_id)
+        new_chapters = []
+
+        for ch in story.get("chapters", []):
+            if ch["number"] in existing:
+                continue
+
+            self._persist_chapter(story_id, base_dir, story, ch)
+            new_chapters.append(ch["number"])
+
+        return new_chapters
+
+    # ─────────────────────────────
+    # INTERNAL HELPERS
+    # ─────────────────────────────
+    def _persist_chapter(self, story_id, base_dir: Path, story: dict, ch: dict) -> int:
+        title_safe = self.file_utils.safe(ch.get("title") or "")
+        filename = f"{ch['number']:03d}_{title_safe or f'chapter_{ch['number']:03d}'}.html"
+
+        path = self.file_utils.write_chapter(
+            base_dir,
+            filename,
+            ch["content"],
         )
 
         story_url = story.get("source_url") or story.get("url") or ""
+        chapter_url = (
+            f"{story_url}#chapter-{ch['number']}"
+            if story_url
+            else f"file://{path}"
+        )
 
-        existing = self.chapters_repo.get_numbers(story_id)
-        existing_set = set(existing)
+        self.chapters_repo.upsert(
+            story_id,
+            ch["number"],
+            ch.get("title"),
+            chapter_url,
+            str(path),
+            1,
+        )
 
-        new_chapter_numbers = []
+        return ch["number"]
 
-        for ch in story["chapters"]:
-            if ch["number"] in existing_set:
-                continue
+    def _update_stats(self, story_id: int, chapter_numbers: list[int]):
+        total = len(chapter_numbers)
+        latest = max(chapter_numbers) if chapter_numbers else None
 
-            title_safe = self.file_utils.safe(ch.get("title") or "")
-            filename = f"{ch['number']:03d}_{title_safe or f'chapter_{ch['number']:03d}'}.html"
+        self.stories_repo.update_chapter_stats(
+            story_id,
+            total,
+            total,
+            latest,
+            total,
+            total,
+        )
 
-            path = self.file_utils.write_chapter(
-                base_dir,
-                filename,
-                ch["content"]
-            )
+    def _move_epub(self, source_path: str, base_dir: Path):
+        source = Path(source_path)
+        if not source.exists():
+            return
 
-            chapter_url = (
-                f"{story_url}#chapter-{ch['number']}"
-                if story_url else f"file://{str(path)}"
-            )
+        dest = base_dir / self.file_utils.safe(source.name)
+        source.replace(dest)
 
-            self.chapters_repo.upsert(
-                story_id,
-                ch["number"],
-                ch.get("title"),
-                chapter_url,
-                str(path),
-                1,
-            )
-
-            new_chapter_numbers.append(ch["number"])
-
-        return new_chapter_numbers
-    
-    def _persist_cover(self, base_dir: Path, story: dict) -> str | None:
-        cover_bytes = story.get("cover_image")
-        cover_url = story.get("cover_url")
-
-        if not cover_bytes and not cover_url:
+    def _write_cover(self, base_dir: Path, cover_bytes: bytes | None):
+        if not cover_bytes:
             return None
 
         cover_path = base_dir / "cover.jpg"
 
-        # Case 1: raw image bytes (most common with parsers)
-        if cover_bytes:
+        try:
             with open(cover_path, "wb") as f:
                 f.write(cover_bytes)
             return str(cover_path)
-
-        # Case 2: download from URL
-        if cover_url:
-            try:
-                import requests
-                resp = requests.get(cover_url, timeout=10)
-                resp.raise_for_status()
-
-                with open(cover_path, "wb") as f:
-                    f.write(resp.content)
-
-                return str(cover_path)
-            except Exception:
-                return None
-
-        return None
+        except Exception as e:
+            logger.warning("Failed to write cover: %s", e)
+            return None

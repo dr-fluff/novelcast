@@ -1,9 +1,5 @@
-"""
-novelcast/db/models/relationships.py
+# novelcast/db/models/relationships.py
 
-Pure association tables (no extra columns — those become full models).
-Import this module in init_db.py so SQLAlchemy registers the tables.
-"""
 
 from sqlalchemy import Column, ForeignKey, Table
 

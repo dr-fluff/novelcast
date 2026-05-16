@@ -2,13 +2,16 @@
 
 import logging
 
+from novelcast.utils.secrets import decrypt_secret, encrypt_secret, is_encrypted_secret
+
 logger = logging.getLogger(__name__)
 
 
 class SettingsService:
-    def __init__(self, repo, settings_schema=None):
+    def __init__(self, repo, settings_schema=None, secret_key: str = ""):
         self.repo = repo
         self.schema = settings_schema or {}
+        self.secret_key = secret_key
 
     # ─────────────────────────────
     # SERVER SETTINGS
@@ -21,6 +24,11 @@ class SettingsService:
         if not key or "." not in key:
             logger.warning("Invalid server setting key: %s", key)
             return None
+
+        if self._is_secret_key(key):
+            if value == "":
+                return None
+            value = encrypt_secret(str(value), self.secret_key)
 
         return self.repo.set_server_setting(key, value)
 
@@ -39,12 +47,71 @@ class SettingsService:
 
             for key, meta in fields.items():
                 full_key = f"{section}.{key}"
-                resolved[section][key] = db_values.get(
+                value = db_values.get(
                     full_key,
                     meta.get("default"),
                 )
+                if self._is_secret_key(full_key):
+                    value = self._decrypt_secret_value(value)
+                resolved[section][key] = value
 
         return resolved
+
+    def migrate_server_secrets(self):
+        db_values = self.get_server_settings()
+
+        for section, fields in self.schema.items():
+            for key, meta in fields.items():
+                if meta.get("type") != "secret":
+                    continue
+
+                full_key = f"{section}.{key}"
+                value = db_values.get(full_key)
+                if value and not is_encrypted_secret(value):
+                    self.repo.set_server_setting(
+                        full_key,
+                        encrypt_secret(str(value), self.secret_key),
+                    )
+
+    def get_display_server_settings(self):
+        resolved = self.get_resolved_server_settings()
+
+        for section, fields in self.schema.items():
+            for key in fields:
+                full_key = f"{section}.{key}"
+                if self._is_secret_key(full_key):
+                    resolved.setdefault(section, {})[key] = bool(
+                        self.repo.get_server_setting(full_key)
+                    )
+
+        return resolved
+
+    def get_raw_server_setting(self, key: str, default=None):
+        value = self.repo.get_server_setting(key)
+        return default if value is None else value
+
+    def get_secret(self, key: str, default=""):
+        value = self.repo.get_server_setting(key)
+        if value is None:
+            return default
+        return self._decrypt_secret_value(value)
+
+    def _is_secret_key(self, key: str) -> bool:
+        if "." not in key:
+            return False
+
+        section, field = key.split(".", 1)
+        meta = self.schema.get(section, {}).get(field, {})
+        return meta.get("type") == "secret"
+
+    def _decrypt_secret_value(self, value):
+        if not value:
+            return ""
+
+        if not is_encrypted_secret(value):
+            return value
+
+        return decrypt_secret(value, self.secret_key)
 
     # ─────────────────────────────
     # USER SETTINGS

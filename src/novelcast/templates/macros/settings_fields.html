@@ -16,6 +16,18 @@
             value="{{ value or '' }}"
         />
 
+    <!-- SECRET -->
+    {% elif meta.type == "secret" %}
+
+        <input
+            type="password"
+            id="{{ section }}.{{ key }}"
+            name="{{ section }}.{{ key }}"
+            value=""
+            placeholder="{% if value %}Saved{% endif %}"
+            autocomplete="new-password"
+        />
+
     <!-- NUMBER -->
     {% elif meta.type == "number" %}
 

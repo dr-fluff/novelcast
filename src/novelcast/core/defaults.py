@@ -1,6 +1,23 @@
 # novelcast/core/defaults.py
 
 SETTINGS = {
+    "patreon": {
+        "config_path": {
+            "type": "string",
+            "default": "config/patreon.ini",
+            "label": "Config path",
+        },
+        "email": {
+            "type": "string",
+            "default": "email@email.com",
+            "label": "Email",
+        },
+        "password": {
+            "type": "secret",
+            "default": "",
+            "label": "Password",
+        },
+    },
     "fanficfare": {
         "config_path": {
             "type": "string",
@@ -157,4 +174,3 @@ SETTINGS = {
         },
     },
 }
-

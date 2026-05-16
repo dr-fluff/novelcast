@@ -10,12 +10,14 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from novelcast.db.base import Base
 
 if TYPE_CHECKING:
-    from novelcast.db.models.author import Author
-    from novelcast.db.models.chapter import Chapter
-    from novelcast.db.models.group import StoryPermission
-    from novelcast.db.models.progress import ReadingProgress
-    from novelcast.db.models.settings import StorySetting
-    from novelcast.db.models.jobs import UpdateJob
+    from novelcast.db.models import (
+        Author, 
+        Chapter, 
+        StoryPermission, 
+        ReadingProgress, 
+        StorySetting, 
+        UpdateJob
+        )
 
 
 class Story(Base):
@@ -31,6 +33,7 @@ class Story(Base):
 
     local_path: Mapped[Optional[str]] = mapped_column(String, unique=True)
     cover_path: Mapped[Optional[str]] = mapped_column(String)
+    local_img_path: Mapped[Optional[str]] = mapped_column(String)
 
     total_chapters: Mapped[int] = mapped_column(Integer, default=0)
     downloaded_chapters: Mapped[int] = mapped_column(Integer, default=0)
@@ -42,37 +45,12 @@ class Story(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
     # relationships
-    authors: Mapped[list["Author"]] = relationship(
-        "Author",
-        secondary="story_author",
-        back_populates="stories",
-    )
-    chapters: Mapped[list["Chapter"]] = relationship(
-        "Chapter",
-        back_populates="story",
-        cascade="all, delete-orphan",
-        order_by="Chapter.chapter_number",
-    )
-    permissions: Mapped[list["StoryPermission"]] = relationship(
-        "StoryPermission",
-        back_populates="story",
-        cascade="all, delete-orphan",
-    )
-    reading_progress: Mapped[list["ReadingProgress"]] = relationship(
-        "ReadingProgress",
-        back_populates="story",
-        cascade="all, delete-orphan",
-    )
-    settings: Mapped[list["StorySetting"]] = relationship(
-        "StorySetting",
-        back_populates="story",
-        cascade="all, delete-orphan",
-    )
-    update_jobs: Mapped[list["UpdateJob"]] = relationship(
-        "UpdateJob",
-        back_populates="story",
-        cascade="all, delete-orphan",
-    )
+    authors: Mapped[list["Author"]] = relationship("Author",secondary="story_author",back_populates="stories",)
+    chapters: Mapped[list["Chapter"]] = relationship("Chapter",back_populates="story",cascade="all, delete-orphan",order_by="Chapter.chapter_number",)
+    permissions: Mapped[list["StoryPermission"]] = relationship("StoryPermission",back_populates="story",cascade="all, delete-orphan",)
+    reading_progress: Mapped[list["ReadingProgress"]] = relationship("ReadingProgress",back_populates="story",cascade="all, delete-orphan",)
+    settings: Mapped[list["StorySetting"]] = relationship("StorySetting",back_populates="story",cascade="all, delete-orphan",)
+    update_jobs: Mapped[list["UpdateJob"]] = relationship("UpdateJob",back_populates="story",cascade="all, delete-orphan",)
 
     def __repr__(self) -> str:
         return f"<Story id={self.id} title={self.title!r}>"

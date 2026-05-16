@@ -115,18 +115,30 @@ function buildNotification(payload) {
     switch (payload.type) {
         case "download_started":
             return {
-                message: `Downloading ${payload.source_url}...`,
+                message: `Downloading: ${payload.source_url}`,
                 type: "info",
                 timeout: 0,
                 options: {
                     id: `download-${payload.download_id}`,
                     persistent: true,
-                    indeterminate: true,
+                    progress: 0,
+                },
+            };
+        case "download_progress":
+            return {
+                message: `Downloading: ${payload.source_url || "story"}`,
+                type: "info",
+                timeout: 0,
+                options: {
+                    id: `download-${payload.download_id}`,
+                    persistent: true,
+                    progress: payload.progress,
+                    indeterminate: payload.indeterminate !== false,
                 },
             };
         case "download_finished":
             return {
-                message: `Download complete: ${payload.title || payload.story_id}.`,
+                message: "Downloading completed",
                 type: "success",
                 timeout: 5000,
                 options: {
@@ -168,14 +180,10 @@ function buildNotification(payload) {
                 timeout: 7000,
             };
         case "story_added":
-            return {
-                message: `Story added: ${payload.title || payload.story_id}.`,
-                type: "success",
-                timeout: 7000,
-            };
+            return null;
         default:
             return {
-                message: JSON.stringify(payload),
+                message: "Background update received.",
                 type: "info",
                 timeout: 7000,
             };
@@ -218,6 +226,7 @@ function initNotificationSocket() {
         try {
             const payload = JSON.parse(event.data);
             const notification = buildNotification(payload);
+            if (!notification) return;
             showNotification(notification.message, notification.type, notification.timeout, notification.options);
         } catch (error) {
             showNotification("Received invalid notification payload.", "warning");

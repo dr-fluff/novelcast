@@ -31,11 +31,7 @@ class Chapter(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
     story: Mapped["Story"] = relationship("Story", back_populates="chapters")
-    files: Mapped[list["ChapterFile"]] = relationship(
-        "ChapterFile",
-        back_populates="chapter",
-        cascade="all, delete-orphan",
-    )
+    files: Mapped[list["ChapterFile"]] = relationship("ChapterFile",back_populates="chapter",cascade="all, delete-orphan",)
 
     @property
     def html_file(self) -> Optional["ChapterFile"]:
@@ -58,9 +54,7 @@ class ChapterFile(Base):
     __tablename__ = "chapter_files"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    chapter_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("chapters.id", ondelete="CASCADE"), nullable=False
-    )
+    chapter_id: Mapped[int] = mapped_column(Integer, ForeignKey("chapters.id", ondelete="CASCADE"), nullable=False)
 
     file_path: Mapped[str] = mapped_column(String, nullable=False)
     format: Mapped[str] = mapped_column(String, nullable=False)   # "html", "epub", "txt", etc.
