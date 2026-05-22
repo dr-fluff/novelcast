@@ -1,0 +1,305 @@
+/* novelcast/static/css/pages/authors.css */
+
+/* ═══════════════════════════════════════════════
+   AUTHORS LIST PAGE
+═══════════════════════════════════════════════ */
+
+/* ── Filters bar (reuses search-sort-bar from index) ─────────────────── */
+
+.authors-filters {
+    padding: 1.25rem 2rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* ── Grid ─────────────────────────────────────────────────────────────── */
+
+.authors-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    padding: 1.5rem 2rem 3rem;
+    max-width: 860px;
+    margin: 0 auto;
+}
+
+/* ── Author card (list row) ───────────────────────────────────────────── */
+
+.author-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+
+    background: var(--card);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 18px;
+    text-decoration: none;
+    color: var(--text);
+
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.author-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.14);
+}
+
+/* ── Avatar circle ────────────────────────────────────────────────────── */
+
+.author-card-avatar {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    flex-shrink: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #fff;
+}
+
+.author-card-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* ── Text block ───────────────────────────────────────────────────────── */
+
+.author-card-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.author-card-name {
+    margin: 0 0 0.2rem;
+    font-size: 1.05rem;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.author-card-meta {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--muted);
+}
+
+.author-card-bio {
+    margin: 0.35rem 0 0;
+    font-size: 0.875rem;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.author-card-chevron {
+    color: var(--muted);
+    font-size: 0.85rem;
+    flex-shrink: 0;
+}
+
+/* ── Empty state ──────────────────────────────────────────────────────── */
+
+.authors-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 4rem 2rem;
+    text-align: center;
+    border: 1px dashed rgba(255, 255, 255, 0.1);
+    border-radius: 1rem;
+    color: var(--muted);
+}
+
+.authors-empty i {
+    font-size: 2rem;
+    color: var(--muted);
+    opacity: 0.5;
+}
+
+.authors-empty .empty-hint {
+    font-size: 0.875rem;
+    opacity: 0.7;
+    margin: 0;
+}
+
+
+/* ═══════════════════════════════════════════════
+   AUTHOR DETAIL PAGE
+═══════════════════════════════════════════════ */
+
+.author-page {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 2rem 2rem 4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+/* ── Profile card ─────────────────────────────────────────────────────── */
+
+.author-profile-card {
+    display: flex;
+    gap: 2rem;
+    align-items: flex-start;
+    padding: 2rem;
+    background: var(--card);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 24px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.12);
+}
+
+/* ── Profile avatar ───────────────────────────────────────────────────── */
+
+.author-profile-avatar {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    flex-shrink: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    font-weight: 700;
+    color: #fff;
+    box-shadow: 0 8px 24px rgba(99, 102, 241, 0.3);
+}
+
+.author-profile-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* ── Profile body ─────────────────────────────────────────────────────── */
+
+.author-profile-body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.author-profile-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.author-profile-name {
+    margin: 0.25rem 0 0;
+    font-size: 2rem;
+    line-height: 1.05;
+}
+
+.author-profile-count {
+    margin: 0.4rem 0 0;
+    font-size: 0.9rem;
+    color: var(--muted);
+}
+
+.author-profile-bio {
+    margin: 0;
+    font-size: 0.975rem;
+    line-height: 1.75;
+    color: var(--text);
+    opacity: 0.85;
+}
+
+/* ── Links ────────────────────────────────────────────────────────────── */
+
+.author-profile-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.author-link-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.45rem 0.9rem;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text);
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.author-link-pill:hover {
+    background: rgba(99, 102, 241, 0.15);
+    border-color: rgba(99, 102, 241, 0.4);
+    transform: translateY(-1px);
+}
+
+.author-link-pill i {
+    font-size: 0.75rem;
+    color: var(--muted);
+}
+
+.author-back-btn {
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+/* ── Stories section ──────────────────────────────────────────────────── */
+
+.author-stories-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.author-stories-heading {
+    margin: 0;
+    font-size: 1.3rem;
+}
+
+/* reuse .library-grid and .library-card from index.css */
+
+/* ── Responsive ───────────────────────────────────────────────────────── */
+
+@media (max-width: 700px) {
+    .authors-grid {
+        padding: 1rem 1rem 3rem;
+    }
+
+    .author-profile-card {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    .author-profile-top {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .author-profile-links {
+        justify-content: center;
+    }
+
+    .author-back-btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .author-page {
+        padding: 1.25rem 1rem 3rem;
+    }
+}

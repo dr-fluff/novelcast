@@ -11,7 +11,7 @@ from novelcast.db.models.chapter import Chapter, ChapterFile
 
 class StoriesRepository(BaseRepository):
 
-    # ── reads ─────────────────────────────────────────────────────────────
+    # ── reads ──────────────────────────────────────────────────────────────
 
     def get_all(self) -> list[dict]:
         with self.session_no_commit() as db:
@@ -46,7 +46,7 @@ class StoriesRepository(BaseRepository):
                 select(Chapter.chapter_number).where(Chapter.story_id == story_id)
             ).all())
 
-    # ── writes ────────────────────────────────────────────────────────────
+    # ── writes ─────────────────────────────────────────────────────────────
 
     def create(self, title: str, author: str | None, url: str | None) -> int:
         with self.session() as db:
@@ -79,6 +79,26 @@ class StoriesRepository(BaseRepository):
                 story.author = author
                 story.last_updated = datetime.now(timezone.utc)
 
+    def update_full_metadata(
+        self,
+        story_id: int,
+        title: str,
+        author: str | None,
+        source_url: str | None = None,
+    ) -> dict | None:
+        """Used by the metadata edit panel."""
+        with self.session() as db:
+            story = db.get(Story, story_id)
+            if not story:
+                return None
+            story.title = title
+            story.author = author
+            if source_url is not None:
+                story.source_url = source_url
+            story.last_updated = datetime.now(timezone.utc)
+            db.flush()
+            return _to_dict(story)
+
     def update_paths(self, story_id: int, local_path: str, cover_path: str | None = None) -> None:
         with self.session() as db:
             story = db.get(Story, story_id)
@@ -104,7 +124,7 @@ class StoriesRepository(BaseRepository):
                 story.latest_online_chapter = latest_online_chapter
                 story.online_chapters = online_chapters or 0
 
-    # ── deletes ───────────────────────────────────────────────────────────
+    # ── deletes ────────────────────────────────────────────────────────────
 
     def delete(self, story_id: int) -> None:
         with self.session() as db:
@@ -113,12 +133,10 @@ class StoriesRepository(BaseRepository):
                 db.delete(story)
 
     def delete_with_relations(self, story_id: int) -> None:
-        # FK cascades handle everything — just delete the story.
-        # PRAGMA foreign_keys=ON is set in engine.py.
         self.delete(story_id)
 
 
-# ── helper ────────────────────────────────────────────────────────────────
+# ── helper ─────────────────────────────────────────────────────────────────
 
 def _to_dict(story: Story | None) -> dict | None:
     if story is None:

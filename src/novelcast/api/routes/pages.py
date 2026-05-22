@@ -231,20 +231,40 @@ def authors(
     stories: StoryService = Depends(get_stories),
     templates: Jinja2Templates = Depends(get_templates),
 ):
-    all_stories = stories.get_all_stories()
+    query = request.query_params.get("q", "").strip().lower()
+    sort  = request.query_params.get("sort", "name")
 
-    grouped: dict[str, list] = {}
-    for s in all_stories:
-        author = s.get("author") or "Unknown"
-        grouped.setdefault(author, []).append(s)
-
-    sorted_authors = sorted(grouped.items(), key=lambda x: x[0].lower())
+    all_authors = stories.get_all_authors(query=query, sort=sort)
 
     return templates.TemplateResponse("pages/authors.html", {
-        "request": request,
-        "authors": sorted_authors,
+        "request":      request,
+        "authors":      all_authors,
+        "query":        query,
+        "sort":         sort,
+        "sort_options": [
+            {"key": "name",    "label": "Name (A–Z)"},
+            {"key": "stories", "label": "Most stories"},
+            {"key": "updated", "label": "Last updated"},
+            {"key": "added",   "label": "Date added"},
+        ],
     })
 
+
+@router.get("/authors/{author_id}")
+def author_detail(
+    request: Request,
+    author_id: int,
+    stories: StoryService = Depends(get_stories),
+    templates: Jinja2Templates = Depends(get_templates),
+):
+    author = stories.get_author(author_id)
+    if not author:
+        raise HTTPException(status_code=404, detail="Author not found")
+
+    return templates.TemplateResponse("pages/author.html", {
+        "request": request,
+        "author":  author,
+    })
 
 # ─────────────────────────────
 # COVERS (SAFE FILE ACCESS)

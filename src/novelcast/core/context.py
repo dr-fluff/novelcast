@@ -1,3 +1,4 @@
+# novelcast/core/context.py
 import logging
 from queue import Queue
 
@@ -13,6 +14,7 @@ from novelcast.db.repositories import (
     ProgressRepository,
     SyncRepository,
     SettingsRepository,
+    AuthorRepository,
 )
 
 from novelcast.services import (
@@ -103,13 +105,15 @@ class AppContext:
 
         sf = self.SessionLocal
 
-        self.stories_repo = StoriesRepository(sf)
-        self.users_repo = UsersRepository(sf)
-        self.files_repo = FilesRepository(sf)
+        self.stories_repo  = StoriesRepository(sf)
+        self.authors_repo  = AuthorRepository(sf)
+        self.users_repo    = UsersRepository(sf)
+        self.files_repo    = FilesRepository(sf)
         self.chapters_repo = ChaptersRepository(sf)
         self.progress_repo = ProgressRepository(sf)
-        self.sync_repo = SyncRepository(self.chapters_repo)
+        self.sync_repo     = SyncRepository(self.chapters_repo)
         self.settings_repo = SettingsRepository(sf)
+
 
     # ─────────────────────────────
     # SERVICES (business logic)
@@ -117,10 +121,10 @@ class AppContext:
     def _init_services(self):
         logger.info("Initializing services...")
 
-        self.stories = StoryService(self.stories_repo)
-        self.users = UserService(self.users_repo)
-        self.auth = AuthService(self.users_repo)
-        self.files = FileService(self.files_repo)
+        self.stories  = StoryService(self.stories_repo, author_repo=self.authors_repo)
+        self.users    = UserService(self.users_repo)
+        self.auth     = AuthService(self.users_repo)
+        self.files    = FileService(self.files_repo)
         self.chapters = ChaptersService(self.chapters_repo)
         self.progress = ProgressService(self.progress_repo)
 

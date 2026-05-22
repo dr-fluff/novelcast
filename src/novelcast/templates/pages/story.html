@@ -1,23 +1,28 @@
+{# novelcast/templates/pages/story.html #}
 {% extends "layouts/base.html" %}
 
 {% block title %}{{ story["title"] }} · NovelCast{% endblock %}
+
+{% block head %}
+    <link rel="stylesheet" href="/static/css/pages/story.css" />
+    <link rel="stylesheet" href="/static/css/components/metadata_panel.css" />
+{% endblock %}
 
 {% block content %}
 
 {% include "partials/library_header.html" %}
 
-{% block head %}
-    <link rel="stylesheet" href="/static/css/pages/story.css" />
-{% endblock %}
+<section class="story-page"
+    data-story-id="{{ story['id'] }}"
+    data-first-unread-id="{{ first_unread_chapter_id | default('') }}">
 
-<section class="story-page" data-story-id="{{ story["id"] }}" data-first-unread-id="{{ first_unread_chapter_id | default('') }}">
     <div class="story-summary">
         <div class="story-summary-left">
             <p class="story-label">Story details</p>
             <h1 class="story-title">{{ story["title"] }}</h1>
             <p class="story-author">{{ story["author"] or "Unknown author" }}</p>
             {% if story["source_url"] %}
-                <p class="story-description">Source: <a href="{{ story["source_url"] }}" target="_blank" rel="noreferrer">{{ story["source_url"] }}</a></p>
+                <p class="story-description">Source: <a href="{{ story['source_url'] }}" target="_blank" rel="noreferrer">{{ story["source_url"] }}</a></p>
             {% else %}
                 <p class="story-description">No source URL available.</p>
             {% endif %}
@@ -42,6 +47,9 @@
             {% if first_unread_chapter_id %}
                 <button class="btn-primary" onclick="goToFirstUnread()">Read</button>
             {% endif %}
+            <button class="btn-secondary meta-edit-btn" onclick="openMetaPanel()">
+                <i class="fa-solid fa-pen-to-square"></i> Edit metadata
+            </button>
             <button class="btn-danger" onclick="confirmDeleteStory()">Delete</button>
         </div>
     </div>
@@ -58,8 +66,8 @@
         {% if chapters %}
             <ul class="chapter-list">
                 {% for chapter in chapters %}
-                    <li class="chapter-item {% if chapter["id"] in read_chapters %}chapter-read{% endif %}">
-                        <a href="/chapter?story_id={{ story["id"] }}&chapter_id={{ chapter["id"] }}" class="chapter-link">
+                    <li class="chapter-item {% if chapter['id'] in read_chapters %}chapter-read{% endif %}">
+                        <a href="/chapter?story_id={{ story['id'] }}&chapter_id={{ chapter['id'] }}" class="chapter-link">
                             <div class="chapter-main">
                                 <span class="chapter-number">Chapter {{ chapter["chapter_number"] }}</span>
                                 <span class="chapter-name">{{ chapter["title"] or "Untitled chapter" }}</span>
@@ -75,10 +83,14 @@
             </div>
         {% endif %}
     </section>
+
 </section>
+
+{% include "partials/metadata_panel.html" %}
+
+{% endblock %}
 
 {% block scripts %}
 <script src="/static/js/story_page.js" defer></script>
-{% endblock %}
-
+<script src="/static/js/metadata_panel.js" defer></script>
 {% endblock %}

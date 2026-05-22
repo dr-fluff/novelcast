@@ -1,0 +1,99 @@
+{# novelcast/templates/pages/author.html #}
+{% extends "layouts/base.html" %}
+
+{% block title %}{{ author.name }} · NovelCast{% endblock %}
+
+{% block head %}
+    <link rel="stylesheet" href="/static/css/pages/authors.css" />
+{% endblock %}
+
+{% block content %}
+
+{% include "partials/library_header.html" %}
+
+<div class="author-page">
+
+    {# ── Profile card ────────────────────────────────────────────────────── #}
+    <section class="author-profile-card">
+
+        <div class="author-profile-avatar">
+            {% if author.picture_url %}
+                <img src="{{ author.picture_url }}" alt="{{ author.name }}" />
+            {% else %}
+                <span>{{ author.name[0].upper() }}</span>
+            {% endif %}
+        </div>
+
+        <div class="author-profile-body">
+
+            <div class="author-profile-top">
+                <div>
+                    <p class="story-label">Author</p>
+                    <h1 class="author-profile-name">{{ author.name }}</h1>
+                    <p class="author-profile-count">
+                        {{ author.stories | length }}
+                        {{ "story" if author.stories | length == 1 else "stories" }}
+                    </p>
+                </div>
+                <a href="/authors" class="btn-secondary author-back-btn">← All authors</a>
+            </div>
+
+            {% if author.bio %}
+                <p class="author-profile-bio">{{ author.bio }}</p>
+            {% endif %}
+
+            {% if author.links %}
+                <div class="author-profile-links">
+                    {% for link in author.links %}
+                        <a class="author-link-pill" href="{{ link.url }}" target="_blank" rel="noreferrer noopener">
+                            <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                            {{ link.label }}
+                        </a>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+        </div>
+
+    </section>
+
+    {# ── Stories grid ────────────────────────────────────────────────────── #}
+    <section class="author-stories-section">
+
+        <h2 class="author-stories-heading">Stories</h2>
+
+        {% if author.stories %}
+            <div class="library-grid">
+                {% for s in author.stories %}
+                    <a class="library-card" href="/story?story_id={{ s.id }}">
+                        <div class="card-cover">
+                            <img
+                                src="{{ s.cover_url or '/static/images/cover-placeholder.svg' }}"
+                                alt="{{ s.title }} cover"
+                                onerror="this.style.display='none'"
+                            />
+                            <div class="card-letter">{{ s.title[0].upper() if s.title else "?" }}</div>
+                        </div>
+                        <div class="card-info">
+                            <h3>{{ s.title }}</h3>
+                            <p class="card-meta">
+                                {{ s.downloaded_chapters or 0 }} chapters
+                                {% if s.last_updated %}
+                                    · {{ s.last_updated.strftime("%b %Y") }}
+                                {% endif %}
+                            </p>
+                        </div>
+                    </a>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <p>No stories linked to this author yet.</p>
+            </div>
+        {% endif %}
+
+    </section>
+
+</div>
+
+{% endblock %}

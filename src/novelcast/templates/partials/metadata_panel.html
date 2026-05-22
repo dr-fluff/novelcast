@@ -1,0 +1,75 @@
+{# novelcast/templates/partials/metadata_panel.html #}
+
+<div class="meta-panel-backdrop" id="metaPanelBackdrop" onclick="closeMetaPanel()"></div>
+
+<aside class="meta-panel" id="metaPanel" aria-label="Edit metadata" aria-hidden="true">
+
+    <div class="meta-panel-header">
+        <h2 class="meta-panel-title">
+            <i class="fa-solid fa-pen-to-square"></i>
+            Edit metadata
+        </h2>
+        <button class="icon-button" onclick="closeMetaPanel()" aria-label="Close">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </div>
+
+    <div class="meta-panel-body">
+
+        {# ── Story ──────────────────────────────────────────────────────── #}
+        <section class="meta-section">
+            <h3 class="meta-section-label">Story</h3>
+
+            <div class="meta-field">
+                <label for="metaTitle">Title</label>
+                <input type="text" id="metaTitle" placeholder="Story title" />
+            </div>
+
+            <div class="meta-field">
+                <label for="metaSourceUrl">Source URL</label>
+                <input type="url" id="metaSourceUrl" placeholder="https://…" />
+            </div>
+        </section>
+
+        {# ── Author ─────────────────────────────────────────────────────── #}
+        <section class="meta-section">
+            <h3 class="meta-section-label">Author</h3>
+
+            <div class="meta-field">
+                <label for="metaAuthorName">Name</label>
+                <input type="text" id="metaAuthorName" placeholder="Author name" />
+            </div>
+
+            <div class="meta-field">
+                <label for="metaAuthorBio">Bio</label>
+                <textarea id="metaAuthorBio" rows="3" placeholder="Short bio…"></textarea>
+            </div>
+        </section>
+
+        {# ── Links ──────────────────────────────────────────────────────── #}
+        <section class="meta-section">
+            <div class="meta-section-header">
+                <h3 class="meta-section-label">Links</h3>
+                <button class="meta-add-link-btn" type="button" onclick="addLinkRow()">
+                    <i class="fa-solid fa-plus"></i> Add link
+                </button>
+            </div>
+
+            <div id="metaLinksContainer" class="meta-links-list">
+                {# rows injected by JS #}
+            </div>
+        </section>
+
+    </div>
+
+    <div class="meta-panel-footer">
+        <span class="meta-save-status" id="metaSaveStatus"></span>
+        <div class="meta-footer-actions">
+            <button class="btn-secondary" onclick="closeMetaPanel()">Cancel</button>
+            <button class="btn-primary" id="metaSaveBtn" onclick="saveMetadata()">
+                <i class="fa-solid fa-floppy-disk"></i> Save
+            </button>
+        </div>
+    </div>
+
+</aside>
