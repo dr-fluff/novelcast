@@ -21,3 +21,10 @@ class StoryDownloadOrchestrator:
         logger.debug("Using engine: %s", engine.__class__.__name__)
 
         return engine.fetch(url, progress_callback=progress_callback)
+
+    def check_updates(self, url: str) -> dict:
+        engine = self.selector.get_engine(url)
+
+        logger.debug("Checking updates with engine: %s", engine.__class__.__name__)
+
+        return engine.check_updates(url)

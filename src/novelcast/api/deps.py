@@ -14,6 +14,7 @@ from novelcast.services import (
     SettingsService,
     StoryDownloadService,
     StoryService,
+    LibrarySyncService,
     NotifierService,
     PasswordResetService,
 )
@@ -49,6 +50,10 @@ def get_settings(request: Request) -> SettingsService:
 
 def get_download(request: Request) -> StoryDownloadService:
     return request.app.state.ctx.story_download
+
+
+def get_library_sync(request: Request) -> LibrarySyncService:
+    return request.app.state.ctx.library_sync
 
 
 def get_notifier(request: Request) -> NotifierService:

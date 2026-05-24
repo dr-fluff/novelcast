@@ -10,5 +10,5 @@ from .progress_service import ProgressService
 from .settings_service import SettingsService
 from .story_download_service import StoryDownloadService
 from .story_service import StoryService
+from .sync_service import LibrarySyncService
 from .user_service import UserService
-

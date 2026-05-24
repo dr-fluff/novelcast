@@ -40,6 +40,17 @@
   font-size: 1rem;
 }
 
+.story-author-link {
+  color: var(--text);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.story-author-link:hover {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
 .story-description {
   margin: 1rem 0 0;
   color: var(--text);

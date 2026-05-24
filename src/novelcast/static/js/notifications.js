@@ -225,6 +225,7 @@ function initNotificationSocket() {
     socket.addEventListener("message", (event) => {
         try {
             const payload = JSON.parse(event.data);
+            window.dispatchEvent(new CustomEvent("novelcast:notification", { detail: payload }));
             const notification = buildNotification(payload);
             if (!notification) return;
             showNotification(notification.message, notification.type, notification.timeout, notification.options);

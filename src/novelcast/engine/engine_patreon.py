@@ -21,6 +21,6 @@ class PatreonEngine(StoryEngine):
     # -------------------------
     # MAIN ENTRY
     # -------------------------
-    def fetch(self, url: str, progress_callback=None) -> dict:
+    def fetch(self, url: str, progress_callback=None, output_dir="/temp") -> dict:
         logger.error("Patreon engine not implemented: %s", url)
         raise NotImplementedError("Patreon engine is not implemented yet")

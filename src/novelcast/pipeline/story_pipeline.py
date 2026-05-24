@@ -70,20 +70,27 @@ class StoryPipeline:
     # APPEND CHAPTERS ONLY
     # ─────────────────────────────
     def append_new_chapters(self, story_id: int, story: dict):
-        base_dir = self.file_utils.story_dir(
+        existing_story = self.stories_repo.get_by_id(story_id) or {}
+        local_path = existing_story.get("local_path")
+        base_dir = Path(local_path) if local_path else self.file_utils.story_dir(
             story.get("author"),
             story.get("title"),
         )
 
         existing = self.chapters_repo.get_chapter_numbers(story_id)
         new_chapters = []
+        online_numbers = []
 
         for ch in story.get("chapters", []):
+            online_numbers.append(ch["number"])
+
             if ch["number"] in existing:
                 continue
 
             self._persist_chapter(story_id, base_dir, story, ch)
             new_chapters.append(ch["number"])
+
+        self._update_append_stats(story_id, online_numbers)
 
         return new_chapters
 
@@ -129,6 +136,19 @@ class StoryPipeline:
             latest,
             total,
             total,
+        )
+
+    def _update_append_stats(self, story_id: int, online_numbers: list[int]):
+        downloaded = self.chapters_repo.get_downloaded_numbers(story_id)
+        total_local = len(self.chapters_repo.get_chapter_numbers(story_id))
+
+        self.stories_repo.update_chapter_stats(
+            story_id,
+            max(total_local, len(online_numbers)),
+            len(downloaded),
+            max(downloaded) if downloaded else None,
+            max(online_numbers) if online_numbers else None,
+            len(online_numbers),
         )
 
     def _move_epub(self, source_path: str, base_dir: Path):

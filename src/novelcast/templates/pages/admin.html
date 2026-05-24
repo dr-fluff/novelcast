@@ -26,7 +26,12 @@
     </div>
     <div class="stat-card">
       <span class="stat-label">Pending Syncs</span>
-      <span class="stat-value stat-value--purple">{{ stats.pending_syncs | default(0) }}</span>
+      <span
+        class="stat-value stat-value--purple"
+        id="pending-syncs"
+        title="{{ stats.pending_chapters | default(0) }} new chapters available">
+        {{ stats.pending_syncs | default(0) }}
+      </span>
     </div>
     <div class="stat-card">
       <span class="stat-label">Need Attention</span>
@@ -89,7 +94,14 @@ function runHealthCheck() {
 function checkUpdates() {
   fetch('/admin/check-updates', { method: 'POST' })
     .then(r => r.json())
-    .then(d => alert(d.message || 'Up to date'));
+    .then(d => {
+      const pendingSyncs = document.getElementById('pending-syncs');
+      if (pendingSyncs) {
+        pendingSyncs.textContent = d.stories_with_updates || 0;
+        pendingSyncs.title = `${d.pending_chapters || 0} new chapters available`;
+      }
+      alert(d.message || 'Up to date');
+    });
 }
 </script>
 

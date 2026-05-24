@@ -10,6 +10,7 @@ from fastapi.templating import Jinja2Templates
 from novelcast.api.deps import (
     get_chapters,
     get_current_user,
+    get_library_sync,
     get_progress,
     get_settings,
     get_stories,
@@ -23,6 +24,7 @@ from novelcast.services import (
     SettingsService,
     UserService,
     ChaptersService,
+    LibrarySyncService,
 )
 
 
@@ -80,6 +82,7 @@ def story(
     if not story:
         raise HTTPException(status_code=404, detail="Story not found")
 
+    story_authors = stories.get_story_authors(story_id)
     chapter_list = chapters.list_by_story(story_id)
     read_chapters, last_chapter_id, last_read_title = _resolve_progress(
         current_user, story_id, chapter_list, progress, chapters
@@ -92,6 +95,7 @@ def story(
     return templates.TemplateResponse("pages/story.html", {
         "request": request,
         "story": story,
+        "story_authors": story_authors,
         "chapters": chapter_list,
         "read_chapters": read_chapters,
         "last_chapter_id": last_chapter_id,
@@ -169,6 +173,8 @@ def chapter(
 def admin_dashboard(
     request: Request,
     settings: SettingsService = Depends(get_settings),
+    stories: StoryService = Depends(get_stories),
+    library_sync: LibrarySyncService = Depends(get_library_sync),
     users: UserService = Depends(get_users),
     current_user: dict | None = Depends(get_current_user),
     templates: Jinja2Templates = Depends(get_templates),
@@ -177,12 +183,13 @@ def admin_dashboard(
         raise HTTPException(status_code=403, detail="Admin access required")
 
     all_users = users.get_all_users()
+    all_stories = stories.get_all_stories()
 
-    # Build stats — replace with real queries as needed
     stats = {
         "total_users":   len(all_users),
-        "total_stories": 0,   # replace: stories_service.count()
-        "pending_syncs": 0,   # replace: sync_service.pending_count()
+        "total_stories": len(all_stories),
+        "pending_syncs": library_sync.pending_count(),
+        "pending_chapters": library_sync.pending_chapter_count(),
         "need_attention": 0,  # replace: stories that errored
     }
 
@@ -208,6 +215,24 @@ def admin_dashboard(
         "health_checks": health_checks,
         "users":         all_users,
     })
+
+
+@router.post("/admin/check-updates")
+def check_updates(
+    current_user: dict | None = Depends(get_current_user),
+    library_sync: LibrarySyncService = Depends(get_library_sync),
+):
+    if not current_user or not current_user.get("is_root"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    result = library_sync.check_updates()
+    pending_stories = result.get("stories_with_updates", 0)
+    pending_chapters = result.get("pending_chapters", 0)
+
+    return {
+        **result,
+        "message": f"{pending_stories} stories have {pending_chapters} new chapters available.",
+    }
 
 
 # ─────────────────────────────
@@ -314,7 +339,7 @@ def author_detail(
     if not author:
         raise HTTPException(status_code=404, detail="Author not found")
 
-    return templates.TemplateResponse("pages/author.html", {
+    return templates.TemplateResponse("pages/author_detail.html", {
         "request": request,
         "author":  author,
     })

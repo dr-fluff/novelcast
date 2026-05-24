@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     ctx = None
+    sync_task = None
 
     try:
         logger.info("Application starting...")
@@ -54,6 +55,8 @@ async def lifespan(app: FastAPI):
         app.state.password_reset = ctx.password_reset
         app.state.ws_manager = ws_manager
 
+        sync_task = asyncio.create_task(auto_sync_worker(ctx))
+
         logger.info("Application startup complete")
 
         yield
@@ -64,6 +67,12 @@ async def lifespan(app: FastAPI):
 
     finally:
         logger.info("Application shutting down...")
+        if sync_task:
+            sync_task.cancel()
+            try:
+                await sync_task
+            except asyncio.CancelledError:
+                pass
         try:
             if ctx and ctx.engine:
                 ctx.engine.dispose()
@@ -80,3 +89,26 @@ async def event_worker(ctx):
             await ctx.ws_manager.send({"type": event_type, **payload})
         except Exception:
             logger.exception("WebSocket send failed")
+
+
+async def auto_sync_worker(ctx):
+    if ctx.library_sync.update_on_startup_enabled():
+        await _run_auto_sync(ctx)
+
+    while True:
+        if not ctx.library_sync.auto_sync_enabled():
+            await asyncio.sleep(60)
+            continue
+
+        await asyncio.sleep(ctx.library_sync.interval_seconds())
+        await _run_auto_sync(ctx)
+
+
+async def _run_auto_sync(ctx):
+    if not ctx.library_sync.auto_sync_enabled():
+        return
+
+    try:
+        await asyncio.to_thread(ctx.library_sync.run_once)
+    except Exception:
+        logger.exception("Automatic sync failed")

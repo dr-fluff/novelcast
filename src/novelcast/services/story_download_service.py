@@ -93,9 +93,79 @@ class StoryDownloadService:
             raise
 
     def sync_story(self, story: dict) -> dict:
-        # Preserve existing sync logic — not changed here.
-        raise NotImplementedError
+        story_id = story.get("id")
+        source_url = story.get("source_url")
+        if not story_id or not source_url:
+            return {"story_id": story_id, "new_chapters": 0, "skipped": True}
+
+        logger.info("Syncing story", extra={"story_id": story_id, "source_url": source_url})
+
+        raw = self.orchestrator.download(source_url)
+        parsed = self.parser.parse(raw)
+        parsed["source_url"] = raw.get("url") or source_url
+        parsed["source_file_path"] = raw.get("file_path")
+
+        self.stories_repo.update_metadata(
+            story_id,
+            parsed.get("title") or story.get("title") or "Unknown",
+            parsed.get("author") or story.get("author"),
+        )
+
+        new_chapters = self.pipeline.append_new_chapters(story_id, parsed)
+
+        if new_chapters:
+            self._emit("sync_story_updated", {
+                "story_id": story_id,
+                "title": parsed.get("title") or story.get("title"),
+                "new_chapters": len(new_chapters),
+            })
+
+        return {
+            "story_id": story_id,
+            "new_chapters": len(new_chapters),
+            "chapter_numbers": new_chapters,
+        }
+
+    def check_story_updates(self, story: dict) -> dict:
+        story_id = story.get("id")
+        source_url = story.get("source_url")
+        if not story_id or not source_url:
+            return {"story_id": story_id, "pending_chapters": 0, "chapter_numbers": [], "skipped": True}
+
+        raw = self.orchestrator.check_updates(source_url)
+        online_numbers = self._online_chapter_numbers(raw)
+        local_numbers = self.pipeline.chapters_repo.get_chapter_numbers(story_id)
+        pending = sorted(number for number in online_numbers if number not in local_numbers)
+
+        return {
+            "story_id": story_id,
+            "title": raw.get("title") or story.get("title"),
+            "pending_chapters": len(pending),
+            "chapter_numbers": pending,
+            "online_chapters": len(online_numbers),
+            "local_chapters": len(local_numbers),
+        }
+
+    def _online_chapter_numbers(self, raw: dict) -> list[int]:
+        chapters = raw.get("chapters") or raw.get("raw", {}).get("chapters")
+        chapters = chapters or raw.get("zchapters") or raw.get("raw", {}).get("zchapters")
+
+        if chapters:
+            return list(range(1, len(chapters) + 1))
+
+        for key in ("numChapters", "num_chapters", "chapter_count"):
+            value = raw.get(key) or raw.get("raw", {}).get(key)
+            try:
+                count = int(value)
+            except (TypeError, ValueError):
+                continue
+            return list(range(1, count + 1))
+
+        return []
 
     def _emit(self, event_type: str, payload: dict):
         if self.notifier:
             self.notifier(event_type, payload)
+    
+    def temp_dir(self):
+        self.temp_dir_path = "temp"

@@ -28,6 +28,7 @@ from novelcast.services import (
     FanFicFareConfigService,
     PatreonConfigService,
     StoryDownloadService,
+    LibrarySyncService,
 )
 
 from novelcast.engine import (
@@ -238,6 +239,13 @@ class AppContext:
             pipeline=self.story_pipeline,
             parser=self.story_parser,
             stories_repo=self.stories_repo,
+            notifier=self.emit,
+        )
+
+        self.library_sync = LibrarySyncService(
+            stories=self.stories,
+            download=self.story_download,
+            settings=self.settings,
             notifier=self.emit,
         )
 

@@ -59,3 +59,30 @@
 </section>
 
 {% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    let refreshTimer = null;
+    const refreshEvents = new Set([
+        "download_finished",
+        "sync_story_updated",
+        "sync_finished",
+    ]);
+
+    window.addEventListener("novelcast:notification", (event) => {
+        const payload = event.detail || {};
+        if (!refreshEvents.has(payload.type)) return;
+
+        if (payload.type === "sync_finished" && !Number(payload.new_chapters || 0)) {
+            return;
+        }
+
+        clearTimeout(refreshTimer);
+        refreshTimer = setTimeout(() => {
+            window.location.reload();
+        }, 900);
+    });
+})();
+</script>
+{% endblock %}

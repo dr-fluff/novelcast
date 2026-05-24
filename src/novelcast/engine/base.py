@@ -8,7 +8,7 @@ class StoryEngine(ABC):
         pass
 
     @abstractmethod
-    def fetch(self, url: str, progress_callback=None) -> dict:
+    def fetch(self, url: str, progress_callback=None, output_dir="/temp") -> dict:
         """
         Must return:
         {
@@ -20,3 +20,6 @@ class StoryEngine(ABC):
         }
         """
         pass
+
+    def check_updates(self, url: str) -> dict:
+        raise NotImplementedError(f"{self.__class__.__name__} does not support update checks")

@@ -20,7 +20,15 @@
         <div class="story-summary-left">
             <p class="story-label">Story details</p>
             <h1 class="story-title">{{ story["title"] }}</h1>
-            <p class="story-author">{{ story["author"] or "Unknown author" }}</p>
+            <p class="story-author">
+                {% if story_authors %}
+                    {% for author in story_authors %}
+                        <a class="story-author-link" href="/authors/{{ author.id }}">{{ author.name }}</a>{% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                {% else %}
+                    {{ story["author"] or "Unknown author" }}
+                {% endif %}
+            </p>
             {% if story["source_url"] %}
                 <p class="story-description">Source: <a href="{{ story['source_url'] }}" target="_blank" rel="noreferrer">{{ story["source_url"] }}</a></p>
             {% else %}
