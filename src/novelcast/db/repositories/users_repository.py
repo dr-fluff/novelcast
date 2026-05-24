@@ -1,13 +1,5 @@
 # novelcast/db/repositories/users_repository.py
 
-"""
-Replaces the old UsersRepository that took (db, qm).
-Now takes only a session_factory from SessionLocal.
-
-All method signatures are preserved so UserService and AuthService
-don't need to change at all.
-"""
-
 from sqlalchemy import select, func
 
 from novelcast.db.repositories.base import BaseRepository

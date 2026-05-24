@@ -1,9 +1,5 @@
-# ─────────────────────────────────────────────────────────────────────────────
 # novelcast/db/repositories/sync_repository.py
-#
-# No DB access — delegates entirely to ChaptersRepository.
-# No changes needed beyond accepting the new ChaptersRepository.
-# ─────────────────────────────────────────────────────────────────────────────
+
 
 from novelcast.db.repositories.base import BaseRepository
 

@@ -19,7 +19,7 @@ if __name__ == "__main__":
     config = AppConfig()
 
     uvicorn.run(
-        "novelcast.main:app",  # string form required for reload
+        "novelcast.main:app",
         host=config.host,
         port=config.port,
         reload=config.reload,

@@ -27,6 +27,16 @@ class SettingsRepository(BaseRepository):
             rows = db.scalars(select(ServerSetting)).all()
             return {row.key: _deserialize(row.value) for row in rows}
 
+    def get_server_settings_by_prefix(self, prefix: str) -> dict:
+        """Return {full_key: value} for every key starting with *prefix*."""
+        with self.session_no_commit() as db:
+            rows = db.scalars(select(ServerSetting)).all()
+            return {
+                row.key: _deserialize(row.value)
+                for row in rows
+                if row.key.startswith(prefix)
+            }
+
     def set_server_setting(self, key: str, value) -> None:
         with self.session() as db:
             stmt = (
@@ -38,6 +48,15 @@ class SettingsRepository(BaseRepository):
                 )
             )
             db.execute(stmt)
+
+        if self.on_change:
+            self.on_change(key)
+
+    def delete_server_setting(self, key: str) -> None:
+        with self.session() as db:
+            row = db.get(ServerSetting, key)
+            if row:
+                db.delete(row)
 
         if self.on_change:
             self.on_change(key)
@@ -85,7 +104,6 @@ class SettingsRepository(BaseRepository):
                         type=type_,
                     )
                     .on_conflict_do_update(
-                        # unique on (user_id, name) — add this constraint to the model
                         index_elements=["user_id", "name"],
                         set_={"value": json.dumps(value)},
                     )

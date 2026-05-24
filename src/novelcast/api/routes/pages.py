@@ -163,7 +163,55 @@ def chapter(
 
 
 # ─────────────────────────────
-# SETTINGS
+# ADMIN DASHBOARD
+# ─────────────────────────────
+@router.get("/admin")
+def admin_dashboard(
+    request: Request,
+    settings: SettingsService = Depends(get_settings),
+    users: UserService = Depends(get_users),
+    current_user: dict | None = Depends(get_current_user),
+    templates: Jinja2Templates = Depends(get_templates),
+):
+    if not current_user or not current_user.get("is_root"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    all_users = users.get_all_users()
+
+    # Build stats — replace with real queries as needed
+    stats = {
+        "total_users":   len(all_users),
+        "total_stories": 0,   # replace: stories_service.count()
+        "pending_syncs": 0,   # replace: sync_service.pending_count()
+        "need_attention": 0,  # replace: stories that errored
+    }
+
+    # Health checks — replace with real probes
+    health_checks = [
+        {
+            "name":   "Database",
+            "status": "healthy",
+            "detail": "Connection successful",
+        },
+        {
+            "name":   "Sync Worker",
+            "status": "healthy",
+            "detail": "Running",
+        },
+        # Add more as your services grow
+    ]
+
+    return templates.TemplateResponse("pages/admin.html", {
+        "request":       request,
+        "user":          current_user,
+        "stats":         stats,
+        "health_checks": health_checks,
+        "users":         all_users,
+    })
+
+
+# ─────────────────────────────
+# SETTINGS  (unchanged logic, updated for new header link)
 # ─────────────────────────────
 @router.get("/settings")
 def settings(
@@ -181,16 +229,16 @@ def settings(
     all_users = []
 
     if current_user.get("is_root"):
-        server_settings = settings.get_display_server_settings()
+        server_settings = settings.get_scoped_server_settings()
         all_users = users.get_all_users()
 
     return templates.TemplateResponse("pages/settings.html", {
-        "request": request,
-        "user": current_user,
-        "schema": settings.schema,
-        "user_settings": user_settings,
+        "request":         request,
+        "user":            current_user,
+        "schema":          settings.schema,
+        "user_settings":   user_settings,
         "server_settings": server_settings,
-        "users": all_users,
+        "users":           all_users,
     })
 
 
@@ -209,9 +257,9 @@ async def save_settings(
     settings.save_user_settings(
         current_user["id"],
         user_updates.get("theme", "light"),
-        int(user_updates.get("font_size", 14)),
-        float(user_updates.get("line_height", 1.5)),
-        int(user_updates.get("auto_update", 0)),
+        user_updates.get("font_size", 14),
+        user_updates.get("line_height", 1.5),
+        user_updates.get("auto_update", 0),
     )
 
     if current_user.get("is_root"):
@@ -219,7 +267,12 @@ async def save_settings(
             for key, value in fields.items():
                 settings.set_server_setting(f"{section}.{key}", value)
 
-    return RedirectResponse("/settings?success=1", status_code=303)
+    active_tab = form.get("_active_tab", "")
+    redirect_url = "/settings?success=1"
+    if active_tab:
+        redirect_url = f"{redirect_url}#{quote(active_tab, safe='')}"
+
+    return RedirectResponse(redirect_url, status_code=303)
 
 
 # ─────────────────────────────
@@ -359,12 +412,33 @@ def _parse_settings_form(form: dict) -> tuple[dict, dict]:
     server_updates: dict = {}
 
     for key, value in form.items():
-        if "." not in key:
+        if key.startswith("_") or "." not in key:
             continue
-        section, field = key.split(".", 1)
-        if section == "app":
-            user_updates.setdefault(field, value)
+
+        parts = key.split(".")
+
+        # app.theme etc
+        if parts[0] == "app":
+            user_updates[".".join(parts[1:])] = value
+            continue
+
+        # fanficfare.site_overrides.<domain>.<field>
+        section = parts[0]
+
+        if section not in server_updates:
+            server_updates[section] = {}
+
+        current = server_updates[section]
+
+        # nested site map
+        if len(parts) >= 3:
+            domain = parts[1]
+            field = parts[2]
+
+            current.setdefault(domain, {})
+            current[domain][field] = value
         else:
-            server_updates.setdefault(section, {})[field] = value
+            field = parts[1]
+            current[field] = value
 
     return user_updates, server_updates
