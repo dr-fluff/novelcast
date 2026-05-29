@@ -45,3 +45,67 @@ window.confirmDeleteStory = async function () {
         }
     }
 };
+
+window.toggleSection = function (section) {
+    const body = document.getElementById(`${section}Body`);
+    const chevron = document.getElementById(`${section}Chevron`);
+    if (!body) return;
+
+    body.classList.toggle("collapsed");
+    if (chevron) {
+        chevron.classList.toggle("collapsed");
+    }
+};
+
+window.toggleDescription = function () {
+    const desc = document.getElementById("storyDescription");
+    const btn = document.getElementById("readMoreBtn");
+    if (!desc || !btn) return;
+
+    const expanded = desc.classList.toggle("expanded");
+    btn.innerHTML = expanded
+        ? 'Show less <i class="fa-solid fa-chevron-up"></i>'
+        : 'Read more <i class="fa-solid fa-chevron-down"></i>';
+};
+
+window.buildMetaFilterLink = function (label, value) {
+    if (!label || value === undefined || value === null) return null;
+    const normalizedLabel = label.trim();
+    if (!normalizedLabel) return null;
+    if (normalizedLabel === "Duration" || normalizedLabel === "Size" || normalizedLabel === "Source") {
+        return null;
+    }
+
+    const link = document.createElement("a");
+    link.className = "meta-link";
+    link.href = "/?q=" + encodeURIComponent(`${normalizedLabel},${value}`);
+    link.textContent = value;
+    return link;
+};
+
+window.enhanceStoryMetaGridLinks = function () {
+    document.querySelectorAll(".story-meta-grid .meta-row").forEach(row => {
+        const dt = row.querySelector("dt");
+        const dd = row.querySelector("dd");
+        if (!dt || !dd) return;
+        if (dd.querySelector("a")) return;
+
+        const label = dt.textContent.trim();
+        const value = dd.textContent.trim();
+        if (!value) return;
+        if (["Duration", "Size", "Source"].includes(label)) return;
+
+        const items = String(value).split(/,\s*/).map(item => item.trim()).filter(Boolean);
+        dd.textContent = "";
+        items.forEach((item, index) => {
+            const link = window.buildMetaFilterLink(label, item);
+            if (!link) return;
+            if (index) dd.appendChild(document.createTextNode(", "));
+            dd.appendChild(link);
+        });
+    });
+};
+
+document.addEventListener("DOMContentLoaded", () => {
+    window.enhanceStoryMetaGridLinks();
+});

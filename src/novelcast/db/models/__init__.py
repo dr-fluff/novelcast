@@ -10,6 +10,9 @@ from novelcast.db.models.relationships import story_author, user_groups
 from novelcast.db.models.settings import ServerSetting, StorySetting, UserSetting
 from novelcast.db.models.story import Story
 from novelcast.db.models.user import User, PasswordResetToken
+from novelcast.db.models.tag import Tag
+from novelcast.db.models.genre import Genre
+from novelcast.db.models.series import Series
 
 __all__ = [
     "Author",
@@ -28,4 +31,8 @@ __all__ = [
     "Story",
     "User",
     "PasswordResetToken",
+    
+    "Tag",
+    "Genre",
+    "Series",
 ]

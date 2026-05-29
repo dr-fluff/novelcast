@@ -2,74 +2,163 @@
 
 <div class="meta-panel-backdrop" id="metaPanelBackdrop" onclick="closeMetaPanel()"></div>
 
-<aside class="meta-panel" id="metaPanel" aria-label="Edit metadata" aria-hidden="true">
+<div class="meta-panel" id="metaPanel" role="dialog" aria-label="Edit metadata" aria-hidden="true">
 
     <div class="meta-panel-header">
         <h2 class="meta-panel-title">
             <i class="fa-solid fa-pen-to-square"></i>
             Edit metadata
         </h2>
-        <button class="icon-button" onclick="closeMetaPanel()" aria-label="Close">
+        <button class="meta-close-btn" onclick="closeMetaPanel()" aria-label="Close">
             <i class="fa-solid fa-xmark"></i>
         </button>
     </div>
 
+    <div class="meta-panel-tabs">
+        <button class="meta-tab active" onclick="switchTab(this, 'tabDetails')">Details</button>
+        <button class="meta-tab" onclick="switchTab(this, 'tabCover')">Cover</button>
+        <button class="meta-tab" onclick="switchTab(this, 'tabLinks')">Links</button>
+    </div>
+
     <div class="meta-panel-body">
 
-        {# ── Story ──────────────────────────────────────────────────────── #}
-        <section class="meta-section">
-            <h3 class="meta-section-label">Story</h3>
+        {# ── Details tab ────────────────────────────────────────────────── #}
+        <div class="meta-tab-panel" id="tabDetails">
+
+            <div class="meta-row-two">
+                <div class="meta-field">
+                    <label for="metaTitle">Title</label>
+                    <input type="text" id="metaTitle" placeholder="Story title" />
+                </div>
+                <div class="meta-field">
+                    <label for="metaSubtitle">Subtitle</label>
+                    <input type="text" id="metaSubtitle" placeholder="Subtitle" />
+                </div>
+            </div>
+
+            <div class="meta-row-two">
+                <div class="meta-field">
+                    <label for="metaAuthorName">Author(s)</label>
+                    <input type="text" id="metaAuthorName" placeholder="Author name" />
+                </div>
+                <div class="meta-field">
+                    <label for="metaPublishYear">Publish year</label>
+                    <input type="text" id="metaPublishYear" placeholder="2024" />
+                </div>
+            </div>
 
             <div class="meta-field">
-                <label for="metaTitle">Title</label>
-                <input type="text" id="metaTitle" placeholder="Story title" />
+                <label>Series</label>
+                <div class="meta-tags-input" id="metaSeriesWrap">
+                    <input
+                        type="text"
+                        class="meta-tag-entry"
+                        id="metaSeriesInput"
+                        placeholder="Add series"
+                        onkeydown="if (event.key === 'Enter' || event.key === ',') { event.preventDefault(); addMetaTagFromInput('metaSeriesWrap','metaSeriesInput'); }"
+                    />
+                    <button type="button" class="meta-tag-add" aria-label="Add series" onclick="addMetaTagFromInput('metaSeriesWrap','metaSeriesInput')">
+                        <i class="fa-solid fa-plus"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="meta-field">
+                <label for="metaDescription">Description</label>
+                <div class="meta-description-toolbar">
+                    <button type="button" class="meta-toolbar-btn" title="Bold"><b>B</b></button>
+                    <button type="button" class="meta-toolbar-btn" title="Italic"><i>I</i></button>
+                    <button type="button" class="meta-toolbar-btn" title="Strikethrough"><s>S</s></button>
+                    <button type="button" class="meta-toolbar-btn" title="Link"><i class="fa-solid fa-link"></i></button>
+                    <div class="meta-toolbar-sep"></div>
+                    <button type="button" class="meta-toolbar-btn" title="Bullet list"><i class="fa-solid fa-list-ul"></i></button>
+                    <button type="button" class="meta-toolbar-btn" title="Ordered list"><i class="fa-solid fa-list-ol"></i></button>
+                </div>
+                <textarea id="metaDescription" rows="5" placeholder="Story description…"></textarea>
+            </div>
+
+            <div class="meta-row-two">
+                <div class="meta-field">
+                    <label>Genres</label>
+                    <div class="meta-tags-input" id="metaGenresWrap">
+                        <input
+                            type="text"
+                            class="meta-tag-entry"
+                            id="metaGenresInput"
+                            placeholder="Add genre"
+                            onkeydown="if (event.key === 'Enter' || event.key === ',') { event.preventDefault(); addMetaTagFromInput('metaGenresWrap','metaGenresInput'); }"
+                        />
+                        <button type="button" class="meta-tag-add" aria-label="Add genre" onclick="addMetaTagFromInput('metaGenresWrap','metaGenresInput')">
+                            <i class="fa-solid fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="meta-field">
+                    <label>Tags</label>
+                    <div class="meta-tags-input" id="metaTagsWrap">
+                        <input
+                            type="text"
+                            class="meta-tag-entry"
+                            id="metaTagsInput"
+                            placeholder="Add tag"
+                            onkeydown="if (event.key === 'Enter' || event.key === ',') { event.preventDefault(); addMetaTagFromInput('metaTagsWrap','metaTagsInput'); }"
+                        />
+                        <button type="button" class="meta-tag-add" aria-label="Add tag" onclick="addMetaTagFromInput('metaTagsWrap','metaTagsInput')">
+                            <i class="fa-solid fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="meta-field">
+                <label for="metaLanguage">Language</label>
+                <input type="text" id="metaLanguage" placeholder="English" />
             </div>
 
             <div class="meta-field">
                 <label for="metaSourceUrl">Source URL</label>
                 <input type="url" id="metaSourceUrl" placeholder="https://…" />
             </div>
-        </section>
 
-        {# ── Author ─────────────────────────────────────────────────────── #}
-        <section class="meta-section">
-            <h3 class="meta-section-label">Author</h3>
+        </div>
 
-            <div class="meta-field">
-                <label for="metaAuthorName">Name</label>
-                <input type="text" id="metaAuthorName" placeholder="Author name" />
+        {# ── Cover tab ──────────────────────────────────────────────────── #}
+        <div class="meta-tab-panel hidden" id="tabCover">
+            <div class="meta-cover-upload">
+                <div class="meta-cover-preview">
+                    <i class="fa-solid fa-image"></i>
+                    <p>No cover image</p>
+                </div>
+                <div class="meta-cover-actions">
+                    <button class="btn-outline-meta"><i class="fa-solid fa-upload"></i> Upload image</button>
+                    <button class="btn-outline-meta"><i class="fa-solid fa-link"></i> From URL</button>
+                </div>
             </div>
+        </div>
 
-            <div class="meta-field">
-                <label for="metaAuthorBio">Bio</label>
-                <textarea id="metaAuthorBio" rows="3" placeholder="Short bio…"></textarea>
-            </div>
-        </section>
-
-        {# ── Links ──────────────────────────────────────────────────────── #}
-        <section class="meta-section">
+        {# ── Links tab ──────────────────────────────────────────────────── #}
+        <div class="meta-tab-panel hidden" id="tabLinks">
             <div class="meta-section-header">
-                <h3 class="meta-section-label">Links</h3>
+                <h3 class="meta-section-label">External links</h3>
                 <button class="meta-add-link-btn" type="button" onclick="addLinkRow()">
                     <i class="fa-solid fa-plus"></i> Add link
                 </button>
             </div>
-
-            <div id="metaLinksContainer" class="meta-links-list">
-                {# rows injected by JS #}
-            </div>
-        </section>
+            <div id="metaLinksContainer" class="meta-links-list"></div>
+        </div>
 
     </div>
 
     <div class="meta-panel-footer">
-        <span class="meta-save-status" id="metaSaveStatus"></span>
-        <div class="meta-footer-actions">
-            <button class="btn-secondary" onclick="closeMetaPanel()">Cancel</button>
-            <button class="btn-primary" id="metaSaveBtn" onclick="saveMetadata()">
-                <i class="fa-solid fa-floppy-disk"></i> Save
-            </button>
+        <div class="meta-footer-left">
+            <button class="btn-outline-meta" onclick="quickMatch && quickMatch()">Quick Match</button>
+            <button class="btn-outline-meta" onclick="reScan && reScan()">Re-Scan</button>
+        </div>
+        <div class="meta-footer-right">
+            <span class="meta-save-status" id="metaSaveStatus"></span>
+            <button class="btn-secondary-meta" onclick="closeMetaPanel()">Cancel</button>
+            <button class="btn-primary-meta" id="metaSaveBtn" onclick="saveMetadata()">Save</button>
         </div>
     </div>
 
-</aside>
+</div>

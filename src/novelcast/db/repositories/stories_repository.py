@@ -7,6 +7,9 @@ from sqlalchemy.dialects.sqlite import insert
 from novelcast.db.repositories.base import BaseRepository
 from novelcast.db.models.story import Story
 from novelcast.db.models.chapter import Chapter, ChapterFile
+from novelcast.db.models.tag import Tag
+from novelcast.db.models.genre import Genre
+from novelcast.db.models.series import Series
 
 
 class StoriesRepository(BaseRepository):
@@ -84,6 +87,13 @@ class StoriesRepository(BaseRepository):
         story_id: int,
         title: str,
         author: str | None,
+        subtitle: str | None = None,
+        description: str | None = None,
+        publish_year: int | None = None,
+        language: str | None = None,
+        series: list[str] | None = None,
+        genres: list[str] | None = None,
+        tags: list[str] | None = None,
         source_url: str | None = None,
     ) -> dict | None:
         """Used by the metadata edit panel."""
@@ -93,8 +103,16 @@ class StoriesRepository(BaseRepository):
                 return None
             story.title = title
             story.author = author
+            # optional fields
+            story.subtitle = subtitle
+            story.description = description
+            story.publish_year = publish_year
+            story.language = language
             if source_url is not None:
                 story.source_url = source_url
+            _sync_story_relations(db, story, Series, "series", series or [])
+            _sync_story_relations(db, story, Genre, "genres", genres or [])
+            _sync_story_relations(db, story, Tag, "tags", tags or [])
             story.last_updated = datetime.now(timezone.utc)
             db.flush()
             return _to_dict(story)
@@ -136,6 +154,28 @@ class StoriesRepository(BaseRepository):
         self.delete(story_id)
 
 
+def _sync_story_relations(db, story, model, attr_name, names):
+    normalized = []
+    for name in names:
+        if not name:
+            continue
+        value = str(name).strip()
+        if not value:
+            continue
+        existing = next((item for item in getattr(story, attr_name) if item.name == value), None)
+        if existing:
+            normalized.append(existing)
+            continue
+        item = db.scalars(select(model).where(model.name == value)).first()
+        if item is None:
+            item = model(name=value)
+            db.add(item)
+            db.flush()
+        normalized.append(item)
+    getattr(story, attr_name).clear()
+    getattr(story, attr_name).extend(normalized)
+
+
 # ── helper ─────────────────────────────────────────────────────────────────
 
 def _to_dict(story: Story | None) -> dict | None:
@@ -145,6 +185,7 @@ def _to_dict(story: Story | None) -> dict | None:
         "id":                        story.id,
         "title":                     story.title,
         "author":                    story.author,
+        "subtitle":                  getattr(story, "subtitle", None),
         "source_url":                story.source_url,
         "local_path":                story.local_path,
         "cover_path":                story.cover_path,
@@ -154,5 +195,19 @@ def _to_dict(story: Story | None) -> dict | None:
         "latest_downloaded_chapter": story.latest_downloaded_chapter,
         "online_chapters":           story.online_chapters,
         "last_updated":              story.last_updated,
+        "description":               getattr(story, "description", None),
+        "publish_year":              getattr(story, "publish_year", None),
+        "language":                  getattr(story, "language", None),
+        "publisher":                 getattr(story, "publisher", None),
+        "narrators":                 getattr(story, "narrators", None),
+        # normalized relations: join names into readable strings
+        "genres":                    ", ".join([g.name for g in getattr(story, "genres", [])]) if getattr(story, "genres", None) else None,
+        "tags":                      ", ".join([t.name for t in getattr(story, "tags", [])]) if getattr(story, "tags", None) else None,
+        "series":                    ", ".join([s.name for s in getattr(story, "series", [])]) if getattr(story, "series", None) else None,
+        "genres_list":              [g.name for g in getattr(story, "genres", [])],
+        "tags_list":                [t.name for t in getattr(story, "tags", [])],
+        "series_list":              [s.name for s in getattr(story, "series", [])],
+        "duration":                  getattr(story, "duration", None),
+        "size":                      getattr(story, "size", None),
         "created_at":                story.created_at,
     }

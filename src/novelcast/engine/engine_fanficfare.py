@@ -49,7 +49,7 @@ class FanFicFareEngine(StoryEngine):
         logger.debug("FanFicFare fetch: %s", url)
 
         config_path = self.config_service.write_config()
-        raw = self._run_fanficfare(url, output_dir, config_path, progress_callback=progress_callback)
+        raw = self._run_fanficfare(url, config_path, progress_callback=progress_callback)
         epub_path = self._extract_epub_path(raw)
 
         return {
@@ -66,7 +66,6 @@ class FanFicFareEngine(StoryEngine):
         config_path = self.config_service.write_config()
         raw = self._run_fanficfare(
             url,
-            None, # output_dir
             config_path,
             extra_flags=[self.FLAG_META_ONLY, self.FLAG_NO_OUTPUT],
         )
@@ -85,7 +84,6 @@ class FanFicFareEngine(StoryEngine):
     def _run_fanficfare(
         self,
         url: str,
-        output_dir: str,
         config_path: str,
         progress_callback=None,
         extra_flags: list[str] | None = None,
@@ -94,7 +92,6 @@ class FanFicFareEngine(StoryEngine):
             self.CMD,
             self.FLAG_METADATA,
             self.FLAG_NON_INTERACTIVE,
-            self.FLAG_OUTPUT_DIR, output_dir,
             self.FLAG_CONFIG, config_path,
         ]
 

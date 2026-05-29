@@ -14,6 +14,13 @@ router = APIRouter(prefix="/stories", tags=["stories"])
 class StoryMetadataUpdate(BaseModel):
     title: str
     author: str | None = None
+    subtitle: str | None = None
+    description: str | None = None
+    publish_year: int | None = None
+    language: str | None = None
+    series: list[str] | None = None
+    genres: list[str] | None = None
+    tags: list[str] | None = None
     source_url: str | None = None
 
 
@@ -32,6 +39,17 @@ class AuthorLinksUpdate(BaseModel):
 
 
 # ── story endpoints ────────────────────────────────────────────────────────
+
+@router.get("/{story_id}")
+def get_story(
+    story_id: int,
+    stories: StoryService = Depends(get_stories),
+):
+    story = stories.get_story(story_id)
+    if not story:
+        raise HTTPException(status_code=404, detail="Story not found")
+    return {"story": story}
+
 
 @router.delete("/{story_id}")
 def delete_story(
@@ -60,6 +78,13 @@ def update_story_metadata(
             story_id=story_id,
             title=body.title,
             author=body.author,
+            subtitle=body.subtitle,
+            description=body.description,
+            publish_year=body.publish_year,
+            language=body.language,
+            series=body.series,
+            genres=body.genres,
+            tags=body.tags,
             source_url=body.source_url,
         )
     except Exception as e:
@@ -104,7 +129,6 @@ def set_author_links(
     body: AuthorLinksUpdate,
     stories: StoryService = Depends(get_stories),
 ):
-    """Replace all links for an author (Patreon, Amazon, Twitter, etc.)."""
     if not stories.get_story(story_id):
         raise HTTPException(status_code=404, detail="Story not found")
     try:

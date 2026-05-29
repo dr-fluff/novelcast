@@ -2,6 +2,7 @@
 
 from pathlib import Path
 from urllib.parse import quote
+import re
 
 from novelcast.db.repositories.author_repository import AuthorRepository
 
@@ -32,14 +33,37 @@ class StoryService:
         if cover_path.startswith(("http://", "https://", "/static/")):
             return cover_path
         return f"/covers?path={quote(cover_path)}"
+    def _parse_comma_separated(self, raw: str | None) -> list[str]:
+        if not raw:
+            return []
+        return [item.strip() for item in re.split(r"[;,]", raw) if item.strip()]
 
+    def _sync_story_authors(self, story_id: int, author_names: list[str]) -> None:
+        if not self.author_repo:
+            return
+
+        existing = self.author_repo.get_for_story(story_id)
+        requested = [name for name in author_names if name]
+
+        for name in requested:
+            author_id = self.author_repo.get_or_create(name)
+            self.author_repo.link_to_story(author_id, story_id)
+
+        for existing_author in existing:
+            if existing_author["name"] not in requested:
+                self.author_repo.unlink_from_story(existing_author["id"], story_id)
     # ── story reads ────────────────────────────────────────────────────────
 
     def get_all_stories(self):
         return self.repo.get_all()
 
     def get_story(self, story_id: int):
-        return self.repo.get_by_id(story_id)
+        data = self.repo.get_by_id(story_id)
+        if not data:
+            return None
+        # resolve cover URL for templates
+        data["cover_url"] = self._cover_url(data.get("cover_path"))
+        return data
 
     def get_by_url(self, url: str):
         return self.repo.get_by_url(url)
@@ -82,17 +106,31 @@ class StoryService:
         story_id: int,
         title: str,
         author: str | None,
+        subtitle: str | None = None,
+        description: str | None = None,
+        publish_year: int | None = None,
+        language: str | None = None,
+        series: list[str] | None = None,
+        genres: list[str] | None = None,
+        tags: list[str] | None = None,
         source_url: str | None = None,
     ) -> dict | None:
         updated = self.repo.update_full_metadata(
             story_id=story_id,
             title=title,
             author=author,
+            subtitle=subtitle,
+            description=description,
+            publish_year=publish_year,
+            language=language,
+            series=series,
+            genres=genres,
+            tags=tags,
             source_url=source_url,
         )
-        if author and updated and self.author_repo:
-            author_id = self.author_repo.get_or_create(author)
-            self.author_repo.link_to_story(author_id, story_id)
+        if updated and self.author_repo and author is not None:
+            names = self._parse_comma_separated(author)
+            self._sync_story_authors(story_id, names)
         return updated
 
     # ── author reads ───────────────────────────────────────────────────────
