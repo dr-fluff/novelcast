@@ -70,9 +70,6 @@
                 {% if story["language"] %}
                 <div class="meta-row"><dt>Language</dt><dd>{{ story["language"] }}</dd></div>
                 {% endif %}
-                {% if story["duration"] %}
-                <div class="meta-row"><dt>Duration</dt><dd>{{ story["duration"] }}</dd></div>
-                {% endif %}
                 {% if story["size"] %}
                 <div class="meta-row"><dt>Size</dt><dd>{{ story["size"] }}</dd></div>
                 {% endif %}
@@ -164,21 +161,84 @@
         <div class="collapsible-header" onclick="toggleSection('files')">
             <div class="collapsible-header-left">
                 <span class="collapsible-title">Library Files</span>
-                <span class="collapsible-badge">{{ story["file_count"] or 0 }}</span>
+                <span class="collapsible-badge">{{ story_files | length if story_files else story["file_count"] or 0 }}</span>
             </div>
             <div class="collapsible-header-right">
-                <button class="btn-header-action" onclick="event.stopPropagation();">Full Path</button>
+                <button class="btn-header-action" id="fullPathBtn" onclick="event.stopPropagation(); toggleFullPath()">Full Path</button>
                 <i class="fa-solid fa-chevron-down collapsible-chevron collapsed" id="filesChevron"></i>
             </div>
         </div>
         <div class="collapsible-body collapsed" id="filesBody">
-            <div class="empty-state">
-                <p>No files available for this story.</p>
-            </div>
+            {% if story_files %}
+                <table class="file-table">
+                    <thead>
+                        <tr>
+                            <th class="file-col-path">Path</th>
+                            <th class="file-col-size">Size</th>
+                            <th class="file-col-type">Type</th>
+                            <th class="file-col-actions"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for file in story_files %}
+                        {% set ext = file.relative_path.rsplit('.', 1)[-1] | lower if '.' in file.relative_path else '' %}
+                        {% set ftype = file.type | lower if file.type is defined else ext %}
+                        <tr class="file-row">
+                            <td class="file-col-path">
+                                <span class="file-path-text"
+                                    data-full="{{ file.full_path | default(file.relative_path) }}"
+                                    data-relative="{{ file.relative_path }}">
+                                    {{ file.relative_path }}
+                                </span>
+                            </td>
+                            <td class="file-col-size">{{ file.size }}</td>
+                            <td class="file-col-type">
+                                <span class="file-type-badge file-type-{{ ftype }}">{{ file.type if file.type is defined else ext }}</span>
+                            </td>
+                            <td class="file-col-actions">
+                                <div class="file-menu-wrapper">
+                                    <button class="btn-file-menu"
+                                        title="More options"
+                                        onclick="event.stopPropagation(); openFileMenu(this, {{ (file.full_path | default(file.relative_path)) | tojson }}, {{ (file.type | default(ext)) | tojson }})">
+                                        <i class="fa-solid fa-ellipsis-vertical"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <div class="empty-state">
+                    <p>No files available for this story.</p>
+                </div>
+            {% endif %}
         </div>
     </div>
 
 </section>
+
+{# ── File More Info Modal ──────────────────────────────────────────────── #}
+<div class="file-info-overlay" id="fileInfoOverlay" onclick="closeFileInfo(event)">
+    <div class="file-info-modal" id="fileInfoModal">
+        <div class="file-info-header">
+            <span class="file-info-title" id="fileInfoTitle"></span>
+            <div class="file-info-header-actions">
+                <button class="btn-probe" id="fileInfoProbeBtn" style="display:none">
+                    <i class="fa-solid fa-waveform-lines"></i> Probe Audio File
+                </button>
+                <button class="btn-modal-close" onclick="closeFileInfoModal()">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+        </div>
+        <div class="file-info-body" id="fileInfoBody">
+            <div class="file-info-loading">
+                <i class="fa-solid fa-spinner fa-spin"></i> Loading…
+            </div>
+        </div>
+    </div>
+</div>
 
 {% include "partials/metadata_panel.html" %}
 
