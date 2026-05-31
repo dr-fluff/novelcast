@@ -1,0 +1,234 @@
+<!-- novelcast/templates/pages/chapter_patterns.html -->
+{% extends "layouts/base.html" %}
+{% block title %}Chapter Patterns - NovelCast{% endblock %}
+{% block content %}
+
+<link rel="stylesheet" href="/static/css/pages/settings.css" />
+{% include "partials/library_header.html" %}
+
+<div class="pg-settings">
+
+  <div class="pg-header">
+    <h1 class="pg-title">Chapter Patterns</h1>
+    <a href="/admin" class="btn-ghost">← Back to Admin</a>
+  </div>
+
+  <!-- Add new pattern -->
+  <div class="section-card">
+    <div class="section-card__head">
+      <span class="section-card__title">Add pattern</span>
+    </div>
+
+    <div class="field-card">
+      <div class="field-card__label-col">
+        <span class="field-label">Regex pattern</span>
+        <span class="field-hint">
+          Case-insensitive. Matched against the chapter title from the epub spine.<br>
+          A spine item is kept only if its title matches at least one pattern.
+        </span>
+      </div>
+      <div class="field-card__input-col" style="display:flex;flex-direction:column;gap:8px">
+        <input
+          id="new-pattern"
+          type="text"
+          class="input"
+          placeholder="\bprologue\b"
+          style="font-family:var(--font-mono);font-size:13px"
+        />
+        <input
+          id="new-description"
+          type="text"
+          class="input"
+          placeholder="Description (e.g. Prologue / Epilogue)"
+        />
+
+        <div id="preview-wrap" style="display:none">
+          <p class="field-hint" style="margin-bottom:4px">Preview against common titles:</p>
+          <div id="preview-results" style="display:flex;flex-direction:column;gap:3px;font-size:13px;font-family:var(--font-mono)"></div>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-top:4px">
+          <button class="btn-ghost btn-ghost--sm" onclick="previewPattern()">Preview</button>
+          <button class="btn-primary" style="font-size:13px;padding:6px 14px" onclick="addPattern()">Add pattern</button>
+        </div>
+        <p id="add-error" class="field-hint" style="color:var(--color-text-danger);display:none"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Built-in patterns (read-only reference) -->
+  <div class="section-card">
+    <div class="section-card__head">
+      <span class="section-card__title">Built-in patterns</span>
+      <span class="field-hint" style="margin-left:auto">Always active — cannot be disabled.</span>
+    </div>
+    {% for p in builtin_patterns %}
+    <div class="field-card" style="opacity:0.6">
+      <div style="flex:1;min-width:0">
+        <code style="font-size:13px">{{ p.pattern }}</code>
+        <span class="field-hint" style="display:block;margin-top:2px">{{ p.description }}</span>
+      </div>
+      <span class="badge badge--user">Built-in</span>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Custom patterns -->
+  <div class="section-card">
+    <div class="section-card__head">
+      <span class="section-card__title">Custom patterns</span>
+    </div>
+
+    <div id="patterns-list">
+      {% if chapter_patterns %}
+        {% for p in chapter_patterns %}
+        <div class="field-card pattern-row" id="pattern-row-{{ p.id }}">
+          <div style="flex:1;min-width:0">
+            <code style="font-size:13px;word-break:break-all">{{ p.pattern }}</code>
+            {% if p.description %}
+            <span class="field-hint" style="display:block;margin-top:2px">{{ p.description }}</span>
+            {% endif %}
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;flex-shrink:0">
+            <label class="toggle-label" title="{{ 'Enabled' if p.enabled else 'Disabled' }}">
+              <input
+                type="checkbox"
+                class="toggle-input"
+                {% if p.enabled %}checked{% endif %}
+                onchange="setEnabled({{ p.id }}, this.checked)"
+              />
+              <span class="toggle-track"></span>
+            </label>
+            <button
+              class="btn-ghost btn-ghost--sm"
+              style="color:var(--color-text-danger)"
+              onclick="deletePattern({{ p.id }})">
+              Delete
+            </button>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <p id="no-patterns-msg" class="field-hint" style="padding:12px 0">
+          No custom patterns yet. Add one above.
+        </p>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+
+<script>
+const SAMPLES = [
+  'Chapter 1', 'Chapter 930 Shelter', 'Chapter: 1 - New Beginnings',
+  'Chapter ???', 'Ch. 42', '1.1', '3.10', 'Part 9 (3.10)', 'Part 67: Running Gauntlet',
+  'Prologue', 'Epilogue', 'Interlude', 'Bestiary Interlude : Hydra', 'Glossary',
+  '1 - Vivisari', '[1 - Breakfast at Night]', '[1. Aine ~ Garden]',
+  'The Path of Ascension Chapter 1', 'Journey to Veresavir - Chapter 55',
+  'In Search of Harmony 26 - No, No Encores',
+  'Azarinth Healer Book One is out today :)',
+  'Hey all! Book 5 is out on Audible',
+  'Not a chapter - update on the story',
+  'Announcing new hardcover for book 1',
+];
+
+function previewPattern() {
+  const pattern = document.getElementById('new-pattern').value.trim();
+  const wrap    = document.getElementById('preview-wrap');
+  const out     = document.getElementById('preview-results');
+  const err     = document.getElementById('add-error');
+  if (!pattern) return;
+
+  fetch('/admin/chapter-patterns/test', {
+    method:  'POST',
+    headers: {'Content-Type': 'application/json'},
+    body:    JSON.stringify({ pattern, samples: SAMPLES }),
+  })
+  .then(async r => {
+    if (!r.ok) { const d = await r.json(); throw new Error(d.detail || 'Invalid regex'); }
+    return r.json();
+  })
+  .then(results => {
+    err.style.display = 'none';
+    out.innerHTML = results.map(r =>
+      `<span style="color:${r.matches ? 'var(--color-text-success,#2e7d32)' : 'var(--color-text-secondary)'}">
+        ${r.matches ? '✓' : '✗'} ${r.title}
+      </span>`
+    ).join('');
+    wrap.style.display = 'block';
+  })
+  .catch(e => {
+    err.textContent = e.message;
+    err.style.display = 'block';
+    wrap.style.display = 'none';
+  });
+}
+
+// preview on enter in pattern field
+document.getElementById('new-pattern').addEventListener('keydown', e => {
+  if (e.key === 'Enter') previewPattern();
+});
+
+function addPattern() {
+  const pattern     = document.getElementById('new-pattern').value.trim();
+  const description = document.getElementById('new-description').value.trim();
+  const err         = document.getElementById('add-error');
+  if (!pattern) { err.textContent = 'Pattern is required.'; err.style.display = 'block'; return; }
+
+  fetch('/admin/chapter-patterns', {
+    method:  'POST',
+    headers: {'Content-Type': 'application/json'},
+    body:    JSON.stringify({ pattern, description }),
+  })
+  .then(async r => {
+    if (!r.ok) { const d = await r.json(); throw new Error(d.detail || 'Error'); }
+    return r.json();
+  })
+  .then(p => {
+    err.style.display = 'none';
+    document.getElementById('new-pattern').value     = '';
+    document.getElementById('new-description').value = '';
+    document.getElementById('preview-wrap').style.display = 'none';
+    _prependPatternRow(p);
+  })
+  .catch(e => { err.textContent = e.message; err.style.display = 'block'; });
+}
+
+function setEnabled(id, enabled) {
+  fetch(`/admin/chapter-patterns/${id}`, {
+    method:  'PATCH',
+    headers: {'Content-Type': 'application/json'},
+    body:    JSON.stringify({ enabled }),
+  });
+}
+
+function deletePattern(id) {
+  if (!confirm('Delete this pattern?')) return;
+  fetch(`/admin/chapter-patterns/${id}`, { method: 'DELETE' })
+    .then(r => { if (r.ok) document.getElementById(`pattern-row-${id}`)?.remove(); });
+}
+
+function _prependPatternRow(p) {
+  const noMsg = document.getElementById('no-patterns-msg');
+  if (noMsg) noMsg.remove();
+  const list = document.getElementById('patterns-list');
+  const div  = document.createElement('div');
+  div.className = 'field-card pattern-row';
+  div.id = `pattern-row-${p.id}`;
+  div.innerHTML = `
+    <div style="flex:1;min-width:0">
+      <code style="font-size:13px;word-break:break-all">${p.pattern}</code>
+      ${p.description ? `<span class="field-hint" style="display:block;margin-top:2px">${p.description}</span>` : ''}
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;flex-shrink:0">
+      <label class="toggle-label">
+        <input type="checkbox" class="toggle-input" checked onchange="setEnabled(${p.id}, this.checked)" />
+        <span class="toggle-track"></span>
+      </label>
+      <button class="btn-ghost btn-ghost--sm" style="color:var(--color-text-danger)" onclick="deletePattern(${p.id})">Delete</button>
+    </div>`;
+  list.prepend(div);
+}
+</script>
+
+{% endblock %}

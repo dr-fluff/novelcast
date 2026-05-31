@@ -93,22 +93,22 @@ async def event_worker(ctx):
 
 async def auto_sync_worker(ctx):
     if ctx.library_sync.update_on_startup_enabled():
-        await _run_auto_sync(ctx)
+        await _run_auto_check(ctx)
 
     while True:
         if not ctx.library_sync.auto_sync_enabled():
             await asyncio.sleep(60)
             continue
 
-        await asyncio.sleep(ctx.library_sync.interval_seconds())
-        await _run_auto_sync(ctx)
+        await asyncio.sleep(ctx.library_sync.next_check_delay_seconds())
+        await _run_auto_check(ctx)
 
 
-async def _run_auto_sync(ctx):
+async def _run_auto_check(ctx):
     if not ctx.library_sync.auto_sync_enabled():
         return
 
     try:
-        await asyncio.to_thread(ctx.library_sync.run_once)
+        await asyncio.to_thread(ctx.library_sync.check_updates)
     except Exception:
-        logger.exception("Automatic sync failed")
+        logger.exception("Automatic update check failed")

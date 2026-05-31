@@ -48,7 +48,6 @@
         <h2 class="panel__title">System Health</h2>
         <button class="btn-ghost btn-ghost--sm" onclick="runHealthCheck()">Run Check</button>
       </div>
-
       <div class="health-list">
         {% for check in health_checks | default([
           {"name": "Database",    "status": "healthy",       "detail": "Connection successful"},
@@ -76,29 +75,30 @@
         <h2 class="panel__title">Quick Links</h2>
       </div>
       <div class="quicklinks">
-        <a href="/admin/users"   class="quicklink">Manage Users</a>
-        <a href="/settings"      class="quicklink">Settings</a>
-        <a href="/admin/logs"    class="quicklink">Activity Log</a>
-        <a href="/"              class="quicklink">Back to Library</a>
+        <a href="/admin/users"            class="quicklink">Manage Users</a>
+        <a href="/admin/chapter-patterns" class="quicklink">Chapter Patterns</a>
+        <a href="/settings"               class="quicklink">Settings</a>
+        <a href="/admin/logs"             class="quicklink">Activity Log</a>
+        <a href="/"                       class="quicklink">Back to Library</a>
       </div>
     </div>
 
   </div>
+
 </div>
 
 <script>
 function runHealthCheck() {
-  fetch('/admin/health-check', { method: 'POST' })
-    .then(() => window.location.reload());
+  fetch('/admin/health-check', { method: 'POST' }).then(() => window.location.reload());
 }
 function checkUpdates() {
   fetch('/admin/check-updates', { method: 'POST' })
     .then(r => r.json())
     .then(d => {
-      const pendingSyncs = document.getElementById('pending-syncs');
-      if (pendingSyncs) {
-        pendingSyncs.textContent = d.stories_with_updates || 0;
-        pendingSyncs.title = `${d.pending_chapters || 0} new chapters available`;
+      const el = document.getElementById('pending-syncs');
+      if (el) {
+        el.textContent = d.stories_with_updates || 0;
+        el.title = `${d.pending_chapters || 0} new chapters available`;
       }
       alert(d.message || 'Up to date');
     });

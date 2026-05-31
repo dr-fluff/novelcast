@@ -18,6 +18,7 @@ from novelcast.services import (
     NotifierService,
     PasswordResetService,
 )
+from novelcast.services.chapter_filter_service import ChapterFilterService
 
 
 def get_auth(request: Request) -> AuthService:
@@ -62,6 +63,10 @@ def get_notifier(request: Request) -> NotifierService:
 
 def get_password_reset(request: Request) -> PasswordResetService:
     return request.app.state.ctx.password_reset
+
+
+def get_chapter_filter(request: Request) -> ChapterFilterService:
+    return request.app.state.ctx.chapter_filter
 
 
 def get_templates(request: Request):

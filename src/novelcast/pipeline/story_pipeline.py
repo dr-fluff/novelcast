@@ -61,6 +61,13 @@ class StoryPipeline:
             )
 
         self._update_stats(story_id, chapter_numbers)
+        # update computed directory size after persisting files
+        try:
+            size_bytes = self.file_utils.dir_size(base_dir)
+            # store as story setting to avoid schema changes
+            self.stories_repo.set_story_setting(story_id, "computed.size", str(int(size_bytes)))
+        except Exception:
+            logger.exception("Failed to update story size setting")
 
     
     def get_story_by_url(self, url: str):
@@ -77,6 +84,11 @@ class StoryPipeline:
             story.get("title"),
         )
 
+        # move EPUB file to story directory if present
+        epub_source_path = story.get("source_file_path")
+        if epub_source_path:
+            self._move_epub(epub_source_path, base_dir)
+
         existing = self.chapters_repo.get_chapter_numbers(story_id)
         new_chapters = []
         online_numbers = []
@@ -91,6 +103,13 @@ class StoryPipeline:
             new_chapters.append(ch["number"])
 
         self._update_append_stats(story_id, online_numbers)
+
+        # update computed directory size after appending new chapters
+        try:
+            size_bytes = self.file_utils.dir_size(base_dir)
+            self.stories_repo.set_story_setting(story_id, "computed.size", str(int(size_bytes)))
+        except Exception:
+            logger.exception("Failed to update story size setting")
 
         return new_chapters
 

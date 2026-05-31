@@ -10,6 +10,8 @@ from novelcast.db.models.chapter import Chapter, ChapterFile
 from novelcast.db.models.tag import Tag
 from novelcast.db.models.genre import Genre
 from novelcast.db.models.series import Series
+from novelcast.db.models.settings import StorySetting
+from novelcast.utils.files import human_readable_size
 
 
 class StoriesRepository(BaseRepository):
@@ -124,6 +126,27 @@ class StoriesRepository(BaseRepository):
                 story.local_path = local_path
                 story.cover_path = cover_path
 
+    def set_story_setting(self, story_id: int, name: str, value: str, category: str | None = None, type: str = "str") -> None:
+        """Create or update a StorySetting entry for a story."""
+        with self.session() as db:
+            existing = db.scalars(
+                select(StorySetting).where(StorySetting.story_id == story_id, StorySetting.name == name)
+            ).first()
+            if existing:
+                existing.value = value
+                existing.category = category
+                existing.type = type
+            else:
+                s = StorySetting(story_id=story_id, name=name, value=value, category=category, type=type)
+                db.add(s)
+
+    def get_story_setting(self, story_id: int, name: str) -> str | None:
+        with self.session_no_commit() as db:
+            s = db.scalars(
+                select(StorySetting).where(StorySetting.story_id == story_id, StorySetting.name == name)
+            ).first()
+            return s.value if s else None
+
     def update_chapter_stats(
         self,
         story_id: int,
@@ -208,6 +231,30 @@ def _to_dict(story: Story | None) -> dict | None:
         "tags_list":                [t.name for t in getattr(story, "tags", [])],
         "series_list":              [s.name for s in getattr(story, "series", [])],
         "duration":                  getattr(story, "duration", None),
-        "size":                      getattr(story, "size", None),
+        "size":                      None,
         "created_at":                story.created_at,
     }
+
+    # try to read computed size from model field or story settings
+    try:
+        size_field = getattr(story, "size", None)
+        if size_field:
+            result = dict(result)
+            result["size"] = human_readable_size(int(size_field))
+            return result
+
+        # check settings relationship for stored computed.size
+        settings = getattr(story, "settings", []) or []
+        for s in settings:
+            if s.name == "computed.size":
+                try:
+                    bytes_val = int(s.value)
+                    result = dict(result)
+                    result["size"] = human_readable_size(bytes_val)
+                    return result
+                except Exception:
+                    break
+    except Exception:
+        pass
+
+    return result

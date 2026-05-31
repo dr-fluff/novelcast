@@ -1,4 +1,5 @@
 from pathlib import Path
+from novelcast.parser.epub_parser import DEFAULT_PATTERNS, _is_chapter, _compile
 
 
 class ChaptersService:
@@ -28,3 +29,9 @@ class ChaptersService:
             return None
 
         return path.read_text(encoding="utf-8", errors="ignore")
+    
+    def list_by_story_filtered(self,story_id: int,extra_patterns: list[str] | None = None,) -> list[dict]:    
+        chapters = self.list_by_story(story_id)
+        compiled = _compile(DEFAULT_PATTERNS + (extra_patterns or []))
+        return [ch for ch in chapters if _is_chapter(ch.get("title", ""), compiled)]
+    

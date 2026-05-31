@@ -16,6 +16,7 @@ from novelcast.db.repositories import (
     SettingsRepository,
     AuthorRepository,
 )
+from novelcast.db.repositories.chapter_pattern_repository import ChapterPatternRepository
 
 from novelcast.services import (
     AuthService,
@@ -30,6 +31,7 @@ from novelcast.services import (
     StoryDownloadService,
     LibrarySyncService,
 )
+from novelcast.services.chapter_filter_service import ChapterFilterService
 
 from novelcast.engine import (
     FanFicFareEngine,
@@ -58,7 +60,7 @@ class AppContext:
         logger.info("Starting AppContext initialization")
 
         self.app_config = app_config
-        self.event_queue = Queue()        
+        self.event_queue = Queue()
         self.ws_manager = None
 
         self._init_database()
@@ -82,7 +84,6 @@ class AppContext:
     def emit(self, event_type: str, payload: dict):
         if not self.ws_manager:
             return
-
         self.event_queue.put((event_type, payload))
 
     # ─────────────────────────────
@@ -91,7 +92,6 @@ class AppContext:
     def _init_database(self):
         logger.info("Initializing database...")
         init_db()
-
         self.SessionLocal = SessionLocal
         self.engine = engine
 
@@ -106,15 +106,15 @@ class AppContext:
 
         sf = self.SessionLocal
 
-        self.stories_repo  = StoriesRepository(sf)
-        self.authors_repo  = AuthorRepository(sf)
-        self.users_repo    = UsersRepository(sf)
-        self.files_repo    = FilesRepository(sf)
-        self.chapters_repo = ChaptersRepository(sf)
-        self.progress_repo = ProgressRepository(sf)
-        self.sync_repo     = SyncRepository(self.chapters_repo)
-        self.settings_repo = SettingsRepository(sf)
-
+        self.stories_repo          = StoriesRepository(sf)
+        self.authors_repo          = AuthorRepository(sf)
+        self.users_repo            = UsersRepository(sf)
+        self.files_repo            = FilesRepository(sf)
+        self.chapters_repo         = ChaptersRepository(sf)
+        self.progress_repo         = ProgressRepository(sf)
+        self.sync_repo             = SyncRepository(self.chapters_repo)
+        self.settings_repo         = SettingsRepository(sf)
+        self.chapter_pattern_repo  = ChapterPatternRepository(sf)  # ← new
 
     # ─────────────────────────────
     # SERVICES (business logic)
@@ -135,6 +135,8 @@ class AppContext:
             secret_key=self.app_config.secret_key,
         )
         self.settings.migrate_server_secrets()
+
+        self.chapter_filter = ChapterFilterService(self.chapter_pattern_repo)  # ← new
 
     # ─────────────────────────────
     # ENGINE CONFIG (writers)
@@ -197,8 +199,14 @@ class AppContext:
     def _init_parser_registry(self):
         self.parser_registry = ParserRegistry()
         self.parser_registry.register("fanficfare", FanFicFareParser())
-        self.parser_registry.register("epub", EpubParser())
         self.parser_registry.register("html", HtmlParser())
+
+        # EpubParser gets DB patterns injected at construction time  ← new
+        epub_parser = EpubParser(
+            extra_patterns=self.chapter_filter.get_enabled_regexes()
+        )
+        self.parser_registry.register("epub", epub_parser)
+        self.epub_parser = epub_parser  # keep ref so we can reload later if needed
 
     # ─────────────────────────────
     # PARSER
@@ -233,7 +241,7 @@ class AppContext:
     # ─────────────────────────────
     def _init_service_layer(self):
         logger.info("Initializing story download service...")
-        
+
         self.story_download = StoryDownloadService(
             orchestrator=self.story_orchestrator,
             pipeline=self.story_pipeline,
@@ -262,6 +270,8 @@ class AppContext:
             "story_parser",
             "engine_selector",
             "story_pipeline",
+            "chapter_filter",       # ← new
+            "chapter_pattern_repo", # ← new
         ]
 
         for r in required:

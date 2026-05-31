@@ -139,3 +139,4 @@ def set_author_links(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
     return {"status": "ok", "links": saved}
+

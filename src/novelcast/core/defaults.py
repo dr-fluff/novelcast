@@ -229,13 +229,13 @@ SETTINGS = {
         },
         "auto_update": {
             "type": "bool",
-            "description": "Automatically sync books in the library for new chapters",
+            "description": "Automatically check books in the library for new chapters",
             "default": True,
             "label": "Automatic sync",
         },
         "update_interval_hours": {
             "type": "number",
-            "description": "How often automatic sync checks books for new chapters",
+            "description": "How often automatic checks for new chapters run",
             "default": 24,
             "min": 1,
             "max": 168,
@@ -243,8 +243,8 @@ SETTINGS = {
         },
         "update_on_startup": {
             "type": "bool",
-            "description": "Run an automatic sync when NovelCast starts",
-            "default": True,
+            "description": "Run an automatic check when NovelCast starts",
+            "default": False,
             "label": "Sync on startup",
         },
         "update_time": {

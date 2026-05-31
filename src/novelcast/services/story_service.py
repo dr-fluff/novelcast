@@ -65,6 +65,37 @@ class StoryService:
         data["cover_url"] = self._cover_url(data.get("cover_path"))
         return data
 
+    def get_story_files(self, story_id: int) -> list[dict]:
+        story = self.get_story(story_id)
+        if not story:
+            return []
+
+        local_path = story.get("local_path")
+        if not local_path:
+            return []
+
+        path = self._resolve_path(local_path)
+        if not path.exists() or not path.is_dir():
+            return []
+
+        from novelcast.utils.files import human_readable_size
+
+        files: list[dict] = []
+        for file_path in sorted(path.rglob("*")):
+            if not file_path.is_file():
+                continue
+            stat = file_path.stat()
+            files.append({
+                "name": file_path.name,
+                "relative_path": str(file_path.relative_to(path)),
+                "path": str(file_path),
+                "size": human_readable_size(stat.st_size),
+                "size_bytes": stat.st_size,
+                "modified_at": stat.st_mtime,
+            })
+
+        return files
+
     def get_by_url(self, url: str):
         return self.repo.get_by_url(url)
 

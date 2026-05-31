@@ -3,6 +3,7 @@
 from novelcast.db.models.author import Author
 from novelcast.db.models.author_link import AuthorLink
 from novelcast.db.models.chapter import Chapter, ChapterFile
+from novelcast.db.models.chapter_pattern import ChapterPattern
 from novelcast.db.models.group import Group, StoryPermission
 from novelcast.db.models.jobs import UpdateJob
 from novelcast.db.models.progress import ReadingProgress
@@ -19,6 +20,7 @@ __all__ = [
     "AuthorLink",
     "Chapter",
     "ChapterFile",
+    "ChapterPattern",
     "Group",
     "StoryPermission",
     "UpdateJob",
@@ -31,7 +33,6 @@ __all__ = [
     "Story",
     "User",
     "PasswordResetToken",
-    
     "Tag",
     "Genre",
     "Series",

@@ -1,6 +1,7 @@
 # novelcast/services/sync_service.py
 
 import logging
+from datetime import datetime, time, timedelta
 from threading import Lock
 
 logger = logging.getLogger(__name__)
@@ -34,6 +35,33 @@ class LibrarySyncService:
             hours = 24
 
         return max(1, hours) * 60 * 60
+
+    def next_check_delay_seconds(self) -> int:
+        try:
+            interval_hours = max(1, int(self._library_setting("update_interval_hours", 24)))
+        except (TypeError, ValueError):
+            interval_hours = 24
+
+        update_time_value = self._parse_update_time(self._library_setting("update_time", "02:00"))
+        now = datetime.now()
+        next_run = datetime.combine(now.date(), update_time_value)
+
+        while next_run <= now:
+            next_run += timedelta(hours=interval_hours)
+
+        return max(0, int((next_run - now).total_seconds()))
+
+    def _parse_update_time(self, value: str) -> time:
+        if not isinstance(value, str):
+            return time(2, 0)
+
+        try:
+            hour_str, minute_str = value.split(":", 1)
+            hour = int(hour_str)
+            minute = int(minute_str)
+            return time(hour % 24, minute % 60)
+        except Exception:
+            return time(2, 0)
 
     def run_once(self) -> dict:
         if not self._lock.acquire(blocking=False):
