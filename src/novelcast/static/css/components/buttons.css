@@ -1,0 +1,167 @@
+.btn-primary,
+.btn-secondary,
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  border-radius: 8px;
+  font-family: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
+}
+
+.btn-primary {
+  padding: 0.55rem 1.2rem;
+  border: none;
+  background: var(--primary, #2563eb);
+  color: #fff;
+  font-size: 0.875rem;
+}
+
+.btn-primary:hover {
+  opacity: 0.88;
+}
+
+.btn-secondary,
+.btn-ghost {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.18));
+  background: transparent;
+  color: var(--text);
+  font-size: 0.875rem;
+}
+
+.btn-secondary:hover,
+.btn-ghost:hover {
+  background: var(--hover, rgba(255, 255, 255, 0.05));
+}
+
+.btn-ghost--sm {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.78rem;
+}
+
+.btn-play,
+.btn-action-icon,
+.btn-header-action,
+.btn-file-menu,
+.btn-probe,
+.btn-modal-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.btn-play {
+  gap: 0.45rem;
+  padding: 0.55rem 1.4rem;
+  border-radius: 999px;
+  background: #16a34a;
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 700;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.btn-play:hover {
+  background: #15803d;
+  transform: translateY(-1px);
+}
+
+.btn-action-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: transparent;
+  color: var(--text, #0f172a);
+  font-size: 0.9rem;
+  transition: background 0.15s ease;
+}
+
+.btn-action-icon:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.btn-action-danger {
+  border-color: rgba(220, 38, 38, 0.2);
+  color: #dc2626;
+}
+
+.btn-action-danger:hover {
+  background: rgba(220, 38, 38, 0.06);
+}
+
+.btn-header-action {
+  gap: 0.35rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 7px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: transparent;
+  color: var(--text, #334155);
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background 0.12s ease;
+}
+
+.btn-header-action:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.btn-header-action.active {
+  background: rgba(99, 102, 241, 0.1);
+  border-color: rgba(99, 102, 241, 0.3);
+  color: #4338ca;
+}
+
+.btn-file-menu {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted, #94a3b8);
+  font-size: 0.9rem;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.btn-file-menu:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--text, #0f172a);
+}
+
+.btn-probe {
+  gap: 0.4rem;
+  padding: 0.4rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: transparent;
+  color: #cbd5e1;
+  font-size: 0.85rem;
+  transition: background 0.12s ease;
+}
+
+.btn-probe:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.btn-modal-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.07);
+  color: #94a3b8;
+  font-size: 1rem;
+  transition: background 0.12s ease;
+}
+
+.btn-modal-close:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #f1f5f9;
+}

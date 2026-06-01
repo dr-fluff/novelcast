@@ -3,38 +3,38 @@
 
 {% block title %}NovelCast{% endblock %}
 
-{% block content %}
-
-{% include "partials/library_header.html" %}
-
 {% block head %}
     <link rel="stylesheet" href="/static/css/pages/index.css" />
 {% endblock %}
 
-<section class="library-filters">
-    <form action="/" method="get" class="search-sort-bar">
-        <input
-            type="text"
-            name="q"
-            placeholder="Search library..."
-            value="{{ query }}"
-        />
+{% block content %}
 
-        <select name="sort" onchange="this.form.submit()">
-            {% for option in sort_options %}
-                <option value="{{ option.key }}"
-                    {% if option.key == sort %}selected{% endif %}>
-                    {{ option.label }}
-                </option>
-            {% endfor %}
-        </select>
-    </form>
-</section>
+{% from "macros/grid_toolbar.html" import render_grid_toolbar %}
+{% include "partials/library_header.html" %}
 
-<section class="library-grid">
+{{ render_grid_toolbar(
+    "/",
+    query,
+    sort,
+    sort_options,
+    filter_options={
+        "statuses": status_options,
+        "genres": filter_options.genres,
+        "tags": filter_options.tags,
+        "series": filter_options.series,
+        "languages": filter_options.languages,
+    },
+    status=status,
+    genre=genre,
+    tag=tag,
+    series=series,
+    language=language
+) }}
+
+<section class="grid">
     {% if stories %}
         {% for s in stories %}
-            <a class="library-card" href="{{ s.url }}">
+            <a class="card" href="{{ s.url }}">
                 <div class="card-cover">
                     <img
                         src="{{ s.cover_url or '/static/images/cover-placeholder.svg' }}"
@@ -48,6 +48,9 @@
                         {% if s.author %}{{ s.author }} · {% endif %}
                         {{ s.last_chapter }} chapters
                     </p>
+                    {% if s.has_unread %}
+                        <span class="card-badge">Unread chapters</span>
+                    {% endif %}
                 </div>
             </a>
         {% endfor %}

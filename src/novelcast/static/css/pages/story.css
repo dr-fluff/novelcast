@@ -1,14 +1,5 @@
 /* novelcast/static/css/pages/story.css */
 
-.story-page {
-    max-width: 820px;
-    margin: 0 auto;
-    padding: 3rem 2rem 4rem;
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-
 /* ── Hero ─────────────────────────────────────────────────────────────── */
 
 .story-hero {
@@ -138,56 +129,6 @@
     flex-wrap: wrap;
 }
 
-.btn-play {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45rem;
-    padding: 0.55rem 1.4rem;
-    border-radius: 999px;
-    background: #16a34a;
-    color: #fff;
-    border: none;
-    font-size: 0.95rem;
-    font-weight: 700;
-    cursor: pointer;
-    font-family: inherit;
-    transition: background 0.15s ease, transform 0.15s ease;
-}
-
-.btn-play:hover {
-    background: #15803d;
-    transform: translateY(-1px);
-}
-
-.btn-action-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 36px;
-    height: 36px;
-    border-radius: 8px;
-    border: 1px solid rgba(0, 0, 0, 0.12);
-    background: transparent;
-    color: var(--text, #0f172a);
-    cursor: pointer;
-    font-size: 0.9rem;
-    font-family: inherit;
-    transition: background 0.15s ease;
-}
-
-.btn-action-icon:hover {
-    background: rgba(0, 0, 0, 0.05);
-}
-
-.btn-action-danger {
-    border-color: rgba(220, 38, 38, 0.2);
-    color: #dc2626;
-}
-
-.btn-action-danger:hover {
-    background: rgba(220, 38, 38, 0.06);
-}
-
 /* ── Description ──────────────────────────────────────────────────────── */
 
 .story-description-block {
@@ -230,114 +171,6 @@
 .read-more-btn i {
     transition: transform 0.2s ease;
     font-size: 0.75rem;
-}
-
-/* ── Collapsible cards ────────────────────────────────────────────────── */
-
-.collapsible-card {
-    border: 1px solid rgba(0, 0, 0, 0.09);
-    border-radius: 14px;
-    overflow: hidden;
-    background: #fff;
-}
-
-.collapsible-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 1rem 1.25rem;
-    cursor: pointer;
-    user-select: none;
-    gap: 1rem;
-    background: #fff;
-    transition: background 0.12s ease;
-}
-
-.collapsible-header:hover {
-    background: #fafafa;
-}
-
-.collapsible-header-left {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-}
-
-.collapsible-title {
-    font-size: 0.97rem;
-    font-weight: 700;
-    color: var(--text, #0f172a);
-}
-
-.collapsible-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 22px;
-    height: 22px;
-    padding: 0 0.45rem;
-    border-radius: 999px;
-    background: rgba(0, 0, 0, 0.07);
-    color: var(--text, #334155);
-    font-size: 0.78rem;
-    font-weight: 700;
-}
-
-.collapsible-header-right {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.collapsible-chevron {
-    font-size: 0.8rem;
-    color: #94a3b8;
-    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    flex-shrink: 0;
-}
-
-.collapsible-chevron.collapsed {
-    transform: rotate(-90deg);
-}
-
-/* ── Header action buttons ────────────────────────────────────────────── */
-
-.btn-header-action {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    padding: 0.3rem 0.75rem;
-    border-radius: 7px;
-    border: 1px solid rgba(0, 0, 0, 0.12);
-    background: transparent;
-    color: var(--text, #334155);
-    font-size: 0.82rem;
-    font-weight: 600;
-    cursor: pointer;
-    font-family: inherit;
-    transition: background 0.12s ease;
-    white-space: nowrap;
-}
-
-.btn-header-action:hover {
-    background: rgba(0, 0, 0, 0.05);
-}
-
-.btn-header-action.active {
-    background: rgba(99, 102, 241, 0.1);
-    border-color: rgba(99, 102, 241, 0.3);
-    color: #4338ca;
-}
-
-/* ── Collapsible body ─────────────────────────────────────────────────── */
-
-.collapsible-body {
-    border-top: 1px solid rgba(0, 0, 0, 0.07);
-    padding: 0.75rem 1.25rem 1.25rem;
-}
-
-.collapsible-body.collapsed {
-    display: none;
 }
 
 /* ── Chapter list ─────────────────────────────────────────────────────── */
@@ -536,26 +369,6 @@
     float: right;
 }
 
-.btn-file-menu {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    border-radius: 6px;
-    border: none;
-    background: transparent;
-    color: var(--muted, #94a3b8);
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: background 0.12s ease, color 0.12s ease;
-}
-
-.btn-file-menu:hover {
-    background: rgba(0, 0, 0, 0.06);
-    color: var(--text, #0f172a);
-}
-
 /* ── File dropdown ────────────────────────────────────────────────────── */
 
 .file-dropdown {
@@ -658,45 +471,6 @@
     flex-shrink: 0;
 }
 
-.btn-probe {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    padding: 0.4rem 0.9rem;
-    border-radius: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    background: transparent;
-    color: #cbd5e1;
-    font-size: 0.85rem;
-    font-family: inherit;
-    cursor: pointer;
-    transition: background 0.12s ease;
-}
-
-.btn-probe:hover {
-    background: rgba(255, 255, 255, 0.07);
-}
-
-.btn-modal-close {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-    border: none;
-    background: rgba(255, 255, 255, 0.07);
-    color: #94a3b8;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: background 0.12s ease;
-}
-
-.btn-modal-close:hover {
-    background: rgba(255, 255, 255, 0.12);
-    color: #f1f5f9;
-}
-
 .file-info-body {
     padding: 1.5rem;
     overflow-y: auto;
@@ -797,24 +571,9 @@
     line-height: 1.6;
 }
 
-/* ── Empty state ──────────────────────────────────────────────────────── */
-
-.empty-state {
-    padding: 1.25rem;
-    border: 1px dashed rgba(0, 0, 0, 0.1);
-    border-radius: 8px;
-    text-align: center;
-    color: var(--muted, #94a3b8);
-    font-size: 0.88rem;
-}
-
 /* ── Responsive ───────────────────────────────────────────────────────── */
 
 @media (max-width: 600px) {
-    .story-page {
-        padding: 1.5rem 1rem 3rem;
-    }
-
     .story-hero {
         flex-direction: column;
         align-items: center;
@@ -827,10 +586,6 @@
 
     .story-action-row {
         justify-content: center;
-    }
-
-    .collapsible-header {
-        flex-wrap: wrap;
     }
 
     .chapter-link {

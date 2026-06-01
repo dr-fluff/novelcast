@@ -64,9 +64,9 @@
         <h2 class="author-stories-heading">Stories</h2>
 
         {% if author.stories %}
-            <div class="library-grid">
+            <div class="grid">
                 {% for s in author.stories %}
-                    <a class="library-card" href="/story?story_id={{ s.id }}">
+                    <a class="card" href="/story?story_id={{ s.id }}">
                         <div class="card-cover">
                             <img
                                 src="{{ s.cover_url or '/static/images/cover-placeholder.svg' }}"

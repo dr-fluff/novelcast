@@ -24,3 +24,26 @@ class UserService:
 
     def promote_to_admin(self, user_id: int):
         return self.repo.set_root(user_id)
+
+    def update_user(
+        self,
+        user_id: int,
+        username: str | None = None,
+        password: str | None = None,
+        is_root: bool | None = None,
+    ):
+        if username is not None:
+            username = username.strip()
+            if not username:
+                raise ValueError("Username cannot be empty")
+
+        if password is not None and password == "":
+            password = None
+
+        password_hash = hash_password(password) if password is not None else None
+        return self.repo.update(
+            user_id,
+            username=username,
+            password_hash=password_hash,
+            is_root=is_root,
+        )

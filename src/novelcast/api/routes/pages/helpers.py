@@ -2,24 +2,127 @@ from pathlib import Path
 from urllib.parse import quote
 
 
-def filter_stories(stories: list[dict], query: str) -> list[dict]:
-    if not query:
-        return stories
+def _norm(value) -> str:
+    return str(value or "").strip().lower()
 
+
+def _contains(values: list[str] | None, selected: str) -> bool:
+    if not selected:
+        return True
+    selected = _norm(selected)
+    return any(_norm(value) == selected for value in values or [])
+
+
+def _story_latest_downloaded(story: dict) -> int:
+    return int(
+        story.get("latest_downloaded_chapter")
+        or story.get("downloaded_chapters")
+        or 0
+    )
+
+
+def story_has_unread(story: dict) -> bool:
+    if not int(story.get("downloaded_chapters") or 0):
+        return False
+    last_read = int(story.get("last_read_chapter_number") or 0)
+    return last_read < _story_latest_downloaded(story)
+
+
+def enrich_story_progress(stories: list[dict], progress_rows: list[dict]) -> list[dict]:
+    progress_by_story = {row["story_id"]: row for row in progress_rows}
+    enriched = []
+    for story in stories:
+        item = dict(story)
+        progress = progress_by_story.get(item.get("id")) or {}
+        item["last_read_chapter_number"] = progress.get("last_chapter_number")
+        item["has_unread"] = story_has_unread(item)
+        enriched.append(item)
+    return enriched
+
+
+def filter_stories(
+    stories: list[dict],
+    query: str,
+    genre: str = "",
+    tag: str = "",
+    series: str = "",
+    language: str = "",
+    status: str = "",
+) -> list[dict]:
+    if not query:
+        query = ""
     query = query.lower()
-    return [
-        story for story in stories
-        if query in (story.get("title") or "").lower()
-        or query in (story.get("author") or "").lower()
-    ]
+
+    filtered = []
+    for story in stories:
+        haystack = " ".join([
+            story.get("title") or "",
+            story.get("author") or "",
+            story.get("series") or "",
+            story.get("genres") or "",
+            story.get("tags") or "",
+        ]).lower()
+        if query and query not in haystack:
+            continue
+        if not _contains(story.get("genres_list"), genre):
+            continue
+        if not _contains(story.get("tags_list"), tag):
+            continue
+        if not _contains(story.get("series_list"), series):
+            continue
+        if language and _norm(story.get("language")) != _norm(language):
+            continue
+        if status == "unread" and not story.get("has_unread"):
+            continue
+        if status == "read" and story.get("has_unread"):
+            continue
+        if status == "not_started" and story.get("last_read_chapter_number"):
+            continue
+        filtered.append(story)
+    return filtered
 
 
 def sort_stories(stories: list[dict], sort: str) -> list[dict]:
+    def date_key(story: dict, field: str):
+        return story.get(field) is not None, story.get(field)
+
     if sort == "author":
         return sorted(stories, key=lambda s: (s.get("author") or "").lower())
     if sort == "downloaded":
         return sorted(stories, key=lambda s: s.get("downloaded_chapters", 0), reverse=True)
+    if sort == "unread":
+        return sorted(stories, key=lambda s: (not s.get("has_unread"), (s.get("title") or "").lower()))
+    if sort == "updated":
+        return sorted(stories, key=lambda s: date_key(s, "last_updated"), reverse=True)
+    if sort == "created":
+        return sorted(stories, key=lambda s: date_key(s, "created_at"), reverse=True)
+    if sort == "year":
+        return sorted(stories, key=lambda s: s.get("publish_year") or 0, reverse=True)
+    if sort == "series":
+        return sorted(stories, key=lambda s: (s.get("series") or "").lower())
     return sorted(stories, key=lambda s: (s.get("title") or "").lower())
+
+
+def story_filter_options(stories: list[dict]) -> dict[str, list[str]]:
+    def unique(field: str) -> list[str]:
+        values = {
+            str(value).strip()
+            for story in stories
+            for value in story.get(field, [])
+            if str(value).strip()
+        }
+        return sorted(values, key=str.lower)
+
+    return {
+        "genres": unique("genres_list"),
+        "tags": unique("tags_list"),
+        "series": unique("series_list"),
+        "languages": sorted({
+            str(story.get("language")).strip()
+            for story in stories
+            if str(story.get("language") or "").strip()
+        }, key=str.lower),
+    }
 
 
 def story_card(story: dict) -> dict:
@@ -37,6 +140,10 @@ def story_card(story: dict) -> dict:
         "author": story.get("author"),
         "thumbnail_letter": title[0].upper() if title else "?",
         "last_chapter": story.get("downloaded_chapters", 0),
+        "has_unread": story.get("has_unread", False),
+        "genres": story.get("genres_list") or [],
+        "tags": story.get("tags_list") or [],
+        "series": story.get("series_list") or [],
         "cover_url": cover_url,
         "url": f"/story?story_id={story.get('id')}",
     }

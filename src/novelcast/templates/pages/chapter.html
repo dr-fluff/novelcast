@@ -3,11 +3,11 @@
 
 {% block title %}{{ title }} - {{ chapter }}{% endblock %}
 
-{% block content %}
-
 {% block head %}
     <link rel="stylesheet" href="/static/css/pages/chapter.css" />
 {% endblock %}
+
+{% block content %}
 
 <!-- PROGRESS BAR -->
 <div id="progress-bar"></div>
@@ -37,10 +37,8 @@
 
 {% include "components/chapter_nav.html" %}
 
-{% block scripts %}
-<script src="/static/js/chapter_page.js" defer></script>
 {% endblock %}
 
-
-
+{% block scripts %}
+<script src="/static/js/chapter_page.js" defer></script>
 {% endblock %}

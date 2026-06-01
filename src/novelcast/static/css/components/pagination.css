@@ -1,0 +1,64 @@
+/* ── Pagination ───────────────────────────────────────────────────────── */
+
+/* Use a class instead of inline display:none so other JS can't conflict */
+.paged-hidden {
+    display: none !important;
+}
+
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    padding: 1rem 1.25rem 0.5rem;
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+    flex-wrap: wrap;
+}
+
+.page-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 34px;
+    height: 34px;
+    padding: 0 0.4rem;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text, #334155);
+    font-size: 0.9rem;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+    line-height: 1;
+}
+
+.page-btn:hover:not(:disabled) {
+    background: rgba(0, 0, 0, 0.05);
+    border-color: rgba(0, 0, 0, 0.1);
+}
+
+.page-btn.active {
+    background: #4f6ef7;
+    border-color: #4f6ef7;
+    color: #fff;
+    font-weight: 700;
+}
+
+.page-btn:disabled {
+    opacity: 0.3;
+    cursor: default;
+}
+
+.page-ellipsis {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 34px;
+    height: 34px;
+    color: var(--muted, #94a3b8);
+    font-size: 0.9rem;
+    pointer-events: none;
+    user-select: none;
+}

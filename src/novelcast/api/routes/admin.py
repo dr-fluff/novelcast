@@ -1,8 +1,9 @@
 # novelcast/api/routes/admin.py
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
+from sqlalchemy.exc import IntegrityError
 
 from novelcast.api.deps import get_current_user, get_users, get_chapter_filter
 from novelcast.services import UserService
@@ -30,6 +31,59 @@ def promote_user(
         raise HTTPException(status_code=403, detail="Admins only")
     users.promote_to_admin(user_id)
     return RedirectResponse("/settings?success=1", status_code=303)
+
+
+@router.post("/users/{user_id}/edit")
+def edit_user(
+    request: Request,
+    user_id: int,
+    username: str = Form(...),
+    password: str | None = Form(None),
+    password_confirm: str | None = Form(None),
+    role: str = Form("user"),
+    current_user: dict = Depends(_require_admin),
+    users: UserService = Depends(get_users),
+):
+    if current_user.get("id") == user_id and role != "admin":
+        return RedirectResponse(
+            f"/admin/users/{user_id}/edit?error=demote",
+            status_code=303,
+        )
+
+    if role not in {"user", "admin"}:
+        return RedirectResponse(
+            f"/admin/users/{user_id}/edit?error=invalid",
+            status_code=303,
+        )
+
+    if password is not None and password != "" and password != password_confirm:
+        return RedirectResponse(
+            f"/admin/users/{user_id}/edit?error=invalid",
+            status_code=303,
+        )
+
+    try:
+        updated = users.update_user(
+            user_id,
+            username=username,
+            password=password,
+            is_root=(role == "admin"),
+        )
+    except ValueError:
+        return RedirectResponse(
+            f"/admin/users/{user_id}/edit?error=invalid",
+            status_code=303,
+        )
+    except IntegrityError:
+        return RedirectResponse(
+            f"/admin/users/{user_id}/edit?error=exists",
+            status_code=303,
+        )
+
+    if not updated:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return RedirectResponse("/admin/users?success=1", status_code=303)
 
 
 # ── Chapter patterns API ───────────────────────────────────────────────────

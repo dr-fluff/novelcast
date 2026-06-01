@@ -14,7 +14,7 @@ body {
 
 /* ICON FIX */
 i {
-  color: var(--text);
+  color: inherit;
 }
 
 * {

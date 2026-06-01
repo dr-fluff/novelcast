@@ -61,10 +61,17 @@ def signup_page(request: Request):
         return RedirectResponse("/", status_code=303)
 
     return templates(request).TemplateResponse(
-        "pages/signup.html",
+        "pages/user_form.html",
         {
             "request": request,
             "error": request.query_params.get("error"),
+            "mode": "signup",
+            "form_action": "/signup",
+            "submit_label": "Create account",
+            "back_url": "/login",
+            "back_label": "← Back to login",
+            "show_role": False,
+            "form_user": None,
         },
     )
 

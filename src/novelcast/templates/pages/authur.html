@@ -2,13 +2,13 @@
 
 {% block title %}NovelCast{% endblock %}
 
-{% block content %}
-
-{% include "partials/library_header.html" %}
-
 {% block head %}
     <link rel="stylesheet" href="/static/css/pages/author.css" />
 {% endblock %}
+
+{% block content %}
+
+{% include "partials/library_header.html" %}
 
 <section class="">
     <h2 class="author-name">{{ author }}</h2>
@@ -22,3 +22,5 @@
         {% endif %}
     </div>
 </section>
+
+{% endblock %}

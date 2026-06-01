@@ -89,32 +89,28 @@
     gap: 0.75rem;
 }
 
-.btn-primary,
-.btn-secondary {
+.error-actions .btn-primary,
+.error-actions .btn-secondary {
     padding: 0.85rem 1.2rem;
     border-radius: 999px;
-    text-decoration: none;
     font-size: 0.95rem;
-    font-weight: 600;
     min-width: 120px;
-    text-align: center;
 }
 
-.btn-primary {
+.error-actions .btn-primary {
     background: #6366f1;
     color: white;
 }
 
-.btn-primary:hover {
+.error-actions .btn-primary:hover {
     background: #4f46e5;
+    opacity: 1;
 }
 
-.btn-secondary {
-    background: transparent;
+.error-actions .btn-secondary {
     border: 1px solid rgba(255, 255, 255, 0.18);
-    color: var(--text);
 }
 
-.btn-secondary:hover {
+.error-actions .btn-secondary:hover {
     background: rgba(255, 255, 255, 0.05);
 }

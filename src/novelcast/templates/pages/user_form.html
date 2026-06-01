@@ -1,0 +1,114 @@
+{% extends "layouts/base.html" %}
+
+{% block head %}
+    <link rel="stylesheet" href="/static/css/pages/settings.css" />
+{% endblock %}
+
+{% block title %}{% if mode == 'signup' %}Sign Up{% else %}Edit User{% endif %} - NovelCast{% endblock %}
+
+{% block content %}
+
+{% if mode != 'signup' %}
+{% include "partials/library_header.html" %}
+{% endif %}
+
+<div class="pg-settings">
+  <div class="pg-header">
+    <div>
+      <h1 class="pg-title">{% if mode == 'signup' %}Create an account{% else %}Edit User{% endif %}</h1>
+      <p class="field-hint">
+        {% if mode == 'signup' %}
+          Create a new account to sign in to NovelCast.
+        {% else %}
+          Modify the username, password, or role for this account.
+        {% endif %}
+      </p>
+    </div>
+    {% if mode != 'signup' %}
+    <a href="{{ back_url }}" class="btn-ghost">{{ back_label }}</a>
+    {% endif %}
+  </div>
+
+  <div class="section-card">
+    <form method="post" action="{{ form_action }}">
+      <div class="field-card">
+        <div class="field-card__label-col">
+          <span class="field-label">Username</span>
+          <span class="field-hint">Unique account name used to sign in.</span>
+        </div>
+        <div class="field-card__input-col">
+          <input type="text" id="username" name="username" value="{{ form_user.username if form_user else '' }}" required />
+        </div>
+      </div>
+
+      <div class="field-card">
+        <div class="field-card__label-col">
+          <span class="field-label">Password</span>
+          <span class="field-hint">{% if mode == 'signup' %}Choose a password for your account.{% else %}Leave blank to keep the current password.{% endif %}</span>
+        </div>
+        <div class="field-card__input-col">
+          <input type="password" id="password" name="password" autocomplete="new-password" {% if mode == 'signup' %}required{% endif %} />
+        </div>
+      </div>
+
+      <div class="field-card">
+        <div class="field-card__label-col">
+          <span class="field-label">Confirm Password</span>
+          <span class="field-hint">{% if mode == 'signup' %}Repeat your password.{% else %}Repeat the password only if you are changing it.{% endif %}</span>
+        </div>
+        <div class="field-card__input-col">
+          <input type="password" id="password_confirm" name="password_confirm" autocomplete="new-password" {% if mode == 'signup' %}required{% endif %} />
+        </div>
+      </div>
+
+      {% if show_role %}
+      <div class="field-card">
+        <div class="field-card__label-col">
+          <span class="field-label">Role</span>
+          <span class="field-hint">Grant admin access or keep as a regular user.</span>
+        </div>
+        <div class="field-card__input-col">
+          <select id="role" name="role" required>
+            <option value="user" {% if not form_user or not form_user.is_root %}selected{% endif %}>User</option>
+            <option value="admin" {% if form_user and form_user.is_root %}selected{% endif %}>Admin</option>
+          </select>
+        </div>
+      </div>
+      {% endif %}
+
+      {% if error == 'invalid' %}
+      <div class="field-card">
+        <div class="field-card__input-col">
+          <div class="alert alert-error">Please check the username and password fields.</div>
+        </div>
+      </div>
+      {% elif error == 'exists' %}
+      <div class="field-card">
+        <div class="field-card__input-col">
+          <div class="alert alert-error">That username is already taken.</div>
+        </div>
+      </div>
+      {% elif error == 'demote' %}
+      <div class="field-card">
+        <div class="field-card__input-col">
+          <div class="alert alert-error">Cannot demote the signed-in admin user.</div>
+        </div>
+      </div>
+      {% elif error == 'closed' %}
+      <div class="field-card">
+        <div class="field-card__input-col">
+          <div class="alert alert-error">Signups are currently disabled.</div>
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="field-card" style="border-bottom:none;">
+        <div class="field-card__input-col">
+          <button type="submit" class="btn-primary">{{ submit_label }}</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}

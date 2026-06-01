@@ -1,0 +1,117 @@
+{% macro render_grid_toolbar(action, query, sort, sort_options, filter_options=None, status="", genre="", tag="", series="", language="") %}
+<form class="grid-toolbar" action="{{ action }}" method="get">
+    <div class="grid-toolbar-search">
+        <input
+            type="search"
+            name="q"
+            placeholder="Search..."
+            value="{{ query }}"
+            autocomplete="off"
+        />
+    </div>
+
+    <div class="grid-toolbar-actions">
+        <details class="grid-tool">
+            <summary class="grid-tool-summary">
+                <i class="fa-solid fa-table-cells-large grid-tool-icon"></i>
+                <span class="grid-tool-label">Options</span>
+            </summary>
+            <div class="grid-tool-menu">
+                <a class="btn-secondary" href="{{ action }}">Clear search and filters</a>
+            </div>
+        </details>
+
+        <div class="grid-toolbar-divider"></div>
+
+        <details class="grid-tool">
+            <summary class="grid-tool-summary">
+                <i class="fa-solid fa-arrow-up-wide-short grid-tool-icon"></i>
+                <span class="grid-tool-label">Sort <i class="fa-solid fa-caret-down"></i></span>
+            </summary>
+            <div class="grid-tool-menu">
+                <div class="grid-tool-field">
+                    <label for="gridSort">Sort by</label>
+                    <select id="gridSort" name="sort" onchange="this.form.submit()">
+                        {% for option in sort_options %}
+                            <option value="{{ option.key }}" {% if option.key == sort %}selected{% endif %}>
+                                {{ option.label }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </details>
+
+        {% if filter_options %}
+        <details class="grid-tool">
+            <summary class="grid-tool-summary">
+                <i class="fa-solid fa-filter grid-tool-icon"></i>
+                <span class="grid-tool-label">Filter <i class="fa-solid fa-caret-down"></i></span>
+            </summary>
+            <div class="grid-tool-menu">
+                {% if filter_options.statuses %}
+                <div class="grid-tool-field">
+                    <label for="gridStatus">Read status</label>
+                    <select id="gridStatus" name="status" onchange="this.form.submit()">
+                        {% for option in filter_options.statuses %}
+                            <option value="{{ option.key }}" {% if option.key == status %}selected{% endif %}>
+                                {{ option.label }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
+
+                {% if filter_options.genres %}
+                <div class="grid-tool-field">
+                    <label for="gridGenre">Genre</label>
+                    <select id="gridGenre" name="genre" onchange="this.form.submit()">
+                        <option value="">Any genre</option>
+                        {% for item in filter_options.genres %}
+                            <option value="{{ item }}" {% if item == genre %}selected{% endif %}>{{ item }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
+
+                {% if filter_options.tags %}
+                <div class="grid-tool-field">
+                    <label for="gridTag">Tag</label>
+                    <select id="gridTag" name="tag" onchange="this.form.submit()">
+                        <option value="">Any tag</option>
+                        {% for item in filter_options.tags %}
+                            <option value="{{ item }}" {% if item == tag %}selected{% endif %}>{{ item }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
+
+                {% if filter_options.series %}
+                <div class="grid-tool-field">
+                    <label for="gridSeries">Series</label>
+                    <select id="gridSeries" name="series" onchange="this.form.submit()">
+                        <option value="">Any series</option>
+                        {% for item in filter_options.series %}
+                            <option value="{{ item }}" {% if item == series %}selected{% endif %}>{{ item }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
+
+                {% if filter_options.languages %}
+                <div class="grid-tool-field">
+                    <label for="gridLanguage">Language</label>
+                    <select id="gridLanguage" name="language" onchange="this.form.submit()">
+                        <option value="">Any language</option>
+                        {% for item in filter_options.languages %}
+                            <option value="{{ item }}" {% if item == language %}selected{% endif %}>{{ item }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
+            </div>
+        </details>
+        {% endif %}
+    </div>
+</form>
+{% endmacro %}

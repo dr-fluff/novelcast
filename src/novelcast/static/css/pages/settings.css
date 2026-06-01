@@ -23,36 +23,6 @@
 }
 
 /* ============================================================
-   BUTTONS
-   ============================================================ */
-.btn-primary {
-  padding: 0.55rem 1.2rem;
-  border-radius: 8px;
-  border: none;
-  background: var(--primary, #2563eb);
-  color: #fff;
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: opacity .15s;
-}
-.btn-primary:hover { opacity: .88; }
-
-.btn-ghost {
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
-  border: 1px solid var(--border, #d1d5db);
-  background: transparent;
-  color: var(--text, #111);
-  font-size: 0.8rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background .12s;
-}
-.btn-ghost:hover { background: var(--hover, rgba(0,0,0,.05)); }
-.btn-ghost--sm { padding: 0.35rem 0.75rem; font-size: 0.78rem; }
-
-/* ============================================================
    TAB BAR  (Settings)
    ============================================================ */
 .tab-bar {

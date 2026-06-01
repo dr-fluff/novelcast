@@ -46,6 +46,28 @@ class UsersRepository(BaseRepository):
             if user:
                 user.is_root = True
 
+    def update(
+        self,
+        user_id: int,
+        username: str | None = None,
+        password_hash: str | None = None,
+        is_root: bool | None = None,
+    ) -> dict | None:
+        with self.session() as db:
+            user = db.get(User, user_id)
+            if not user:
+                return None
+
+            if username is not None:
+                user.username = username
+            if password_hash is not None:
+                user.password_hash = password_hash
+            if is_root is not None:
+                user.is_root = bool(is_root)
+
+            db.flush()
+            return _to_dict(user)
+
     def delete(self, user_id: int) -> None:
         with self.session() as db:
             user = db.get(User, user_id)

@@ -2,9 +2,11 @@
 
 {% block title %}Error {{ error_code }}{% endblock %}
 
-{% block content %}
+{% block head %}
+    <link rel="stylesheet" href="/static/css/pages/error.css" />
+{% endblock %}
 
-<link rel="stylesheet" href="/static/css/pages/error.css" />
+{% block content %}
 
 <section class="error-page">
 

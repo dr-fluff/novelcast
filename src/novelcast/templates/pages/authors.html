@@ -10,43 +10,30 @@
 
 {% block content %}
 
+{% from "macros/grid_toolbar.html" import render_grid_toolbar %}
 {% include "partials/library_header.html" %}
 
-<section class="authors-filters">
-    <form action="/authors" method="get" class="search-sort-bar">
-        <input
-            type="text"
-            name="q"
-            placeholder="Search authors…"
-            value="{{ query }}"
-            autocomplete="off"
-        />
-        <select name="sort" onchange="this.form.submit()">
-            {% for option in sort_options %}
-                <option value="{{ option.key }}" {% if option.key == sort %}selected{% endif %}>
-                    {{ option.label }}
-                </option>
-            {% endfor %}
-        </select>
-    </form>
-</section>
+{{ render_grid_toolbar("/authors", query, sort, sort_options) }}
 
-<section class="authors-grid">
+<section class="grid grid-compact">
     {% if authors %}
         {% for author in authors %}
-            <a class="author-card" href="/authors/{{ author.id }}">
+            <a class="card author-card" href="/authors/{{ author.id }}">
 
-                <div class="author-card-avatar">
+                <div class="card-cover author-card-cover">
                     {% if author.picture_url %}
                         <img src="{{ author.picture_url }}" alt="{{ author.name }}" />
                     {% else %}
-                        <span>{{ author.name[0].upper() }}</span>
+                        <div class="author-card-placeholder">
+                            <span>{{ author.name[0].upper() }}</span>
+                        </div>
                     {% endif %}
+                    <div class="card-letter">{{ author.name[0].upper() }}</div>
                 </div>
 
-                <div class="author-card-info">
-                    <h3 class="author-card-name">{{ author.name }}</h3>
-                    <p class="author-card-meta">
+                <div class="card-info">
+                    <h3>{{ author.name }}</h3>
+                    <p class="card-meta">
                         {{ author.story_count }} {{ "story" if author.story_count == 1 else "stories" }}
                         {% if author.last_updated %}
                             · {{ author.last_updated.strftime("%b %Y") }}

@@ -1,3 +1,109 @@
+/* novelcast/static/js/story_page.js */
+
+/* ── Collapsible sections ─────────────────────────────────────────────── */
+
+window.toggleSection = function (key) {
+    const body    = document.getElementById(key + "Body");
+    const chevron = document.getElementById(key + "Chevron");
+    if (!body) return;
+    const collapsed = body.classList.toggle("collapsed");
+    if (chevron) chevron.classList.toggle("collapsed", collapsed);
+};
+
+/* ── Chapter sort ─────────────────────────────────────────────────────── */
+
+const SORT_MODES = ["asc", "desc"];
+let _sortIndex = 0;
+
+window.cycleSort = function () {
+    _sortIndex = (_sortIndex + 1) % SORT_MODES.length;
+    const mode = SORT_MODES[_sortIndex];
+
+    const list = document.getElementById("chapterList");
+    if (!list) return;
+
+    const items = [...list.querySelectorAll(".chapter-item")];
+    items.sort((a, b) => {
+        const na = parseInt(a.dataset.chapterNumber, 10) || 0;
+        const nb = parseInt(b.dataset.chapterNumber, 10) || 0;
+        return mode === "asc" ? na - nb : nb - na;
+    });
+    items.forEach(el => list.appendChild(el));
+
+    const icon = document.getElementById("sortIcon");
+    if (icon) {
+        icon.className = mode === "asc"
+            ? "fa-solid fa-arrow-up-wide-short"
+            : "fa-solid fa-arrow-down-wide-short";
+    }
+
+    if (window.chapterPaginator) {
+        setTimeout(() => window.chapterPaginator.refresh(), 0);
+    }
+};
+
+/* ── Full path toggle ─────────────────────────────────────────────────── */
+
+let _showFullPath = false;
+
+window.toggleFullPath = function () {
+    _showFullPath = !_showFullPath;
+    document.querySelectorAll(".file-path-text").forEach(el => {
+        el.textContent = _showFullPath
+            ? (el.dataset.full || el.dataset.relative)
+            : el.dataset.relative;
+    });
+    const btn = document.getElementById("fullPathBtn");
+    if (btn) btn.classList.toggle("active", _showFullPath);
+};
+
+/* ── Go to first unread ───────────────────────────────────────────────── */
+
+window.goToFirstUnread = function () {
+    const section   = document.querySelector(".story-page");
+    const storyId   = section?.dataset.storyId;
+    const chapterId = section?.dataset.firstUnreadId;
+    if (storyId && chapterId) {
+        window.location.href = `/chapter?story_id=${storyId}&chapter_id=${chapterId}`;
+    }
+};
+
+/* ── Metadata panel ───────────────────────────────────────────────────── */
+
+window.openMetaPanel = function () {
+    const panel = document.getElementById("metadataPanel");
+    if (panel) panel.classList.add("open");
+};
+
+/* ── Delete story ─────────────────────────────────────────────────────── */
+
+window.confirmDeleteStory = async function () {
+    const section = document.querySelector(".story-page");
+    const storyId = section?.dataset.storyId;
+    if (!storyId) return;
+    if (!confirm("Delete this story and all its data? This cannot be undone.")) return;
+    try {
+        const res = await fetch(`/api/stories/${storyId}`, { method: "DELETE" });
+        if (!res.ok) throw new Error(await res.text());
+        window.location.href = "/library";
+    } catch (err) {
+        window.showNotification?.(`Delete failed: ${err.message}`, "error", 6000)
+            ?? alert(`Delete failed: ${err.message}`);
+    }
+};
+
+/* ── Description expand/collapse ─────────────────────────────────────── */
+
+window.toggleDescription = function () {
+    const desc = document.getElementById("storyDescription");
+    const btn  = document.getElementById("readMoreBtn");
+    if (!desc || !btn) return;
+    const expanded = desc.classList.toggle("expanded");
+    btn.innerHTML  = expanded
+        ? 'Show less <i class="fa-solid fa-chevron-up"></i>'
+        : 'Read more <i class="fa-solid fa-chevron-down"></i>';
+};
+
 /* ── File row menu & More Info modal ─────────────────────────────────── */
 
 let _activeDropdown = null;
@@ -17,8 +123,7 @@ document.addEventListener("click", (e) => {
 
 window.openFileMenu = function (btn, filePath, fileType) {
     closeActiveDropdown();
-
-    const wrapper = btn.closest(".file-menu-wrapper");
+    const wrapper  = btn.closest(".file-menu-wrapper");
     const dropdown = document.createElement("div");
     dropdown.className = "file-dropdown";
     dropdown.innerHTML = `
@@ -32,7 +137,6 @@ window.openFileMenu = function (btn, filePath, fileType) {
 
 window.downloadFile = function (filePath) {
     closeActiveDropdown();
-    // Adjust endpoint to match your API
     window.open(`/api/files/download?path=${encodeURIComponent(filePath)}`, "_blank");
 };
 
@@ -46,19 +150,15 @@ window.deleteFile = async function (filePath) {
             body: JSON.stringify({ path: filePath }),
         });
         if (!res.ok) throw new Error(await res.text());
-        // Remove row from table
         document.querySelectorAll(".file-path-text").forEach(el => {
             if (el.dataset.full === filePath || el.dataset.relative === filePath) {
                 el.closest(".file-row").remove();
             }
         });
-        if (typeof window.showNotification === "function") {
-            window.showNotification("File deleted.", "success", 4000);
-        }
+        window.filePaginator?.refresh();
+        window.showNotification?.("File deleted.", "success", 4000);
     } catch (err) {
-        if (typeof window.showNotification === "function") {
-            window.showNotification(`Delete failed: ${err.message}`, "error", 6000);
-        }
+        window.showNotification?.(`Delete failed: ${err.message}`, "error", 6000);
     }
 };
 
@@ -82,8 +182,7 @@ window.openFileInfo = async function (filePath, fileType) {
     try {
         const res = await fetch(`/api/files/info?path=${encodeURIComponent(filePath)}`);
         if (!res.ok) throw new Error(await res.text());
-        const info = await res.json();
-        renderFileInfo(body, filePath, info);
+        renderFileInfo(body, filePath, await res.json());
     } catch (err) {
         body.innerHTML = `
             <p class="file-info-section-title">Path</p>
@@ -95,8 +194,6 @@ window.openFileInfo = async function (filePath, fileType) {
 };
 
 function renderFileInfo(body, filePath, info) {
-    // info shape: { size, duration, format, codec, channels, bitrate, chapters, time_base,
-    //               embedded_cover, language, meta_tags: { Album, Artist, ... } }
     const details = [
         ["Size",           info.size],
         ["Duration",       info.duration],
@@ -110,30 +207,23 @@ function renderFileInfo(body, filePath, info) {
         ["Language",       info.language],
     ].filter(([, v]) => v !== undefined && v !== null && v !== "");
 
-    const leftDetails  = details.filter((_, i) => i % 2 === 0);
-    const rightDetails = details.filter((_, i) => i % 2 === 1);
-    const maxRows = Math.max(leftDetails.length, rightDetails.length);
+    const left  = details.filter((_, i) => i % 2 === 0);
+    const right = details.filter((_, i) => i % 2 === 1);
 
     let detailRows = "";
-    for (let i = 0; i < maxRows; i++) {
-        const l = leftDetails[i]  || null;
-        const r = rightDetails[i] || null;
-        detailRows += `<div class="file-info-row">
-            ${l ? `<dt>${l[0]}</dt><dd>${l[1]}</dd>` : "<dt></dt><dd></dd>"}
-        </div>
-        <div class="file-info-row">
-            ${r ? `<dt>${r[0]}</dt><dd>${r[1]}</dd>` : "<dt></dt><dd></dd>"}
-        </div>`;
+    for (let i = 0; i < Math.max(left.length, right.length); i++) {
+        const l = left[i]  || null;
+        const r = right[i] || null;
+        detailRows += `
+            <div class="file-info-row">${l ? `<dt>${l[0]}</dt><dd>${l[1]}</dd>` : "<dt></dt><dd></dd>"}</div>
+            <div class="file-info-row">${r ? `<dt>${r[0]}</dt><dd>${r[1]}</dd>` : "<dt></dt><dd></dd>"}</div>`;
     }
 
     let metaTagsHtml = "";
     if (info.meta_tags && Object.keys(info.meta_tags).length) {
-        const rows = Object.entries(info.meta_tags).map(([k, v]) => {
-            if (k === "Comment" || (typeof v === "string" && v.length > 60)) {
-                return `<dt>${k}</dt><dd class="file-info-comment">${v}</dd>`;
-            }
-            return `<dt>${k}</dt><dd>${v}</dd>`;
-        }).join("");
+        const rows = Object.entries(info.meta_tags).map(([k, v]) =>
+            `<dt>${k}</dt><dd${(k === "Comment" || String(v).length > 60) ? ` class="file-info-comment"` : ""}>${v}</dd>`
+        ).join("");
         metaTagsHtml = `
             <hr class="file-info-divider" />
             <div>
@@ -153,9 +243,7 @@ function renderFileInfo(body, filePath, info) {
 }
 
 window.closeFileInfo = function (e) {
-    if (e.target === document.getElementById("fileInfoOverlay")) {
-        closeFileInfoModal();
-    }
+    if (e.target === document.getElementById("fileInfoOverlay")) closeFileInfoModal();
 };
 
 window.closeFileInfoModal = function () {
@@ -167,9 +255,7 @@ document.addEventListener("keydown", (e) => {
 });
 
 window.probeAudioFile = async function (filePath) {
-    if (typeof window.showNotification === "function") {
-        window.showNotification("Probing audio file…", "info", 3000);
-    }
+    window.showNotification?.("Probing audio file…", "info", 3000);
     try {
         const res = await fetch(`/api/files/probe`, {
             method: "POST",
@@ -177,12 +263,8 @@ window.probeAudioFile = async function (filePath) {
             body: JSON.stringify({ path: filePath }),
         });
         if (!res.ok) throw new Error(await res.text());
-        const info = await res.json();
-        const body = document.getElementById("fileInfoBody");
-        renderFileInfo(body, filePath, info);
+        renderFileInfo(document.getElementById("fileInfoBody"), filePath, await res.json());
     } catch (err) {
-        if (typeof window.showNotification === "function") {
-            window.showNotification(`Probe failed: ${err.message}`, "error", 6000);
-        }
+        window.showNotification?.(`Probe failed: ${err.message}`, "error", 6000);
     }
 };

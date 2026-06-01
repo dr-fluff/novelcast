@@ -42,23 +42,17 @@
   color: #f8fafc;
 }
 
-.btn-primary {
+.login-form .btn-primary {
   width: 100%;
-  display: inline-flex;
-  justify-content: center;
   padding: 0.95rem 1rem;
-  border: none;
   border-radius: 14px;
-  color: #fff;
-  background: #2563eb;
   font-weight: 700;
-  cursor: pointer;
-  transition: transform 0.2s ease, background 0.2s ease;
 }
 
-.btn-primary:hover {
+.login-form .btn-primary:hover {
   transform: translateY(-1px);
   background: #1d4ed8;
+  opacity: 1;
 }
 
 .auth-footer {
