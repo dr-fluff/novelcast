@@ -4,6 +4,7 @@ import logging
 import os
 import selectors
 import subprocess
+import sys
 import time
 from urllib.parse import urlparse
 
@@ -18,11 +19,10 @@ FFF_SUPPORTED_SITES = {
 
 # How long the process may be completely silent before we consider it hung.
 # As long as FanFicFare keeps sending dots/lines, the timer resets.
-IDLE_TIMEOUT_SECONDS = 60
+IDLE_TIMEOUT_SECONDS = 300
 
 
 class FanFicFareEngine(StoryEngine):
-    CMD = "fanficfare"
     FLAG_CONFIG = "--config"
     FLAG_METADATA = "--json-meta"
     FLAG_META_ONLY = "--meta-only"
@@ -53,11 +53,13 @@ class FanFicFareEngine(StoryEngine):
         epub_path = self._extract_epub_path(raw)
 
         return {
-            "title":    raw.get("title"),
-            "author":   raw.get("author"),
-            "url":      url,
-            "file_path": epub_path,
-            "chapters": None,
+            "title":      raw.get("title"),
+            "author":     raw.get("author"),
+            "url":        url,
+            "file_path":  epub_path,
+            "chapters":   None,
+            "format":     "epub",
+            "raw":        raw,
         }
 
     def check_updates(self, url: str) -> dict:
@@ -89,7 +91,9 @@ class FanFicFareEngine(StoryEngine):
         extra_flags: list[str] | None = None,
     ) -> dict:
         cmd = [
-            self.CMD,
+            sys.executable,
+            "-m",
+            "fanficfare.cli",
             self.FLAG_METADATA,
             self.FLAG_NON_INTERACTIVE,
             self.FLAG_CONFIG, config_path,
@@ -202,7 +206,9 @@ class FanFicFareEngine(StoryEngine):
             raise RuntimeError("FanFicFare returned no output")
 
         try:
-            return self._parse_json_stdout(stdout)
+            raw = self._parse_json_stdout(stdout)
+            raw["format"] = "fanficfare"
+            return raw
         except ValueError:
             logger.error(
                 "Invalid JSON from FanFicFare\nSTDOUT:\n%s\nSTDERR:\n%s",

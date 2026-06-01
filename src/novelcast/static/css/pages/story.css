@@ -365,8 +365,11 @@
 
 .file-menu-wrapper {
     position: relative;
-    display: inline-block;
-    float: right;
+    display: inline-flex;
+}
+
+.story-action-row .file-menu-wrapper {
+    margin-left: auto;
 }
 
 /* ── File dropdown ────────────────────────────────────────────────────── */

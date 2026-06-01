@@ -1,7 +1,11 @@
 # novelcast/pipeline/story_pipeline.py
 
 from pathlib import Path
+import copy
+import json
 import logging
+
+from novelcast.utils.html import clean_html_description
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +64,7 @@ class StoryPipeline:
                 self._persist_chapter(story_id, base_dir, story, ch)
             )
 
+        self._write_metadata_json(base_dir, story)
         self._update_stats(story_id, chapter_numbers)
         # update computed directory size after persisting files
         try:
@@ -90,6 +95,7 @@ class StoryPipeline:
             self._move_epub(epub_source_path, base_dir)
 
         existing = self.chapters_repo.get_chapter_numbers(story_id)
+        restored_chapters = self._restore_missing_chapter_files(story_id, base_dir, story)
         new_chapters = []
         online_numbers = []
 
@@ -102,16 +108,17 @@ class StoryPipeline:
             self._persist_chapter(story_id, base_dir, story, ch)
             new_chapters.append(ch["number"])
 
+        self._write_metadata_json(base_dir, story)
         self._update_append_stats(story_id, online_numbers)
 
-        # update computed directory size after appending new chapters
+        # update computed directory size after appending new chapters or restoring lost files
         try:
             size_bytes = self.file_utils.dir_size(base_dir)
             self.stories_repo.set_story_setting(story_id, "computed.size", str(int(size_bytes)))
         except Exception:
             logger.exception("Failed to update story size setting")
 
-        return new_chapters
+        return sorted(set(new_chapters + restored_chapters))
 
     # ─────────────────────────────
     # INTERNAL HELPERS
@@ -143,6 +150,47 @@ class StoryPipeline:
         )
 
         return ch["number"]
+
+    def _restore_missing_chapter_files(self, story_id: int, base_dir: Path, story: dict) -> list[int]:
+        chapters = self.chapters_repo.get_by_story(story_id)
+        if not chapters:
+            return []
+
+        chapter_map = {ch["chapter_number"]: ch for ch in chapters}
+        restored = []
+
+        for ch in story.get("chapters", []):
+            existing = chapter_map.get(ch["number"])
+            if not existing:
+                continue
+
+            file_path = existing.get("file_path")
+            if file_path and Path(file_path).exists():
+                continue
+
+            # Re-create missing local HTML from available parsed chapter content.
+            self._persist_chapter(story_id, base_dir, story, ch)
+            restored.append(ch["number"])
+
+        return restored
+
+    def _write_metadata_json(self, base_dir: Path, story: dict) -> None:
+        metadata = story.get("raw_metadata")
+        if not metadata:
+            return
+
+        metadata_copy = copy.deepcopy(metadata)
+        if isinstance(metadata_copy.get("description"), str):
+            metadata_copy["description"] = clean_html_description(metadata_copy["description"])
+
+        metadata_path = base_dir / "metadata.json"
+        try:
+            metadata_path.write_text(
+                json.dumps(metadata_copy, indent=2, ensure_ascii=False),
+                encoding="utf-8",
+            )
+        except Exception:
+            logger.exception("Failed to write metadata.json")
 
     def _update_stats(self, story_id: int, chapter_numbers: list[int]):
         total = len(chapter_numbers)

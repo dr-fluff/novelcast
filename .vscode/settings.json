@@ -16,5 +16,11 @@
         "**/.venv/**": true,
         "**/node_modules/**": true,
         "**/__pycache__/**": true
+    },
+    "chat.tools.terminal.autoApprove": {
+        "/^cd /Users/oliver/Documents/Projekt/novelcast && /Users/oliver/Documents/Projekt/novelcast/\\.venv/bin/python - <<'PY'\nimport inspect\nfrom fanficfare import epubutils\nprint\\(epubutils\\)\nfor name, obj in inspect\\.getmembers\\(epubutils\\):\n    if inspect\\.isfunction\\(obj\\) or inspect\\.isclass\\(obj\\):\n        if 'epub' in name\\.lower\\(\\) or 'spine' in name\\.lower\\(\\) or 'parse' in name\\.lower\\(\\) or 'package' in name\\.lower\\(\\):\n            print\\(' -', name\\)\nPY$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
     }
 }

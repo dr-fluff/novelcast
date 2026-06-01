@@ -85,7 +85,7 @@ window.confirmDeleteStory = async function () {
     try {
         const res = await fetch(`/api/stories/${storyId}`, { method: "DELETE" });
         if (!res.ok) throw new Error(await res.text());
-        window.location.href = "/library";
+        window.location.href = "/";
     } catch (err) {
         window.showNotification?.(`Delete failed: ${err.message}`, "error", 6000)
             ?? alert(`Delete failed: ${err.message}`);
@@ -116,7 +116,7 @@ function closeActiveDropdown() {
 }
 
 document.addEventListener("click", (e) => {
-    if (!e.target.closest(".file-menu-wrapper")) {
+    if (!e.target.closest(".file-menu-wrapper") && !e.target.closest(".story-menu-wrapper")) {
         closeActiveDropdown();
     }
 });
@@ -133,6 +133,42 @@ window.openFileMenu = function (btn, filePath, fileType) {
     `;
     wrapper.appendChild(dropdown);
     _activeDropdown = dropdown;
+};
+
+window.openStoryMenu = function (btn) {
+    closeActiveDropdown();
+    const wrapper  = btn.closest(".file-menu-wrapper");
+    const dropdown = document.createElement("div");
+    dropdown.className = "file-dropdown";
+    dropdown.innerHTML = `
+        <button class="file-dropdown-item" onclick="syncStory()">Sync story</button>
+    `;
+    wrapper.appendChild(dropdown);
+    _activeDropdown = dropdown;
+};
+
+window.syncStory = async function () {
+    closeActiveDropdown();
+
+    const section = document.querySelector(".story-page");
+    const storyId = section?.dataset.storyId;
+    if (!storyId) {
+        return window.showNotification?.("Unable to sync story: missing story ID.", "error", 6000) || alert("Unable to sync story: missing story ID.");
+    }
+
+    try {
+        const res = await fetch(`/api/sync/story/${storyId}`, {
+            method: "POST",
+        });
+        if (!res.ok) {
+            const text = await res.text();
+            throw new Error(text || res.statusText);
+        }
+
+        window.showNotification?.("Sync requested for this story.", "success", 5000);
+    } catch (err) {
+        window.showNotification?.(`Sync failed: ${err.message}`, "error", 7000) || alert(`Sync failed: ${err.message}`);
+    }
 };
 
 window.downloadFile = function (filePath) {
@@ -192,6 +228,23 @@ window.openFileInfo = async function (filePath, fileType) {
             </p>`;
     }
 };
+
+window.addEventListener("novelcast:notification", (event) => {
+    const payload = event.detail || {};
+    const currentStoryId = document.querySelector('.story-page')?.dataset.storyId;
+    if (!currentStoryId || String(payload.story_id) !== currentStoryId) return;
+
+    if (["sync_story_updated", "sync_finished", "story_updated"].includes(payload.type)) {
+        window.location.reload();
+    }
+});
+
+window.addEventListener("novelcast:story-updated", (event) => {
+    const payload = event.detail || {};
+    const currentStoryId = document.querySelector('.story-page')?.dataset.storyId;
+    if (!currentStoryId || String(payload.storyId) !== currentStoryId) return;
+    window.location.reload();
+});
 
 function renderFileInfo(body, filePath, info) {
     const details = [

@@ -89,12 +89,14 @@ class EpubParser(BaseParser):
         epub_path = Path(data["file_path"])
         chapters = self.extract(epub_path)
         cover = self._extract_cover(epub_path)
+        raw_metadata = data.get("raw") if isinstance(data.get("raw"), dict) else data
 
         return {
-            "title": data.get("title", "Unknown"),
-            "author": data.get("author"),
+            "title": data.get("title", raw_metadata.get("title", "Unknown")),
+            "author": data.get("author") or raw_metadata.get("author"),
             "chapters": chapters,
             "cover_image": cover,
+            "raw_metadata": raw_metadata,
         }
 
     def extract(self, epub_path: Path) -> list[dict]:
@@ -125,7 +127,12 @@ class EpubParser(BaseParser):
                 if not _is_chapter(title, self._patterns):
                     continue  # announcement / ad / non-story item — skip
 
-                number += 1
+                parsed_number = self._parse_chapter_number(title)
+                if parsed_number is not None:
+                    number = parsed_number
+                else:
+                    number += 1
+
                 chapters.append(
                     {
                         "number": number,
@@ -197,8 +204,18 @@ class EpubParser(BaseParser):
 
     def _parse_chapter(self, item_data: bytes) -> tuple[str, str]:
         soup = BeautifulSoup(item_data, "html.parser")
-        title_tag = soup.find(["h1", "h2", "title"])
-        title = title_tag.get_text(strip=True) if title_tag else ""
+        title_tag = soup.find(["h1", "h2", "h3", "title"])
+        if not title_tag:
+            title_tag = soup.find("meta", attrs={"name": "chaptertitle"})
+        if not title_tag:
+            title_tag = soup.find("meta", attrs={"name": "chapterorigtitle"})
+        if not title_tag:
+            title_tag = soup.find("meta", attrs={"name": "chaptertoctitle"})
+
+        if title_tag and title_tag.name == "meta":
+            title = title_tag.get("content", "").strip()
+        else:
+            title = title_tag.get_text(strip=True) if title_tag else ""
 
         body = soup.find("body")
         if not body:
@@ -207,3 +224,18 @@ class EpubParser(BaseParser):
             content = "".join(str(child) for child in body.contents).strip()
 
         return title, content
+
+    def _parse_chapter_number(self, title: str) -> int | None:
+        import re
+
+        if not title:
+            return None
+
+        match = re.search(r"chapter\s*#?\s*(\d+)", title, re.IGNORECASE)
+        if match:
+            try:
+                return int(match.group(1))
+            except ValueError:
+                return None
+
+        return None

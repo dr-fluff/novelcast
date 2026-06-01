@@ -73,7 +73,7 @@ class LibrarySyncService:
             updated = 0
             new_chapters = 0
 
-            self._emit("sync_started", {"stories": len(stories)})
+            self._emit("sync_run_started", {"stories": len(stories)})
 
             for story in stories:
                 if not story.get("source_url"):
@@ -97,6 +97,8 @@ class LibrarySyncService:
                 "stories_updated": updated,
                 "new_chapters": new_chapters,
             }
+            if updated == 0:
+                self._emit("sync_no_changes", payload)
             self._emit("sync_finished", payload)
             return payload
         finally:

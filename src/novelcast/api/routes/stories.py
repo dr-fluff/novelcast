@@ -1,6 +1,6 @@
 # novelcast/api/routes/stories.py
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
 from novelcast.api.deps import get_stories
@@ -67,6 +67,7 @@ def delete_story(
 
 @router.patch("/{story_id}/metadata")
 def update_story_metadata(
+    request: Request,
     story_id: int,
     body: StoryMetadataUpdate,
     stories: StoryService = Depends(get_stories),
@@ -87,6 +88,7 @@ def update_story_metadata(
             tags=body.tags,
             source_url=body.source_url,
         )
+        request.app.state.ctx.emit("story_updated", {"story_id": story_id})
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
     return {"status": "ok", "story": updated}

@@ -103,6 +103,15 @@ SETTINGS = {
             "scope": "www.royalroad.com",
             "ini_key": "password",
         },
+        "royalroad_slow_down_sleep_time": {
+            "type": "number",
+            "description": "Sleep time between requests to RoyalRoad (seconds)",
+            "default": 2,
+            "min": 1,
+            "max": 10,
+            "label": "Slow down sleep time (seconds)",
+            "scope": "www.royalroad.com",
+        },
         "tthfanfic_username": {
             "type": "string",
             "description": "Username for TTHFanfic",

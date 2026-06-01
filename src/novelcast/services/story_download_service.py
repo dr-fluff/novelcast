@@ -1,9 +1,13 @@
 # novelcast/services/story_download_service.py
 # Full file — replaces the existing one entirely.
 
+import json
 import logging
+import re
 import uuid
+from pathlib import Path
 
+from novelcast.utils.html import clean_html_description
 from novelcast.utils.url_normalizer import normalize_story_url
 
 logger = logging.getLogger(__name__)
@@ -59,11 +63,7 @@ class StoryDownloadService:
             parsed["source_url"]       = source_url
             parsed["source_file_path"] = raw.get("file_path")
 
-            self.stories_repo.update_metadata(
-                story_id,
-                parsed.get("title") or raw.get("title") or "Unknown",
-                parsed.get("author") or raw.get("author"),
-            )
+            self._update_story_metadata(story_id, raw, parsed)
 
             # 5. link author — get-or-create Author row + story_author join
             author_name = parsed.get("author") or raw.get("author")
@@ -75,6 +75,7 @@ class StoryDownloadService:
 
             # 6. persist files, paths, chapters, stats
             self.pipeline.persist(story_id, parsed)
+            self._refresh_metadata_from_json(story_id)
 
             self._emit("download_finished", {
                 "download_id": download_id,
@@ -95,30 +96,53 @@ class StoryDownloadService:
     def sync_story(self, story: dict) -> dict:
         story_id = story.get("id")
         source_url = story.get("source_url")
+        title = story.get("title")
         if not story_id or not source_url:
             return {"story_id": story_id, "new_chapters": 0, "skipped": True}
 
-        logger.info("Syncing story", extra={"story_id": story_id, "source_url": source_url})
+        logger.info("Syncing story", extra={"story_name": title, "story_id": story_id, "source_url": source_url})
+        self._emit("sync_story_started", {
+            "story_id": story_id,
+            "title": title,
+            "source_url": source_url,
+        })
 
         raw = self.orchestrator.download(source_url)
         parsed = self.parser.parse(raw)
         parsed["source_url"] = raw.get("url") or source_url
         parsed["source_file_path"] = raw.get("file_path")
 
-        self.stories_repo.update_metadata(
-            story_id,
-            parsed.get("title") or story.get("title") or "Unknown",
-            parsed.get("author") or story.get("author"),
-        )
+        self._update_story_metadata(story_id, raw, parsed)
 
-        new_chapters = self.pipeline.append_new_chapters(story_id, parsed)
+        existing_numbers = self.pipeline.chapters_repo.get_chapter_numbers(story_id)
+        parsed_numbers = [ch["number"] for ch in parsed.get("chapters", [])]
+        new_chapters = [number for number in parsed_numbers if number not in existing_numbers]
+
+        if raw.get("file_path"):
+            self.pipeline.persist(story_id, parsed)
+        else:
+            new_chapters = self.pipeline.append_new_chapters(story_id, parsed)
+
+        self._refresh_metadata_from_json(story_id)
+        final_title = parsed.get("title") or title
 
         if new_chapters:
-            self._emit("sync_story_updated", {
+            self._emit("sync_progress", {
                 "story_id": story_id,
-                "title": parsed.get("title") or story.get("title"),
+                "title": final_title,
                 "new_chapters": len(new_chapters),
             })
+            self._emit("sync_story_updated", {
+                "story_id": story_id,
+                "title": final_title,
+                "new_chapters": len(new_chapters),
+            })
+
+        self._emit("sync_finished", {
+            "story_id": story_id,
+            "title": final_title,
+            "new_chapters": len(new_chapters),
+        })
 
         return {
             "story_id": story_id,
@@ -162,6 +186,136 @@ class StoryDownloadService:
             return list(range(1, count + 1))
 
         return []
+
+    def _update_story_metadata(self, story_id: int, raw: dict, parsed: dict) -> None:
+        metadata_json = self._load_local_metadata_json(story_id)
+        metadata = self._extract_metadata(metadata_json or raw)
+        if metadata is not None:
+            self.stories_repo.update_full_metadata(
+                story_id=story_id,
+                title=metadata.get("title") or parsed.get("title") or raw.get("title") or "Unknown",
+                author=metadata.get("author") or parsed.get("author") or raw.get("author"),
+                subtitle=metadata.get("subtitle"),
+                description=metadata.get("description"),
+                publish_year=metadata.get("publish_year"),
+                language=metadata.get("language"),
+                series=metadata.get("series"),
+                genres=metadata.get("genres"),
+                tags=metadata.get("tags"),
+                source_url=parsed.get("source_url"),
+            )
+            return
+
+        self.stories_repo.update_metadata(
+            story_id,
+            parsed.get("title") or raw.get("title") or "Unknown",
+            parsed.get("author") or raw.get("author"),
+        )
+
+    def _load_local_metadata_json(self, story_id: int) -> dict | None:
+        story = self.stories_repo.get_by_id(story_id)
+        if not story:
+            return None
+
+        local_path = story.get("local_path")
+        if not local_path:
+            return None
+
+        metadata_path = Path(local_path) / "metadata.json"
+        if not metadata_path.exists():
+            return None
+
+        try:
+            return json.loads(metadata_path.read_text(encoding="utf-8"))
+        except Exception:
+            logger.exception("Failed to read metadata.json for story %s", story_id)
+            return None
+
+    def _refresh_metadata_from_json(self, story_id: int) -> None:
+        metadata = self._load_local_metadata_json(story_id)
+        if not metadata:
+            return
+
+        story = self.stories_repo.get_by_id(story_id)
+        if not story:
+            return
+
+        parsed = {"source_url": story.get("source_url")}
+        self._update_story_metadata(story_id, metadata, parsed)
+
+    def _extract_metadata(self, raw: dict) -> dict:
+        if not raw:
+            return {}
+
+        title = raw.get("title")
+        author = raw.get("author")
+        subtitle = raw.get("subtitle") or raw.get("subtitleText")
+        description = raw.get("description") or raw.get("summary")
+        if isinstance(description, str):
+            description = clean_html_description(description)
+        publish_year = self._parse_publish_year(raw.get("datePublished") or raw.get("published") or raw.get("year"))
+        language = raw.get("language")
+        series = self._normalize_metadata_list(raw.get("series") or raw.get("series_name") or raw.get("series_info"))
+        genres = self._normalize_metadata_list(raw.get("genre") or raw.get("genres"))
+        tags = self._normalize_metadata_list(raw.get("subject_tags") or raw.get("tags") or raw.get("subjects"))
+
+        metadata = {
+            "title": title,
+            "author": author,
+            "subtitle": subtitle,
+            "description": description,
+            "publish_year": publish_year,
+            "language": language,
+            "series": series,
+            "genres": genres,
+            "tags": tags,
+        }
+
+        if not any([
+            subtitle,
+            description,
+            publish_year is not None,
+            language,
+            series,
+            genres,
+            tags,
+        ]):
+            return None
+
+        return metadata
+
+    def _parse_publish_year(self, value):
+        if value is None:
+            return None
+
+        if isinstance(value, int):
+            return value
+
+        raw_value = str(value).strip()
+        if not raw_value:
+            return None
+
+        import re
+        match = re.search(r"(\d{4})", raw_value)
+        if match:
+            try:
+                return int(match.group(1))
+            except ValueError:
+                return None
+
+        try:
+            return int(raw_value)
+        except ValueError:
+            return None
+
+    def _normalize_metadata_list(self, value):
+        if value is None:
+            return []
+        if isinstance(value, str):
+            return [item.strip() for item in re.split(r"[;,]", value) if item.strip()]
+        if isinstance(value, (list, tuple, set)):
+            return [str(item).strip() for item in value if str(item).strip()]
+        return [str(value).strip()] if str(value).strip() else []
 
     def _emit(self, event_type: str, payload: dict):
         if self.notifier:

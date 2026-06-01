@@ -98,9 +98,11 @@
                 <button class="btn-action-icon btn-action-danger" onclick="confirmDeleteStory()" title="Delete story">
                     <i class="fa-solid fa-trash"></i>
                 </button>
-                <button class="btn-action-icon" title="More options">
-                    <i class="fa-solid fa-ellipsis"></i>
-                </button>
+                <div class="file-menu-wrapper">
+                    <button class="btn-action-icon" title="More options" onclick="event.stopPropagation(); openStoryMenu(this)">
+                        <i class="fa-solid fa-ellipsis"></i>
+                    </button>
+                </div>
             </div>
 
             {% if story["description"] %}

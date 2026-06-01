@@ -155,29 +155,63 @@ function buildNotification(payload) {
                     id: `download-${payload.download_id}`,
                 },
             };
-        case "sync_started":
+        case "sync_run_started":
             return {
-                message: `Sync started for “${payload.title || payload.story_id}”.`,
+                message: `Sync started for ${payload.stories || 0} stories.`,
                 type: "info",
                 timeout: 7000,
             };
+        case "sync_story_started":
+            return {
+                message: `Syncing “${payload.title || payload.story_id}”.`,
+                type: "info",
+                timeout: 0,
+                options: {
+                    id: `sync-${payload.story_id}`,
+                    persistent: true,
+                },
+            };
         case "sync_no_changes":
             return {
-                message: `No updates found for story ${payload.story_id}.`,
+                message: `No library updates found.`,
                 type: "info",
                 timeout: 7000,
             };
         case "sync_progress":
             return {
-                message: `${payload.new_chapters} new chapter${payload.new_chapters === 1 ? "" : "s"} downloaded.`,
+                message: `Syncing “${payload.title || payload.story_id}”: ${payload.new_chapters} new chapter${payload.new_chapters === 1 ? "" : "s"}.`,
                 type: "info",
-                timeout: 7000,
+                timeout: 0,
+                options: {
+                    id: `sync-${payload.story_id}`,
+                    persistent: true,
+                },
+            };
+        case "sync_story_updated":
+            return {
+                message: `Updated “${payload.title || payload.story_id}”: ${payload.new_chapters} new chapter${payload.new_chapters === 1 ? "" : "s"}.`,
+                type: "success",
+                timeout: 5000,
+                options: {
+                    id: `sync-${payload.story_id}`,
+                },
             };
         case "sync_finished":
             return {
-                message: `Sync finished: ${payload.new_chapters} new chapter${payload.new_chapters === 1 ? "" : "s"}.`,
+                message: payload.new_chapters
+                    ? `Sync finished: ${payload.new_chapters} new chapter${payload.new_chapters === 1 ? "" : "s"}.`
+                    : `Sync complete: no new chapters.`,
+                type: payload.new_chapters ? "success" : "info",
+                timeout: 5000,
+                options: {
+                    id: `sync-${payload.story_id}`,
+                },
+            };
+        case "story_updated":
+            return {
+                message: "Story metadata updated.",
                 type: "success",
-                timeout: 7000,
+                timeout: 4000,
             };
         case "story_added":
             return null;
