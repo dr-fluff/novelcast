@@ -141,23 +141,23 @@ window.openStoryMenu = function (btn) {
     const dropdown = document.createElement("div");
     dropdown.className = "file-dropdown";
     dropdown.innerHTML = `
-        <button class="file-dropdown-item" onclick="syncStory()">Sync story</button>
+        <button class="file-dropdown-item" onclick="updateStory()">Update story</button>
     `;
     wrapper.appendChild(dropdown);
     _activeDropdown = dropdown;
 };
 
-window.syncStory = async function () {
+window.updateStory = async function () {
     closeActiveDropdown();
 
     const section = document.querySelector(".story-page");
     const storyId = section?.dataset.storyId;
     if (!storyId) {
-        return window.showNotification?.("Unable to sync story: missing story ID.", "error", 6000) || alert("Unable to sync story: missing story ID.");
+        return window.showNotification?.("Unable to update story: missing story ID.", "error", 6000) || alert("Unable to update story: missing story ID.");
     }
 
     try {
-        const res = await fetch(`/api/sync/story/${storyId}`, {
+        const res = await fetch(`/api/update/story/${storyId}`, {
             method: "POST",
         });
         if (!res.ok) {
@@ -165,9 +165,9 @@ window.syncStory = async function () {
             throw new Error(text || res.statusText);
         }
 
-        window.showNotification?.("Sync requested for this story.", "success", 5000);
+        window.showNotification?.("Update requested for this story.", "success", 5000);
     } catch (err) {
-        window.showNotification?.(`Sync failed: ${err.message}`, "error", 7000) || alert(`Sync failed: ${err.message}`);
+        window.showNotification?.(`Update failed: ${err.message}`, "error", 7000) || alert(`Update failed: ${err.message}`);
     }
 };
 
@@ -234,6 +234,10 @@ window.addEventListener("novelcast:notification", (event) => {
     const currentStoryId = document.querySelector('.story-page')?.dataset.storyId;
     if (!currentStoryId || String(payload.story_id) !== currentStoryId) return;
 
+    if (document.getElementById('metaPanel')?.classList.contains('open')) {
+        return;
+    }
+
     if (["sync_story_updated", "sync_finished", "story_updated"].includes(payload.type)) {
         window.location.reload();
     }
@@ -243,6 +247,9 @@ window.addEventListener("novelcast:story-updated", (event) => {
     const payload = event.detail || {};
     const currentStoryId = document.querySelector('.story-page')?.dataset.storyId;
     if (!currentStoryId || String(payload.storyId) !== currentStoryId) return;
+    if (document.getElementById('metaPanel')?.classList.contains('open')) {
+        return;
+    }
     window.location.reload();
 });
 

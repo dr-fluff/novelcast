@@ -145,6 +145,7 @@ class StoryService:
         genres: list[str] | None = None,
         tags: list[str] | None = None,
         source_url: str | None = None,
+        auto_update: bool | None = None,
     ) -> dict | None:
         updated = self.repo.update_full_metadata(
             story_id=story_id,
@@ -159,6 +160,18 @@ class StoryService:
             tags=tags,
             source_url=source_url,
         )
+        if updated and self.author_repo and author is not None:
+            names = self._parse_comma_separated(author)
+            self._sync_story_authors(story_id, names)
+        if updated and auto_update is not None:
+            self.repo.set_story_setting(
+                story_id,
+                "auto_update",
+                "1" if bool(auto_update) else "0",
+                category="story",
+                type="bool",
+            )
+        return updated
         if updated and self.author_repo and author is not None:
             names = self._parse_comma_separated(author)
             self._sync_story_authors(story_id, names)

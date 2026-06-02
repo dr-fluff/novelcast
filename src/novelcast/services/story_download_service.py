@@ -21,6 +21,25 @@ class StoryDownloadService:
         self.stories_repo  = stories_repo
         self.notifier      = notifier
 
+    def _download_raw(self, url: str, progress_callback=None) -> dict:
+        return self.orchestrator.download(url, progress_callback=progress_callback)
+
+    def _parse_raw(self, raw: dict) -> dict:
+        parsed = self.parser.parse(raw)
+        parsed["source_url"] = raw.get("url") or raw.get("source_url")
+        parsed["source_file_path"] = raw.get("file_path")
+        return parsed
+
+    def _persist_story(self, story_id: int, raw: dict, parsed: dict) -> list[int]:
+        self._update_story_metadata(story_id, raw, parsed)
+
+        if raw.get("file_path"):
+            self.pipeline.persist(story_id, parsed)
+        else:
+            return self.pipeline.append_new_chapters(story_id, parsed)
+
+        return [ch["number"] for ch in parsed.get("chapters", [])]
+
     def add_story(self, url: str):
         logger.debug("Story download requested")
 
@@ -47,25 +66,18 @@ class StoryDownloadService:
                     "indeterminate": progress_value is None,
                 })
 
-            # 2. fetch via orchestrator
-            raw        = self.orchestrator.download(normalized_url, progress_callback=progress)
+            raw        = self._download_raw(normalized_url, progress_callback=progress)
             source_url = raw.get("url") or normalized_url
 
-            # 3. create story row
             story_id = self.stories_repo.create(
                 raw.get("title") or "Unknown",
                 raw.get("author"),
                 source_url,
             )
 
-            # 4. parse
-            parsed = self.parser.parse(raw)
-            parsed["source_url"]       = source_url
-            parsed["source_file_path"] = raw.get("file_path")
-
+            parsed = self._parse_raw(raw)
             self._update_story_metadata(story_id, raw, parsed)
 
-            # 5. link author — get-or-create Author row + story_author join
             author_name = parsed.get("author") or raw.get("author")
             if author_name:
                 from novelcast.db.repositories.author_repository import AuthorRepository
@@ -73,7 +85,6 @@ class StoryDownloadService:
                 author_id   = author_repo.get_or_create(author_name)
                 author_repo.link_to_story(author_id, story_id)
 
-            # 6. persist files, paths, chapters, stats
             self.pipeline.persist(story_id, parsed)
             self._refresh_metadata_from_json(story_id)
 
@@ -93,25 +104,22 @@ class StoryDownloadService:
             })
             raise
 
-    def sync_story(self, story: dict) -> dict:
+    def update_story(self, story: dict) -> dict:
         story_id = story.get("id")
         source_url = story.get("source_url")
         title = story.get("title")
         if not story_id or not source_url:
             return {"story_id": story_id, "new_chapters": 0, "skipped": True}
 
-        logger.info("Syncing story", extra={"story_name": title, "story_id": story_id, "source_url": source_url})
-        self._emit("sync_story_started", {
+        logger.info("Updating story", extra={"story_name": title, "story_id": story_id, "source_url": source_url})
+        self._emit("update_story_started", {
             "story_id": story_id,
             "title": title,
             "source_url": source_url,
         })
 
-        raw = self.orchestrator.download(source_url)
-        parsed = self.parser.parse(raw)
-        parsed["source_url"] = raw.get("url") or source_url
-        parsed["source_file_path"] = raw.get("file_path")
-
+        raw = self._download_raw(source_url)
+        parsed = self._parse_raw(raw)
         self._update_story_metadata(story_id, raw, parsed)
 
         existing_numbers = self.pipeline.chapters_repo.get_chapter_numbers(story_id)
@@ -127,7 +135,7 @@ class StoryDownloadService:
         final_title = parsed.get("title") or title
 
         if new_chapters:
-            self._emit("sync_progress", {
+            self._emit("update_progress", {
                 "story_id": story_id,
                 "title": final_title,
                 "new_chapters": len(new_chapters),
@@ -138,7 +146,7 @@ class StoryDownloadService:
                 "new_chapters": len(new_chapters),
             })
 
-        self._emit("sync_finished", {
+        self._emit("update_finished", {
             "story_id": story_id,
             "title": final_title,
             "new_chapters": len(new_chapters),
@@ -149,6 +157,9 @@ class StoryDownloadService:
             "new_chapters": len(new_chapters),
             "chapter_numbers": new_chapters,
         }
+
+    def sync_story(self, story: dict) -> dict:
+        return self.update_story(story)
 
     def check_story_updates(self, story: dict) -> dict:
         story_id = story.get("id")

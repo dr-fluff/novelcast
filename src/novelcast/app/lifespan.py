@@ -109,6 +109,18 @@ async def _run_auto_check(ctx):
         return
 
     try:
-        await asyncio.to_thread(ctx.library_sync.check_updates)
+        auto_stories = [
+            story["id"]
+            for story in ctx.library_sync.stories.get_all_stories()
+            if story.get("auto_update")
+        ]
+
+        if not auto_stories:
+            await asyncio.to_thread(ctx.library_sync.check_updates)
+            return
+
+        result = await asyncio.to_thread(ctx.library_sync.check_updates, auto_stories)
+        if result.get("pending_chapters", 0) > 0:
+            await asyncio.to_thread(ctx.library_sync.update_all, auto_stories)
     except Exception:
         logger.exception("Automatic update check failed")

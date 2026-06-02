@@ -35,7 +35,10 @@ format:
 	$(UV) run black src
 
 test:
-	$(UV) run pytest
+	$(UV) run pytest tests
+
+# Run all available test suites, including future additions in tests/
+test-all: test
 
 db:
 	$(UV) run python -m novelcast.db.migrate

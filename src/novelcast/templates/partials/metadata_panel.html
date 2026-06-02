@@ -17,7 +17,7 @@
     <div class="meta-panel-tabs">
         <button class="meta-tab active" onclick="switchTab(this, 'tabDetails')">Details</button>
         <button class="meta-tab" onclick="switchTab(this, 'tabCover')">Cover</button>
-        <button class="meta-tab" onclick="switchTab(this, 'tabLinks')">Links</button>
+        <button class="meta-tab" onclick="switchTab(this, 'tabTools')">Tools</button>
     </div>
 
     <div class="meta-panel-body">
@@ -136,22 +136,20 @@
             </div>
         </div>
 
-        {# ── Links tab ──────────────────────────────────────────────────── #}
-        <div class="meta-tab-panel hidden" id="tabLinks">
-            <div class="meta-section-header">
-                <h3 class="meta-section-label">External links</h3>
-                <button class="meta-add-link-btn" type="button" onclick="addLinkRow()">
-                    <i class="fa-solid fa-plus"></i> Add link
-                </button>
+        {# ── Tools tab ─────────────────────────────────────────────────── #}
+        <div class="meta-tab-panel hidden" id="tabTools">
+            <div class="meta-field meta-switch-field">
+                <div class="meta-switch">
+                    <input type="checkbox" id="metaAutoUpdate" />
+                    <label for="metaAutoUpdate">Auto-update story</label>
+                </div>
             </div>
-            <div id="metaLinksContainer" class="meta-links-list"></div>
         </div>
 
     </div>
 
     <div class="meta-panel-footer">
         <div class="meta-footer-left">
-            <button class="btn-outline-meta" onclick="quickMatch && quickMatch()">Quick Match</button>
             <button class="btn-outline-meta" onclick="reScan && reScan()">Re-Scan</button>
         </div>
         <div class="meta-footer-right">

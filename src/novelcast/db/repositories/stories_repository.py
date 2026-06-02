@@ -210,6 +210,11 @@ def _to_dict(story: Story | None) -> dict | None:
         "author":                    story.author,
         "subtitle":                  getattr(story, "subtitle", None),
         "source_url":                story.source_url,
+        "auto_update":               any(
+            str(s.value).lower() in ("1", "true", "yes")
+            for s in getattr(story, "settings", []) or []
+            if s.name == "auto_update"
+        ),
         "local_path":                story.local_path,
         "cover_path":                story.cover_path,
         "total_chapters":            story.total_chapters,

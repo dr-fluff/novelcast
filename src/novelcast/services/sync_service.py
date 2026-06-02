@@ -63,17 +63,28 @@ class LibrarySyncService:
         except Exception:
             return time(2, 0)
 
-    def run_once(self) -> dict:
+    def _filter_stories(self, story_ids=None):
+        stories = self.stories.get_all_stories()
+        if story_ids is None:
+            return stories
+
+        ids = set(story_ids)
+        return [story for story in stories if story.get("id") in ids]
+
+    def run_once(self, story_ids=None) -> dict:
+        return self.update_all(story_ids)
+
+    def update_all(self, story_ids=None) -> dict:
         if not self._lock.acquire(blocking=False):
             return {"status": "already_running", "stories_checked": 0, "stories_updated": 0, "new_chapters": 0}
 
         try:
-            stories = self.stories.get_all_stories()
+            stories = self._filter_stories(story_ids)
             checked = 0
             updated = 0
             new_chapters = 0
 
-            self._emit("sync_run_started", {"stories": len(stories)})
+            self._emit("update_run_started", {"stories": len(stories), "story_ids": story_ids})
 
             for story in stories:
                 if not story.get("source_url"):
@@ -81,9 +92,9 @@ class LibrarySyncService:
 
                 checked += 1
                 try:
-                    result = self.download.sync_story(story)
+                    result = self.download.update_story(story)
                 except Exception:
-                    logger.exception("Failed to sync story %s", story.get("id"))
+                    logger.exception("Failed to update story %s", story.get("id"))
                     continue
 
                 count = int(result.get("new_chapters", 0) or 0)
@@ -98,23 +109,23 @@ class LibrarySyncService:
                 "new_chapters": new_chapters,
             }
             if updated == 0:
-                self._emit("sync_no_changes", payload)
-            self._emit("sync_finished", payload)
+                self._emit("update_no_changes", payload)
+            self._emit("update_finished", payload)
             return payload
         finally:
             self._lock.release()
 
-    def check_updates(self) -> dict:
+    def check_updates(self, story_ids=None) -> dict:
         if not self._lock.acquire(blocking=False):
             return {**self._last_update_check, "status": "already_running"}
 
         try:
-            stories = self.stories.get_all_stories()
+            stories = self._filter_stories(story_ids)
             checked = 0
             pending_chapters = 0
             pending_stories = []
 
-            self._emit("sync_check_started", {"stories": len(stories)})
+            self._emit("sync_check_started", {"stories": len(stories), "story_ids": story_ids})
 
             for story in stories:
                 if not story.get("source_url"):

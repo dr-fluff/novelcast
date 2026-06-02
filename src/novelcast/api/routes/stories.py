@@ -22,6 +22,7 @@ class StoryMetadataUpdate(BaseModel):
     genres: list[str] | None = None
     tags: list[str] | None = None
     source_url: str | None = None
+    auto_update: bool | None = None
 
 
 class AuthorUpdate(BaseModel):
@@ -87,6 +88,7 @@ def update_story_metadata(
             genres=body.genres,
             tags=body.tags,
             source_url=body.source_url,
+            auto_update=body.auto_update,
         )
         request.app.state.ctx.emit("story_updated", {"story_id": story_id})
     except Exception as e:

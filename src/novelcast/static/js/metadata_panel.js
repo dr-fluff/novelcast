@@ -6,6 +6,7 @@
 
     let storyId       = null;
     let currentAuthorId = null;
+    let saveCloseTimer = null;
 
     function el(id) { return document.getElementById(id); }
 
@@ -21,11 +22,19 @@
 
     // ── Open / Close ───────────────────────────────────────────────────────
 
+    function clearSaveCloseTimer() {
+        if (saveCloseTimer) {
+            clearTimeout(saveCloseTimer);
+            saveCloseTimer = null;
+        }
+    }
+
     window.openMetaPanel = async function () {
         const page = document.querySelector(".story-page");
         storyId = page ? page.dataset.storyId : null;
         if (!storyId) return;
 
+        clearSaveCloseTimer();
         el("metaPanel").classList.add("open");
         el("metaPanel").setAttribute("aria-hidden", "false");
         el("metaPanelBackdrop").classList.add("open");
@@ -36,6 +45,7 @@
     };
 
     window.closeMetaPanel = function () {
+        clearSaveCloseTimer();
         el("metaPanel").classList.remove("open");
         el("metaPanel").setAttribute("aria-hidden", "true");
         el("metaPanelBackdrop").classList.remove("open");
@@ -70,6 +80,7 @@
                 setVal('metaPublishYear', st.publish_year || '');
                 setVal('metaLanguage', st.language || '');
                 setVal('metaSourceUrl', st.source_url || getVal('metaSourceUrl'));
+                el('metaAutoUpdate').checked = Boolean(st.auto_update);
                 renderMetaTagList('metaSeriesWrap', st.series_list ?? parseCommaList(st.series));
                 renderMetaTagList('metaGenresWrap', st.genres_list ?? parseCommaList(st.genres));
                 renderMetaTagList('metaTagsWrap', st.tags_list ?? parseCommaList(st.tags));
@@ -79,8 +90,6 @@
         // Reset
         currentAuthorId = null;
         setVal("metaAuthorName", "");
-        const linksContainer = el("metaLinksContainer");
-        if (linksContainer) linksContainer.innerHTML = "";
 
         // Load authors from API
         try {
@@ -92,7 +101,6 @@
                     const a = authors[0];
                     currentAuthorId = a.id;
                     setVal("metaAuthorName", a.name || "");
-                    (a.links || []).forEach(lnk => addLinkRow(lnk.label, lnk.url));
                 }
             }
         } catch (_) { /* non-fatal */ }
@@ -105,51 +113,6 @@
                 setVal("metaAuthorName", txt === "Unknown author" ? "" : txt);
             }
         }
-    }
-
-    // ── Link rows ──────────────────────────────────────────────────────────
-
-    window.addLinkRow = function (label = "", url = "") {
-        const container = el("metaLinksContainer");
-        if (!container) return;
-
-        const row = document.createElement("div");
-        row.className = "meta-link-row";
-
-        const labelInput       = document.createElement("input");
-        labelInput.type        = "text";
-        labelInput.placeholder = "Label (e.g. Patreon)";
-        labelInput.value       = label;
-
-        const urlInput       = document.createElement("input");
-        urlInput.type        = "url";
-        urlInput.placeholder = "https://…";
-        urlInput.value       = url;
-
-        const removeBtn     = document.createElement("button");
-        removeBtn.type      = "button";
-        removeBtn.className = "meta-remove-link-btn";
-        removeBtn.setAttribute("aria-label", "Remove link");
-        removeBtn.innerHTML = '<i class="fa-solid fa-trash"></i>';
-        removeBtn.onclick   = () => row.remove();
-
-        row.appendChild(labelInput);
-        row.appendChild(urlInput);
-        row.appendChild(removeBtn);
-        container.appendChild(row);
-    };
-
-    function collectLinks() {
-        const container = el("metaLinksContainer");
-        if (!container) return [];
-        const links = [];
-        container.querySelectorAll(".meta-link-row").forEach(row => {
-            const inputs = row.querySelectorAll("input");
-            const label  = (inputs[0]?.value || "").trim();
-            const url    = (inputs[1]?.value || "").trim();
-            if (label && url) links.push({ label, url });
-        });
-        return links;
     }
 
     function parseCommaList(raw) {
@@ -281,12 +244,14 @@
                     genres: genres,
                     tags: tags,
                     source_url: sourceUrl,
+                    auto_update: el('metaAutoUpdate')?.checked || false,
                 }),
             });
             if (!storyRes.ok) {
                 const err = await storyRes.json().catch(() => ({}));
                 throw new Error(err.detail || "Failed to save story");
             }
+            clearSaveCloseTimer();
             const storyData = await storyRes.json();
 
             // 2 — Re-fetch author id if missing
@@ -314,28 +279,18 @@
                     const err = await authorRes.json().catch(() => ({}));
                     throw new Error(err.detail || "Failed to save author");
                 }
-
-                // 4 — Save links
-                const linksRes = await fetch(
-                    `/api/stories/${storyId}/authors/${currentAuthorId}/links`,
-                    {
-                        method:  "PUT",
-                        headers: { "Content-Type": "application/json" },
-                        body:    JSON.stringify({ links: collectLinks() }),
-                    }
-                );
-                if (!linksRes.ok) {
-                    const err = await linksRes.json().catch(() => ({}));
-                    throw new Error(err.detail || "Failed to save links");
-                }
             }
 
             // 5 — Update DOM
             _updatePageDOM(storyData.story, authorName, sourceUrl);
             setStatus("Saved!", "success");
-            setTimeout(() => { setStatus("", ""); closeMetaPanel(); }, 1200);
+            saveCloseTimer = setTimeout(() => {
+                setStatus("", "");
+                closeMetaPanel();
+            }, 1200);
 
         } catch (err) {
+            clearSaveCloseTimer();
             setStatus(err.message || "Something went wrong.", "error");
         } finally {
             if (saveBtn) saveBtn.disabled = false;
