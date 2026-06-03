@@ -7,6 +7,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" href="/static/images/favicon.svg" onerror="this.href='/favicon.svg'">
 
+    <!-- HTMX — must load before body content -->
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+
     <!-- GLOBAL CSS -->
     <link rel="stylesheet" href="/static/css/tokens.css" />
     <link rel="stylesheet" href="/static/css/base.css" />
@@ -36,8 +39,8 @@
     {% include "components/notifications.html" %}
 
     <script src="/static/js/main.js" defer></script>
-    <script src="/static/js/library_header.js"></script>
-    <script src="/static/js/notifications.js"></script>
+    <script src="/static/js/library_header.js" defer></script>
+    <script src="/static/js/notifications.js" defer></script>
 
     {% block scripts %}{% endblock %}
 

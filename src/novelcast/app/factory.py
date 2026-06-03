@@ -2,6 +2,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from urllib3 import request
 
 from novelcast.core.config import AppConfig
 from novelcast.core.logging import setup_logging
@@ -20,6 +21,7 @@ from novelcast.api.routes import api as api_module
 
 from novelcast.app.lifespan import lifespan
 from novelcast.api.ws.notifications import router as ws_router
+from novelcast.core.templates import AppTemplates
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -38,7 +40,10 @@ def create_app(config: AppConfig) -> FastAPI:
     # ─────────────────────────────
     setup_logging(config)
 
-    app.state.templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+#    app.state.templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+    app.state.templates = AppTemplates(directory=str(TEMPLATES_DIR))
+
+
     app.state.config = config
 
     register_error_handlers(app)

@@ -1,57 +1,48 @@
 <header class="library-header">
+  <div class="library-header-inner">
 
     <!-- LEFT: BRAND -->
-    <div class="library-title">
-        <a href="/">
-            <h1><i class="fa-solid fa-book"></i> NovelCast</h1>
-        </a>
-        <p>Your reading library</p>
-    </div>
+    <a class="library-brand" href="/">
+        <i class="fa-solid fa-book"></i>
+        <span>NovelCast</span>
+    </a>
 
-    <!-- CENTER: ACTIONS -->
+    <!-- CENTER: NAV LINKS -->
+    <nav class="library-nav">
+        <a class="library-nav-link {% if request.url.path == '/' %}library-nav-link--active{% endif %}" href="/">
+            Library
+        </a>
+        <a class="library-nav-link {% if request.url.path == '/authors' %}library-nav-link--active{% endif %}" href="/authors">
+            Authors
+        </a>
+        <a class="library-nav-link {% if request.url.path == '/search' %}library-nav-link--active{% endif %}" href="/search">
+            Search
+        </a>
+    </nav>
+
+    <!-- RIGHT: ACTIONS -->
     <div class="library-actions">
 
-        <!-- ADD STORY -->
-        <form class="inline-form" onsubmit="addStory(event)">
-            <input
-                id="story-url"
-                placeholder="Paste novel URL..."
-                required
-                autocomplete="off"
-            />
-            <button type="submit">
-                <i class="fa-solid fa-plus"></i> Add
-            </button>
-        </form>
-
-        <!-- SYNC ALL -->
-        <button type="button" onclick="startSync()">
-            <i class="fa-solid fa-rotate"></i>
-        </button>
-
-        <!-- AUTHORS -->
-        <a class="icon-button" href="/authors" title="Authors">
-            <i class="fa-solid fa-user-pen"></i>
-        </a>
-
-    </div>
-
-    <!-- RIGHT: USER + admin -->
-    <div class="library-user">
-
-        <!-- admin -->
-        <a class="icon-button" href="/admin" title="admin">
+        {% if current_user and current_user.get("is_root") %}
+        <a class="icon-button" href="/admin" title="Admin settings">
             <i class="fa-solid fa-gear"></i>
         </a>
+        {% endif %}
 
-        <!-- USER MENU -->
-        <button class="icon-button" onclick="toggleUserMenu()" title="User menu">
-            <i class="fa-solid fa-user"></i>
+        {% if current_user %}
+        <button class="library-user-btn" onclick="toggleUserMenu()" title="User menu">
+            <span class="library-username">{{ current_user.get("username", "") }}</span>
+            {% if current_user.get("is_root") %}
+                <span class="badge badge--admin">Admin</span>
+            {% else %}
+                <span class="badge badge--user">User</span>
+            {% endif %}
         </button>
+        {% endif %}
 
-        <!-- STATUS -->
         <div class="status-dot" id="sync-status" title="Idle"></div>
 
     </div>
 
+  </div>
 </header>

@@ -1,4 +1,8 @@
+<!-- novelcast/templates/macros/grid_toolbar.html -->
 {% macro render_grid_toolbar(action, query, sort, sort_options, filter_options=None, status="", genre="", tag="", series="", language="") %}
+
+{% set has_filters = status or genre or tag or series or language %}
+
 <form class="grid-toolbar" action="{{ action }}" method="get">
     <div class="grid-toolbar-search">
         <input
@@ -11,107 +15,203 @@
     </div>
 
     <div class="grid-toolbar-actions">
-        <details class="grid-tool">
-            <summary class="grid-tool-summary">
-                <i class="fa-solid fa-table-cells-large grid-tool-icon"></i>
-                <span class="grid-tool-label">Options</span>
-            </summary>
-            <div class="grid-tool-menu">
-                <a class="btn-secondary" href="{{ action }}">Clear search and filters</a>
-            </div>
-        </details>
 
-        <div class="grid-toolbar-divider"></div>
+        {% if has_filters %}
+            <a class="btn-secondary grid-toolbar-clear" href="{{ action }}">Clear</a>
+            <div class="grid-toolbar-divider"></div>
+        {% endif %}
 
+        {# ── SORT ── #}
         <details class="grid-tool">
             <summary class="grid-tool-summary">
                 <i class="fa-solid fa-arrow-up-wide-short grid-tool-icon"></i>
                 <span class="grid-tool-label">Sort <i class="fa-solid fa-caret-down"></i></span>
             </summary>
             <div class="grid-tool-menu">
-                <div class="grid-tool-field">
-                    <label for="gridSort">Sort by</label>
-                    <select id="gridSort" name="sort" onchange="this.form.submit()">
-                        {% for option in sort_options %}
-                            <option value="{{ option.key }}" {% if option.key == sort %}selected{% endif %}>
-                                {{ option.label }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
+                {% for option in sort_options %}
+                    <button
+                        type="submit"
+                        name="sort"
+                        value="{{ option.key }}"
+                        class="grid-tool-option {% if option.key == sort %}grid-tool-option--active{% endif %}"
+                    >{{ option.label }}</button>
+                {% endfor %}
             </div>
         </details>
 
+        {# ── FILTER ── #}
         {% if filter_options %}
-        <details class="grid-tool">
+        <details class="grid-tool" id="filterTool">
             <summary class="grid-tool-summary">
-                <i class="fa-solid fa-filter grid-tool-icon"></i>
+                <i class="fa-solid fa-filter grid-tool-icon {% if has_filters %}grid-tool-icon--active{% endif %}"></i>
                 <span class="grid-tool-label">Filter <i class="fa-solid fa-caret-down"></i></span>
             </summary>
-            <div class="grid-tool-menu">
+
+            {# Category list panel #}
+            <div class="grid-tool-menu" id="filterMenu">
+                <div class="filter-panel" id="filterHome">
+
+                    {# in each sub-panel, replace the existing "Any" button with this #}
+                    <button type="submit" name="genre" value=""
+                        class="grid-tool-option {% if not genre %}grid-tool-option--active{% endif %}">
+                        <i class="fa-solid fa-layer-group" style="margin-right: 0.4rem; font-size: 0.85rem;"></i>
+                        All
+                    </button>
+
+                    {% if filter_options.statuses %}
+                    <button type="button" class="grid-tool-option grid-tool-option--nav {% if status %}grid-tool-option--active{% endif %}" data-panel="panelStatus">
+                        Status {% if status %}<span class="grid-tool-option-value">{{ status }}</span>{% endif %}
+                        <i class="fa-solid fa-chevron-right grid-tool-option-arrow"></i>
+                    </button>
+                    {% endif %}
+
+                    {% if filter_options.genres %}
+                    <button type="button" class="grid-tool-option grid-tool-option--nav {% if genre %}grid-tool-option--active{% endif %}" data-panel="panelGenre">
+                        Genre {% if genre %}<span class="grid-tool-option-value">{{ genre }}</span>{% endif %}
+                        <i class="fa-solid fa-chevron-right grid-tool-option-arrow"></i>
+                    </button>
+                    {% endif %}
+
+                    {% if filter_options.tags %}
+                    <button type="button" class="grid-tool-option grid-tool-option--nav {% if tag %}grid-tool-option--active{% endif %}" data-panel="panelTag">
+                        Tag {% if tag %}<span class="grid-tool-option-value">{{ tag }}</span>{% endif %}
+                        <i class="fa-solid fa-chevron-right grid-tool-option-arrow"></i>
+                    </button>
+                    {% endif %}
+
+                    {% if filter_options.series %}
+                    <button type="button" class="grid-tool-option grid-tool-option--nav {% if series %}grid-tool-option--active{% endif %}" data-panel="panelSeries">
+                        Series {% if series %}<span class="grid-tool-option-value">{{ series }}</span>{% endif %}
+                        <i class="fa-solid fa-chevron-right grid-tool-option-arrow"></i>
+                    </button>
+                    {% endif %}
+
+                    {% if filter_options.languages %}
+                    <button type="button" class="grid-tool-option grid-tool-option--nav {% if language %}grid-tool-option--active{% endif %}" data-panel="panelLanguage">
+                        Language {% if language %}<span class="grid-tool-option-value">{{ language }}</span>{% endif %}
+                        <i class="fa-solid fa-chevron-right grid-tool-option-arrow"></i>
+                    </button>
+                    {% endif %}
+
+                </div>
+
+                {# Sub-panels #}
                 {% if filter_options.statuses %}
-                <div class="grid-tool-field">
-                    <label for="gridStatus">Read status</label>
-                    <select id="gridStatus" name="status" onchange="this.form.submit()">
-                        {% for option in filter_options.statuses %}
-                            <option value="{{ option.key }}" {% if option.key == status %}selected{% endif %}>
-                                {{ option.label }}
-                            </option>
-                        {% endfor %}
-                    </select>
+                <div class="filter-panel filter-panel--hidden" id="panelStatus">
+                    <button type="button" class="grid-tool-back" data-back="filterHome">
+                        <i class="fa-solid fa-chevron-left"></i> Status
+                    </button>
+                    {% for option in filter_options.statuses %}
+                        <button type="submit" name="status" value="{{ option.key }}"
+                            class="grid-tool-option {% if option.key == status %}grid-tool-option--active{% endif %}">
+                            {{ option.label }}
+                        </button>
+                    {% endfor %}
                 </div>
                 {% endif %}
 
                 {% if filter_options.genres %}
-                <div class="grid-tool-field">
-                    <label for="gridGenre">Genre</label>
-                    <select id="gridGenre" name="genre" onchange="this.form.submit()">
-                        <option value="">Any genre</option>
-                        {% for item in filter_options.genres %}
-                            <option value="{{ item }}" {% if item == genre %}selected{% endif %}>{{ item }}</option>
-                        {% endfor %}
-                    </select>
+                <div class="filter-panel filter-panel--hidden" id="panelGenre">
+                    <button type="button" class="grid-tool-back" data-back="filterHome">
+                        <i class="fa-solid fa-chevron-left"></i> Genre
+                    </button>
+                    {% for item in filter_options.genres %}
+                        <button type="submit" name="genre" value="{{ item }}"
+                            class="grid-tool-option {% if item == genre %}grid-tool-option--active{% endif %}">
+                            {{ item }}
+                        </button>
+                    {% endfor %}
                 </div>
                 {% endif %}
 
                 {% if filter_options.tags %}
-                <div class="grid-tool-field">
-                    <label for="gridTag">Tag</label>
-                    <select id="gridTag" name="tag" onchange="this.form.submit()">
-                        <option value="">Any tag</option>
-                        {% for item in filter_options.tags %}
-                            <option value="{{ item }}" {% if item == tag %}selected{% endif %}>{{ item }}</option>
-                        {% endfor %}
-                    </select>
+                <div class="filter-panel filter-panel--hidden" id="panelTag">
+                    <button type="button" class="grid-tool-back" data-back="filterHome">
+                        <i class="fa-solid fa-chevron-left"></i> Tag
+                    </button>
+                    {% for item in filter_options.tags %}
+                        <button type="submit" name="tag" value="{{ item }}"
+                            class="grid-tool-option {% if item == tag %}grid-tool-option--active{% endif %}">
+                            {{ item }}
+                        </button>
+                    {% endfor %}
                 </div>
                 {% endif %}
 
                 {% if filter_options.series %}
-                <div class="grid-tool-field">
-                    <label for="gridSeries">Series</label>
-                    <select id="gridSeries" name="series" onchange="this.form.submit()">
-                        <option value="">Any series</option>
-                        {% for item in filter_options.series %}
-                            <option value="{{ item }}" {% if item == series %}selected{% endif %}>{{ item }}</option>
-                        {% endfor %}
-                    </select>
+                <div class="filter-panel filter-panel--hidden" id="panelSeries">
+                    <button type="button" class="grid-tool-back" data-back="filterHome">
+                        <i class="fa-solid fa-chevron-left"></i> Series
+                    </button>
+                    {% for item in filter_options.series %}
+                        <button type="submit" name="series" value="{{ item }}"
+                            class="grid-tool-option {% if item == series %}grid-tool-option--active{% endif %}">
+                            {{ item }}
+                        </button>
+                    {% endfor %}
                 </div>
                 {% endif %}
 
                 {% if filter_options.languages %}
-                <div class="grid-tool-field">
-                    <label for="gridLanguage">Language</label>
-                    <select id="gridLanguage" name="language" onchange="this.form.submit()">
-                        <option value="">Any language</option>
-                        {% for item in filter_options.languages %}
-                            <option value="{{ item }}" {% if item == language %}selected{% endif %}>{{ item }}</option>
-                        {% endfor %}
-                    </select>
+                <div class="filter-panel filter-panel--hidden" id="panelLanguage">
+                    <button type="button" class="grid-tool-back" data-back="filterHome">
+                        <i class="fa-solid fa-chevron-left"></i> Language
+                    </button>
+                    {% for item in filter_options.languages %}
+                        <button type="submit" name="language" value="{{ item }}"
+                            class="grid-tool-option {% if item == language %}grid-tool-option--active{% endif %}">
+                            {{ item }}
+                        </button>
+                    {% endfor %}
                 </div>
                 {% endif %}
+
             </div>
         </details>
         {% endif %}
+
     </div>
 </form>
+
+<script>
+(function () {
+    const filterTool = document.getElementById('filterTool');
+    if (!filterTool) return;
+
+    // Nav: home → sub-panel
+    filterTool.querySelectorAll('[data-panel]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const target = document.getElementById(btn.dataset.panel);
+            filterTool.querySelectorAll('.filter-panel').forEach(p => p.classList.add('filter-panel--hidden'));
+            target.classList.remove('filter-panel--hidden');
+        });
+    });
+
+    // Back: sub-panel → home
+    filterTool.querySelectorAll('[data-back]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const target = document.getElementById(btn.dataset.back);
+            filterTool.querySelectorAll('.filter-panel').forEach(p => p.classList.add('filter-panel--hidden'));
+            target.classList.remove('filter-panel--hidden');
+        });
+    });
+
+    // Reset to home panel when details closes
+    filterTool.addEventListener('toggle', () => {
+        if (!filterTool.open) {
+            filterTool.querySelectorAll('.filter-panel').forEach(p => p.classList.add('filter-panel--hidden'));
+            document.getElementById('filterHome').classList.remove('filter-panel--hidden');
+        }
+    });
+})();
+
+document.addEventListener('click', (e) => {
+    document.querySelectorAll('.grid-tool[open]').forEach(tool => {
+        if (!tool.contains(e.target)) {
+            tool.removeAttribute('open');
+        }
+    });
+});
+</script>
+
 {% endmacro %}

@@ -1,5 +1,4 @@
 # novelcast/services/story_download_service.py
-# Full file — replaces the existing one entirely.
 
 import json
 import logging

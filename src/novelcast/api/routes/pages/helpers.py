@@ -1,3 +1,4 @@
+# novelcast/api/routes/pages/helpers.py
 from pathlib import Path
 from urllib.parse import quote
 
@@ -48,15 +49,20 @@ def filter_stories(
     series: str = "",
     language: str = "",
     status: str = "",
+    ignore_prefixes: list[str] | None = None,  # ← new
 ) -> list[dict]:
     if not query:
         query = ""
     query = query.lower()
+    prefixes = ignore_prefixes or []
 
     filtered = []
     for story in stories:
+        title = story.get("title") or ""
+        # Strip prefix from title before matching query
+        normalized_title = _strip_prefix(title, prefixes).lower()
         haystack = " ".join([
-            story.get("title") or "",
+            normalized_title,
             story.get("author") or "",
             story.get("series") or "",
             story.get("genres") or "",
@@ -82,16 +88,28 @@ def filter_stories(
     return filtered
 
 
-def sort_stories(stories: list[dict], sort: str) -> list[dict]:
+def sort_stories(
+    stories: list[dict],
+    sort: str,
+    ignore_prefixes: list[str] | None = None,  # ← new
+) -> list[dict]:
+    prefixes = ignore_prefixes or []
+
+    def title_key(story: dict) -> str:
+        return _strip_prefix((story.get("title") or ""), prefixes).lower()
+
+    def author_key(story: dict) -> str:
+        return _strip_prefix((story.get("author") or ""), prefixes).lower()
+
     def date_key(story: dict, field: str):
         return story.get(field) is not None, story.get(field)
 
     if sort == "author":
-        return sorted(stories, key=lambda s: (s.get("author") or "").lower())
+        return sorted(stories, key=author_key)
     if sort == "downloaded":
         return sorted(stories, key=lambda s: s.get("downloaded_chapters", 0), reverse=True)
     if sort == "unread":
-        return sorted(stories, key=lambda s: (not s.get("has_unread"), (s.get("title") or "").lower()))
+        return sorted(stories, key=lambda s: (not s.get("has_unread"), title_key(s)))
     if sort == "updated":
         return sorted(stories, key=lambda s: date_key(s, "last_updated"), reverse=True)
     if sort == "created":
@@ -99,8 +117,8 @@ def sort_stories(stories: list[dict], sort: str) -> list[dict]:
     if sort == "year":
         return sorted(stories, key=lambda s: s.get("publish_year") or 0, reverse=True)
     if sort == "series":
-        return sorted(stories, key=lambda s: (s.get("series") or "").lower())
-    return sorted(stories, key=lambda s: (s.get("title") or "").lower())
+        return sorted(stories, key=lambda s: _strip_prefix((s.get("series") or ""), prefixes).lower())
+    return sorted(stories, key=title_key)
 
 
 def story_filter_options(stories: list[dict]) -> dict[str, list[str]]:
@@ -205,3 +223,14 @@ def parse_settings_form(form: dict) -> tuple[dict, dict]:
             current[field] = value
 
     return user_updates, server_updates
+
+def _strip_prefix(title: str, prefixes: list[str]) -> str:
+    """Return title with any leading ignore-prefix stripped, for sorting/searching."""
+    lower = title.lower()
+    for prefix in prefixes:
+        p = prefix.strip().lower()
+        if not p:
+            continue
+        if lower.startswith(p + " "):
+            return title[len(p):].strip()
+    return title

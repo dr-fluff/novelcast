@@ -1,3 +1,5 @@
+# novelcast/api/routes/pages/story.py
+
 from fastapi import Depends, HTTPException, Request
 from fastapi.templating import Jinja2Templates
 

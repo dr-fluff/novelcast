@@ -1,9 +1,10 @@
+# novelcast/api/routes/pages/home.py
 from fastapi import Depends, Request
 from fastapi.templating import Jinja2Templates
 
 from . import router
-from novelcast.api.deps import get_current_user, get_progress, get_stories, get_templates
-from novelcast.services import ProgressService, StoryService
+from novelcast.api.deps import get_current_user, get_progress, get_settings, get_stories, get_templates
+from novelcast.services import ProgressService, SettingsService, StoryService
 from .helpers import (
     enrich_story_progress,
     filter_stories,
@@ -18,6 +19,7 @@ def home(
     request: Request,
     stories: StoryService = Depends(get_stories),
     progress: ProgressService = Depends(get_progress),
+    settings: SettingsService = Depends(get_settings),   # ← new
     current_user: dict | None = Depends(get_current_user),
     templates: Jinja2Templates = Depends(get_templates),
 ):
@@ -28,6 +30,10 @@ def home(
     series = request.query_params.get("series", "").strip()
     language = request.query_params.get("language", "").strip()
     status = request.query_params.get("status", "").strip()
+
+    # Parse ignore_prefixes from settings
+    raw_prefixes = settings.get_server_setting("library.ignore_prefixes", default="the,a,an")
+    ignore_prefixes = [p.strip() for p in raw_prefixes.split(",") if p.strip()]
 
     all_stories = stories.get_all_stories()
     filter_options = story_filter_options(all_stories)
@@ -41,8 +47,13 @@ def home(
         series=series,
         language=language,
         status=status,
+        ignore_prefixes=ignore_prefixes,   # ← new
     )
-    sorted_stories = sort_stories(filtered_stories, sort)
+    sorted_stories = sort_stories(
+        filtered_stories,
+        sort,
+        ignore_prefixes=ignore_prefixes,   # ← new
+    )
     cards = [story_card(s) for s in sorted_stories]
 
     return templates.TemplateResponse("pages/index.html", {

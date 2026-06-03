@@ -1,0 +1,44 @@
+<!-- novelcast/templates/pages/search.html -->
+{% extends "layouts/base.html" %}
+
+{% block title %}Search{% endblock %}
+
+{% block head %}
+    <link rel="stylesheet" href="/static/css/pages/search.css" />
+{% endblock %}
+
+{% block content %}
+
+{% include "partials/library_header.html" %}
+
+<section class="search-section">
+    <h2>Search Stories</h2>
+
+    <div class="search-box-wrapper">
+        <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        <input
+            type="text"
+            class="search-input"
+            name="q"
+            value="{{ request.query_params.get('q', '') }}"
+            placeholder="Search by title, author, URL… (e.g. royalroad:Changeling)"
+            autocomplete="off"
+            hx-get="/search/results"
+            hx-trigger="input changed delay:300ms, search"
+            hx-target="#search-results"
+            hx-swap="innerHTML"
+            hx-indicator=".search-box-wrapper"
+        />
+        <div class="search-spinner"></div>
+    </div>
+
+    <div id="search-results">
+        {% if request.query_params.get('q') %}
+            {% include "partials/search_results.html" %}
+        {% endif %}
+    </div>
+</section>
+
+{% endblock %}
