@@ -62,7 +62,7 @@ window.setStatus = function (state) {
             dot.title = "Error";
             break;
         default:
-            dot.style.background = "gray";
+            dot.style.background = "green";
             dot.title = "Idle";
     }
 };

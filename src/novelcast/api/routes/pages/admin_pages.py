@@ -73,6 +73,11 @@ def admin_dashboard(
             "detail": "Connection successful",
         },
         {
+            "name":   "Database",
+            "status": "not healthy",
+            "detail": "Connection not successful",
+        },
+        {
             "name":   "Sync Worker",
             "status": "healthy",
             "detail": "Running",

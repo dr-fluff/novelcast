@@ -15,7 +15,7 @@
   <!-- PAGE HEADER -->
   <div class="pg-header">
     <h1 class="pg-title">Admin Dashboard</h1>
-    <button class="btn-ghost" onclick="checkUpdates()">Check for Updates</button>
+    <button class="btn-ghost" onclick="syncStory()">Sync all</button>
   </div>
 
   <!-- STAT CARDS -->
@@ -65,6 +65,7 @@
           </div>
           <span class="health-badge health-badge--{{ check.status }}">
             {% if check.status == "healthy" %}Healthy
+            {% elif check.status == "not_healthy" %} Not Healthy
             {% elif check.status == "not_configured" %}Not Configured
             {% else %}Error{% endif %}
           </span>
@@ -91,22 +92,8 @@
 
 </div>
 
-<script>
-function runHealthCheck() {
-  fetch('/admin/health-check', { method: 'POST' }).then(() => window.location.reload());
-}
-function checkUpdates() {
-  fetch('/admin/check-updates', { method: 'POST' })
-    .then(r => r.json())
-    .then(d => {
-      const el = document.getElementById('pending-syncs');
-      if (el) {
-        el.textContent = d.stories_with_updates || 0;
-        el.title = `${d.pending_chapters || 0} new chapters available`;
-      }
-      alert(d.message || 'Up to date');
-    });
-}
-</script>
+{% block scripts %}
+  <script src="/static/js/admin_page.js" defer></script>
+{% endblock %}
 
 {% endblock %}

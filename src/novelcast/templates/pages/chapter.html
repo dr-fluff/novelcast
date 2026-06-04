@@ -9,36 +9,157 @@
 
 {% block content %}
 
-<!-- PROGRESS BAR -->
-<div id="progress-bar"></div>
+<div class="reader-container" 
+     data-story-id="{{ story_id }}" 
+     data-chapter-id="{{ chapter_id }}"
+     data-next-chapter-id="{{ next_chapter_id }}"
+     data-prev-chapter-id="{{ prev_chapter_id }}"
+     data-first-unread-id="{{ first_unread_chapter_id | default('') }}">
 
-<!-- READER UI -->
-<div class="reader-ui" data-story-id="{{ story_id }}" data-first-unread-id="{{ first_unread_chapter_id | default('') }}">
+    <!-- READER HEADER -->
+    <div class="reader-header">
+        <div class="header-left">
+            <a href="/story?story_id={{ story_id }}" class="back-btn" title="Back to story">
+                <i class="fa-solid fa-chevron-left"></i>
+            </a>
+        </div>
+        
+        <div class="header-center">
+            <h1>{{ title }}</h1>
+        </div>
+        
+        <div class="header-right">
+            <button class="settings-btn" id="settingsBtn" title="Settings">
+                <i class="fa-solid fa-sliders"></i>
+            </button>
+        </div>
+    </div>
 
-    {% include "components/reader_header.html" %}
+    <!-- READER SETTINGS PANEL -->
+    <div class="settings-panel" id="settingsPanel">
+        <div class="settings-content">
+            <div class="settings-header">
+                <h2>Reading Settings</h2>
+                <button class="close-settings" id="closeSettings">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
 
-    {% include "components/reader_controls.html" %}
+            <!-- Theme selector -->
+            <div class="settings-group">
+                <label>Theme:</label>
+                <div class="button-group">
+                    <button class="theme-btn" data-theme="light" title="Light theme">
+                        <i class="fa-solid fa-sun"></i> Light
+                    </button>
+                    <button class="theme-btn" data-theme="sepia" title="Sepia theme">
+                        <i class="fa-solid fa-book"></i> Sepia
+                    </button>
+                    <button class="theme-btn" data-theme="dark" title="Dark theme">
+                        <i class="fa-solid fa-moon"></i> Dark
+                    </button>
+                </div>
+            </div>
+
+            <!-- Font family selector -->
+            <div class="settings-group">
+                <label>Font Family:</label>
+                <div class="button-group">
+                    <button class="font-family-btn" data-font="sans" title="Sans-serif font">
+                        Sans
+                    </button>
+                    <button class="font-family-btn" data-font="serif" title="Serif font">
+                        Serif
+                    </button>
+                </div>
+            </div>
+
+            <!-- Font size slider -->
+            <div class="settings-group">
+                <label>Font Size:</label>
+                <div class="slider-container">
+                    <span class="slider-min">A</span>
+                    <input type="range" id="fontSizeSlider" class="slider" min="80" max="170" value="100">
+                    <span class="slider-max">A</span>
+                </div>
+                <div class="slider-value" id="fontSizeValue">100%</div>
+            </div>
+
+            <!-- Line spacing slider -->
+            <div class="settings-group">
+                <label>Line Spacing:</label>
+                <div class="slider-container">
+                    <span class="slider-min">−</span>
+                    <input type="range" id="lineSpacingSlider" class="slider" min="80" max="150" value="100">
+                    <span class="slider-max">+</span>
+                </div>
+                <div class="slider-value" id="lineSpacingValue">100%</div>
+            </div>
+
+            <!-- Font weight slider -->
+            <div class="settings-group">
+                <label>Font Weight:</label>
+                <div class="slider-container">
+                    <span class="slider-min">−</span>
+                    <input type="range" id="fontWeightSlider" class="slider" min="0" max="100" value="0">
+                    <span class="slider-max">+</span>
+                </div>
+                <div class="slider-value" id="fontWeightValue">Normal</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SETTINGS OVERLAY -->
+    <div class="settings-overlay" id="settingsOverlay"></div>
+
+    <!-- CHAPTER SCROLL CONTAINER -->
+    <div class="chapter-scroll-container" id="chapterScroll">
+        <div class="chapter-content">
+            <h2 class="chapter-title">
+                <i class="fa-regular fa-bookmark"></i>
+                {{ chapter }}
+            </h2>
+
+            <hr />
+            
+            <div class="chapter-text"
+                {{ content | safe }}
+            </div>
+
+            <!-- End of chapter prompt -->
+            <div class="chapter-end-prompt" id="endPrompt">
+                <p>End of chapter</p>
+                <div class="chapter-navigation">
+                    <button class="nav-btn secondary" id="goToLibrary" title="Return to library">
+                        <i class="fa-solid fa-arrow-left"></i> Library
+                    </button>
+                    <button class="nav-btn primary" id="nextChapterBtn" title="Next chapter">
+                        Next Chapter <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FLOATING NAVIGATION ARROWS -->
+    <div class="floating-nav">
+        <button class="nav-arrow prev-chapter" id="prevChapter" title="Previous chapter (← or swipe right)">
+            <i class="fa-solid fa-chevron-left"></i>
+        </button>
+        <button class="nav-arrow next-chapter" id="nextChapterFloating" title="Next chapter (→ or swipe left)">
+            <i class="fa-solid fa-chevron-right"></i>
+        </button>
+    </div>
+
+    <!-- KEYBOARD HINT -->
+    <div class="keyboard-hint" id="keyboardHint">
+        Use arrow keys or swipe to navigate
+    </div>
 
 </div>
-
-<!-- CHAPTER CONTENT -->
-<main class="chapter-content">
-
-    <h2 class="chapter-title">
-        <i class="fa-regular fa-bookmark"></i>
-        {{ chapter }}
-    </h2>
-
-    <hr />
-
-    {{ content | safe }}
-
-</main>
-
-{% include "components/chapter_nav.html" %}
 
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/chapter_page.js" defer></script>
+<script src="/static/js/chapter_paginated.js" defer></script>
 {% endblock %}

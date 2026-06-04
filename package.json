@@ -16,5 +16,8 @@
     "dotenv": "^16.4.5",
     "kill-port": "^2.0.1",
     "prettier": "^3.2.5"
+  },
+  "dependencies": {
+    "epubjs": "^0.3.93"
   }
 }
