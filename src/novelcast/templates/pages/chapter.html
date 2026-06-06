@@ -119,24 +119,10 @@
                 <i class="fa-regular fa-bookmark"></i>
                 {{ chapter }}
             </h2>
-
-            <hr />
+            <hr/>
             
             <div class="chapter-text"
                 {{ content | safe }}
-            </div>
-
-            <!-- End of chapter prompt -->
-            <div class="chapter-end-prompt" id="endPrompt">
-                <p>End of chapter</p>
-                <div class="chapter-navigation">
-                    <button class="nav-btn secondary" id="goToLibrary" title="Return to library">
-                        <i class="fa-solid fa-arrow-left"></i> Library
-                    </button>
-                    <button class="nav-btn primary" id="nextChapterBtn" title="Next chapter">
-                        Next Chapter <i class="fa-solid fa-arrow-right"></i>
-                    </button>
-                </div>
             </div>
         </div>
     </div>
@@ -150,16 +136,10 @@
             <i class="fa-solid fa-chevron-right"></i>
         </button>
     </div>
-
-    <!-- KEYBOARD HINT -->
-    <div class="keyboard-hint" id="keyboardHint">
-        Use arrow keys or swipe to navigate
-    </div>
-
 </div>
 
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/chapter_paginated.js" defer></script>
+    <script src="/static/js/chapter_paginated.js" defer></script>
 {% endblock %}

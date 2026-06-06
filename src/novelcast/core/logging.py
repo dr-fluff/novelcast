@@ -60,7 +60,7 @@ def setup_logging(config):
 
         file_handler = TimestampRotatingFileHandler(
             filename=str(log_path),
-            maxBytes=10 * 1024 * 1024,  # 10MB
+            maxBytes=10 * 1024 * 1024,
             backupCount=0,
             encoding="utf-8",
         )
@@ -70,11 +70,17 @@ def setup_logging(config):
 
     root.handlers = handlers
 
+    # Suppress everything from these loggers except WARNING+
     for noisy_logger in (
         "websockets",
         "websockets.server",
         "websockets.protocol",
+        "websockets.client",
+        "uvicorn",
+        "uvicorn.access",
+        "uvicorn.protocols",
         "uvicorn.protocols.websockets",
         "uvicorn.protocols.websockets.websockets_impl",
+        "asyncio",
     ):
         logging.getLogger(noisy_logger).setLevel(logging.WARNING)

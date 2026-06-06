@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Request
 
 from novelcast.api.deps import get_current_user
-from novelcast.api.routes import admin, download, files, pages, password_reset, stories, sync, users
+from novelcast.api.routes import admin, download, files, pages, password_reset, stories, sync, users, add_story
 
 router = APIRouter()
 
@@ -16,6 +16,7 @@ router.include_router(download.router)
 router.include_router(sync.router)
 router.include_router(stories.router)
 router.include_router(admin.router)
+router.include_router(add_story.router)
 
 
 @router.get("/status")

@@ -1,9 +1,11 @@
 # novelcast/main.py
 
+import logging
 import uvicorn
 
 from novelcast.app.factory import create_app
 from novelcast.core.config import AppConfig
+from novelcast.core.logging import setup_logging  # Import your logging setup
 
 
 def get_app():
@@ -11,12 +13,14 @@ def get_app():
     return create_app(config)
 
 
-# This is what ASGI servers (uvicorn, gunicorn) will use
 app = get_app()
 
 
 if __name__ == "__main__":
     config = AppConfig()
+    
+    # Set up logging BEFORE uvicorn starts
+    setup_logging(config)
 
     uvicorn.run(
         "novelcast.main:app",

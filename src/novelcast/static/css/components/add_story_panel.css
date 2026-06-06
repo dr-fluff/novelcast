@@ -1,0 +1,164 @@
+/* =========================
+   BACKDROP
+   ========================= */
+
+.add-story-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0);
+    opacity: 0;
+    pointer-events: none;
+    transition: 0.25s ease;
+    z-index: 1999;
+}
+
+.add-story-backdrop.open {
+    opacity: 1;
+    background: rgba(0,0,0,0.5);
+    pointer-events: auto;
+}
+
+/* =========================
+   PANEL
+   ========================= */
+
+.add-story-panel {
+    position: fixed;
+    top: 0;
+    right: -520px;
+    width: 520px;
+    height: 100vh;
+
+    background: var(--color-bg-panel);
+    box-shadow: -2px 0 12px rgba(0,0,0,0.2);
+
+    transition: right 0.25s ease;
+    z-index: 2000;
+
+    display: flex;
+    flex-direction: column;
+}
+
+.add-story-panel.open {
+    right: 0;
+}
+
+/* =========================
+   HEADER
+   ========================= */
+
+.add-story-header {
+    padding: 16px;
+    border-bottom: 1px solid var(--color-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.add-story-close {
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+}
+
+/* =========================
+   STEPS
+   ========================= */
+
+.add-story-step {
+    display: none;
+    flex: 1;
+    flex-direction: column;
+}
+
+.add-story-step.is-active {
+    display: flex;
+}
+
+/* =========================
+   BODY
+   ========================= */
+
+.add-story-body {
+    padding: 20px;
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.add-story-center {
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+/* =========================
+   INPUTS
+   ========================= */
+
+.add-story-input {
+    padding: 10px;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    background: var(--color-bg-input);
+    color: var(--color-text);
+}
+
+/* =========================
+   FOOTER
+   ========================= */
+
+.add-story-footer {
+    padding: 12px;
+    border-top: 1px solid var(--color-border);
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+/* =========================
+   BUTTONS (minimal fallback)
+   ========================= */
+
+.btn-primary {
+    background: var(--color-primary);
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.btn-secondary {
+    background: transparent;
+    border: 1px solid var(--color-border);
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+/* =========================
+   INFO + LOADING
+   ========================= */
+
+.add-story-info {
+    padding: 10px;
+    background: var(--color-bg-secondary);
+    border-radius: 6px;
+}
+
+.add-story-bar {
+    width: 100%;
+    height: 4px;
+    background: #333;
+    margin-top: 10px;
+}
+
+.add-story-fill {
+    width: 0%;
+    height: 100%;
+    background: var(--color-primary);
+}

@@ -97,6 +97,7 @@ class StoriesRepository(BaseRepository):
         genres: list[str] | None = None,
         tags: list[str] | None = None,
         source_url: str | None = None,
+        auto_update: bool | None = None,  # ← ADD THIS
     ) -> dict | None:
         """Used by the metadata edit panel."""
         with self.session() as db:
@@ -105,13 +106,21 @@ class StoriesRepository(BaseRepository):
                 return None
             story.title = title
             story.author = author
-            # optional fields
             story.subtitle = subtitle
             story.description = description
             story.publish_year = publish_year
             story.language = language
             if source_url is not None:
                 story.source_url = source_url
+            
+            # ← ADD THIS BLOCK
+            if auto_update is not None:
+                self.set_story_setting(
+                    story_id,
+                    "auto_update",
+                    "1" if auto_update else "0",
+                )
+            
             _sync_story_relations(db, story, Series, "series", series or [])
             _sync_story_relations(db, story, Genre, "genres", genres or [])
             _sync_story_relations(db, story, Tag, "tags", tags or [])

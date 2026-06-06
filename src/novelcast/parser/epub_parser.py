@@ -1,5 +1,3 @@
-# novelcast/parser/epub_parser.py
-
 import re
 from pathlib import Path
 from zipfile import ZipFile
@@ -9,41 +7,12 @@ from bs4 import BeautifulSoup
 
 from novelcast.parser.base import BaseParser, Story
 
-
-# ── Built-in chapter patterns ──────────────────────────────────────────────
-# These cover the most common web fiction / RoyalRoad naming conventions.
-# Extra patterns can be added at runtime via the DB (see ChapterFilterService).
-#
-# Format: plain regex strings, case-insensitive flag applied automatically.
-#
-# RoyalRoad examples covered:
-#   "Chapter 1"                              →  \bchapter\s*\d+
-#   "Chapter 4 Exploration"                  →  \bchapter\s*\d+
-#   "Chapter: 1 - New Beginnings"            →  \bchapter\s*:?\s*\d+
-#   "Chapter ???"                            →  \bchapter\s*\?+
-#   "Chapter 1: Strange Business"            →  \bchapter\s*\d+
-#   "1.1"  /  "3.10"                         →  ^\[?\d+\.\d+
-#   "1 - Vivisari"                           →  ^\[?\d+\s*[-–]
-#   "Part 9 (3.10)"  /  "Part 67: Running"  →  \bpart\s*\d+
-#   "Prologue"                               →  \bprologue\b
-#   "Interlude - text"                       →  \binterlude\b
-#   "Bestiary Interlude : Hydra"             →  \binterlude\b
-#   "Glossary"                               →  \bglossary\b
-#   "The Path of Ascension Chapter 1"        →  \bchapter\s*\d+
-#   "[1 - Breakfast at Night](url)"          →  ^\[?\d+\s*[-–]
-#   "[1. Aine ~ Garden](url)"                →  ^\[?\d+\.
-#   "[Chapter 0 - Four who heard](url)"      →  \bchapter\s*\d+
-#
-# Patreon examples covered:
-#   "Amazon Apocalypse 7: Chapter 77"        →  \bchapter\s*\d+
-#   "Journey to Veresavir - Chapter 55"      →  \bchapter\s*\d+
-#   "In Search of Harmony 26 - No, No..."   →  \w.*\s+\d+\s*[-–]
 DEFAULT_PATTERNS: list[str] = [
     r"\bchapter\s*:?\s*\d+",       # Chapter 1 / Chapter: 1 / Chapter 930
     r"\bchapter\s*\?+",            # Chapter ???
     r"\bch\.?\s*\d+",              # Ch. 42 / Ch42
     r"^\[?\d+\.\d+",               # 1.1 / 3.10 / [1.1]
-    r"^\[?\d+\s*[-–]",             # 1 - Vivisari / [1 - Breakfast...]
+    r"^\[?\d+\s*[-–—‑−]",          # 1 - / 1 – / 1 — / 1 ‑ / 1 − (all dash variants)
     r"^\[?\d+\.",                   # 1. Aine ~ Garden / [1. ...]
     r"\bpart\s*\d+",               # Part 1 / Part 9 (3.10)
     r"\bpart\s+[ivxlcdm]+\b",      # Part IV (Roman numerals)
@@ -55,7 +24,7 @@ DEFAULT_PATTERNS: list[str] = [
     r"\bappendix\b",               # Appendix
     r"\bcover\b",                  # Cover page
     r"\bby\s+\w+",                 # "Azarinth Healer by Rhaegar"
-    r"\w.*\s+\d+\s*[-–]",         # "In Search of Harmony 26 - ..."
+    r"\w.*\s+\d+\s*[-–—‑−]",       # "In Search of Harmony 26 - ..." (all dash variants)
 ]
 
 
@@ -71,13 +40,6 @@ def _is_chapter(title: str, compiled: list[re.Pattern]) -> bool:
 
 
 class EpubParser(BaseParser):
-    """
-    Parses an EPUB file into a Story dict.
-
-    extra_patterns: additional regex strings loaded from the DB at call time.
-                    Pass them in via ChapterFilterService before calling parse().
-    """
-
     def __init__(self, extra_patterns: list[str] | None = None):
         self._patterns = _compile(DEFAULT_PATTERNS + (extra_patterns or []))
 
@@ -142,8 +104,6 @@ class EpubParser(BaseParser):
                 )
 
             return chapters
-
-    # ── private helpers ────────────────────────────────────────────────────
 
     def _extract_cover(self, epub_path: Path) -> bytes | None:
         try:

@@ -28,7 +28,7 @@
         <p class="result-count">{{ results|length }} result{{ 's' if results|length != 1 }}</p>
         <div class="results-grid">
             {% for r in results %}
-            <a class="result-card result-card--{{ r.kind }}" href="{{ r.url }}" target="_blank">
+            <a href="#" class="result-card" data-url="{{ r.url }}" data-title="{{ r.title }}" data-author="{{ r.author or '' }}">
                 <div class="result-card__cover">
                     {% if r.cover_url %}
                         <img src="{{ r.cover_url }}" alt="{{ r.title }}" loading="lazy" />
@@ -55,5 +55,41 @@
     {% else %}
         <p class="search-empty">No results found for "<strong>{{ parsed.identifier }}</strong>".</p>
     {% endif %}
+
+    <script>
+        (function () {
+
+            function openStoryPanel(url, title, author, attempt = 0) {
+
+                // HARD CHECK
+                if (window.openAddStoryPanelWithLoading) {
+                    window.openAddStoryPanelWithLoading(url, title, author);
+                    return;
+                }
+
+                // Retry logic (safe + bounded)
+                if (attempt < 20) {
+                    setTimeout(() => {
+                        openStoryPanel(url, title, author, attempt + 1);
+                    }, 100);
+                } else {
+                    console.error("[AddStory] Panel function never loaded");
+                }
+            }
+
+            document.querySelectorAll(".result-card").forEach(card => {
+                card.addEventListener("click", e => {
+                    e.preventDefault();
+
+                    openStoryPanel(
+                        card.dataset.url,
+                        card.dataset.title,
+                        card.dataset.author
+                    );
+                });
+            });
+
+        })();
+        </script>
 
 {% endif %}

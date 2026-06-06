@@ -16,6 +16,7 @@ window.checkUpdates = function checkUpdates() {
 }
 
 window.syncStory = function syncStory() {
-    fetch('/api/sync/all', { method: 'POST' })
+    fetch('/api/update/all', { method: 'POST' })
+
 
 }

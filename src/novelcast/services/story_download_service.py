@@ -255,19 +255,34 @@ class StoryDownloadService:
 
     def _extract_metadata(self, raw: dict) -> dict:
         if not raw:
-            return {}
+            return None
 
         title = raw.get("title")
         author = raw.get("author")
+
         subtitle = raw.get("subtitle") or raw.get("subtitleText")
+
         description = raw.get("description") or raw.get("summary")
         if isinstance(description, str):
             description = clean_html_description(description)
-        publish_year = self._parse_publish_year(raw.get("datePublished") or raw.get("published") or raw.get("year"))
-        language = raw.get("language")
-        series = self._normalize_metadata_list(raw.get("series") or raw.get("series_name") or raw.get("series_info"))
-        genres = self._normalize_metadata_list(raw.get("genre") or raw.get("genres"))
-        tags = self._normalize_metadata_list(raw.get("subject_tags") or raw.get("tags") or raw.get("subjects"))
+
+        publish_year = self._parse_publish_year(
+            raw.get("datePublished") or raw.get("published") or raw.get("year")
+        )
+
+        language = raw.get("language") or raw.get("langcode")
+
+        series = self._normalize_metadata_list(
+            raw.get("series") or raw.get("series_name") or raw.get("series_info")
+        )
+
+        genres = self._normalize_metadata_list(
+            raw.get("genre") or raw.get("genres")
+        )
+
+        tags = self._normalize_metadata_list(
+            raw.get("subject_tags") or raw.get("tags") or raw.get("subjects")
+        )
 
         metadata = {
             "title": title,
@@ -281,15 +296,8 @@ class StoryDownloadService:
             "tags": tags,
         }
 
-        if not any([
-            subtitle,
-            description,
-            publish_year is not None,
-            language,
-            series,
-            genres,
-            tags,
-        ]):
+        # only hard-fail if completely useless
+        if not title and not author and not description:
             return None
 
         return metadata
