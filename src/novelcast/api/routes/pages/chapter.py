@@ -1,10 +1,12 @@
 from fastapi import Depends, HTTPException, Request
 from fastapi.templating import Jinja2Templates
+import logging
 
 from . import router
 from novelcast.api.deps import get_chapters, get_current_user, get_progress, get_stories, get_templates
 from novelcast.services import ChaptersService, ProgressService, StoryService
 
+logger = logging.getLogger(__name__)
 
 @router.get("/chapter")
 def chapter(
@@ -39,6 +41,7 @@ def chapter(
     prev_id = ids[idx - 1] if idx is not None and idx > 0 else None
     next_id = ids[idx + 1] if idx is not None and idx < len(ids) - 1 else None
 
+    logger.info("prev_id: %s, next_id: %s", prev_id, next_id)
     read_chapters: set[int] = set()
     if current_user and current_user.get("id"):
         prog = progress.get_progress(current_user["id"], story_id)

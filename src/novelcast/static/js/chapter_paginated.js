@@ -243,24 +243,30 @@ class PaginatedEReader {
   // ======================
   // NAVIGATION
   // ======================
+  
 
   nextPage = () => {
     const { currentPage, totalPages, nextChapterId, storyId } = this.state;
+    const cleanNextChapterId = nextChapterId === "None" ? null : nextChapterId;
 
     if (currentPage < totalPages - 1) {
       this.render(currentPage + 1);
-    } else if (nextChapterId) {
-      window.location.href = `/chapter?story_id=${storyId}&chapter_id=${nextChapterId}`;
+    } else if (cleanNextChapterId) {
+      window.location.href = `/chapter?story_id=${storyId}&chapter_id=${cleanNextChapterId}`;
+    }else {
+      window.location.href = `/story?story_id=${storyId}`;
     }
   };
 
   prevPage = () => {
     const { currentPage, prevChapterId, storyId } = this.state;
-
+    const cleanPrevChapterId = prevChapterId === "None" ? null : prevChapterId;
     if (currentPage > 0) {
       this.render(currentPage - 1);
-    } else if (prevChapterId) {
-      window.location.href = `/chapter?story_id=${storyId}&chapter_id=${prevChapterId}&lastPage=1`;
+    } else if (cleanPrevChapterId) {
+      window.location.href = `/chapter?story_id=${storyId}&chapter_id=${cleanPrevChapterId}&lastPage=1`;
+    }else {
+      window.location.href = `/story?story_id=${storyId}`;
     }
   };
 
