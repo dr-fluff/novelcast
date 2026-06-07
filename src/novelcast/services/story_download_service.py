@@ -29,6 +29,24 @@ class StoryDownloadService:
         parsed["source_file_path"] = raw.get("file_path")
         return parsed
 
+    def _filter_chapters(self, parsed: dict, selected_chapters: list[int]) -> dict:
+        """Filter parsed chapters to only include selected chapter numbers."""
+        if not selected_chapters:
+            return parsed
+        
+        selected_set = set(selected_chapters)
+        original_chapters = parsed.get("chapters", [])
+        
+        filtered = [ch for ch in original_chapters if ch.get("number") in selected_set]
+        logger.debug(
+            "Filtered chapters from %d to %d",
+            len(original_chapters),
+            len(filtered),
+        )
+        
+        parsed["chapters"] = filtered
+        return parsed
+
     def _persist_story(self, story_id: int, raw: dict, parsed: dict) -> list[int]:
         self._update_story_metadata(story_id, raw, parsed)
 
@@ -39,8 +57,10 @@ class StoryDownloadService:
 
         return [ch["number"] for ch in parsed.get("chapters", [])]
 
-    def add_story(self, url: str):
+    def add_story(self, url: str, selected_chapters: list[int] | None = None):
         logger.debug("Story download requested of URL: %s", url)
+        if selected_chapters:
+            logger.debug("Filtering to selected chapters: %s", selected_chapters)
 
         normalized_url = normalize_story_url(url)
         download_id    = str(uuid.uuid4())
@@ -75,6 +95,11 @@ class StoryDownloadService:
             )
 
             parsed = self._parse_raw(raw)
+            
+            # Filter chapters if selected_chapters is provided
+            if selected_chapters:
+                parsed = self._filter_chapters(parsed, selected_chapters)
+            
             self._update_story_metadata(story_id, raw, parsed)
 
             author_name = parsed.get("author") or raw.get("author")

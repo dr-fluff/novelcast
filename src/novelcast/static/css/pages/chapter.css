@@ -467,8 +467,21 @@ body[data-theme="dark"] .settings-btn:hover {
 }
 
 /* Hide author notes */
+.author-note,
+.author-note * {
+  display: none !important;
+}
+
 .author-note-portlet,
-.author-note {
+.author-note-portlet * {
+  display: none !important;
+}
+
+.portlet.solid.author-note-portlet {
+  display: none !important;
+}
+
+.portlet-body.author-note {
   display: none !important;
 }
 
