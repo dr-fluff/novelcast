@@ -201,12 +201,12 @@ class AppContext:
         self.parser_registry.register("fanficfare", FanFicFareParser())
         self.parser_registry.register("html", HtmlParser())
 
-        # EpubParser gets DB patterns injected at construction time  ← new
+        # EpubParser gets DB patterns injected at construction time
         epub_parser = EpubParser(
-            extra_patterns=self.chapter_filter.get_enabled_regexes()
+            patterns=self.chapter_filter.get_enabled_regexes()  # ← changed from extra_patterns
         )
         self.parser_registry.register("epub", epub_parser)
-        self.epub_parser = epub_parser  # keep ref so we can reload later if needed
+        self.epub_parser = epub_parser
 
     # ─────────────────────────────
     # PARSER

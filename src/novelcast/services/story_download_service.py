@@ -40,7 +40,7 @@ class StoryDownloadService:
         return [ch["number"] for ch in parsed.get("chapters", [])]
 
     def add_story(self, url: str):
-        logger.debug("Story download requested")
+        logger.debug("Story download requested of URL: %s", url)
 
         normalized_url = normalize_story_url(url)
         download_id    = str(uuid.uuid4())

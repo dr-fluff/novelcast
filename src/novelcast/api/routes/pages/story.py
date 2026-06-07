@@ -2,6 +2,7 @@
 
 from fastapi import Depends, HTTPException, Request
 from fastapi.templating import Jinja2Templates
+import logging
 
 from . import router
 from novelcast.api.deps import (
@@ -16,6 +17,7 @@ from novelcast.services import ChaptersService, ProgressService, StoryService
 from novelcast.services.chapter_filter_service import ChapterFilterService
 from .helpers import resolve_progress
 
+logger = logging.getLogger(__name__)
 
 @router.get("/story")
 def story(
@@ -33,18 +35,22 @@ def story(
     story = stories.get_story(story_id)
     if not story:
         raise HTTPException(status_code=404, detail="Story not found")
+    try:
+        story_authors = stories.get_story_authors(story_id)
+        #extra_patterns = get_chapter_filter(request).get_enabled_regexes()
+        chapter_list = chapters.list_by_story_filtered(story_id)
+        story_files = stories.get_story_files(story_id)
+        
+        read_chapters, last_chapter_id, last_read_title = resolve_progress(
+            current_user, story_id, chapter_list, progress, chapters
+        )
 
-    story_authors = stories.get_story_authors(story_id)
-    extra_patterns = get_chapter_filter(request).get_enabled_regexes()
-    chapter_list = chapters.list_by_story_filtered(story_id, extra_patterns)
-    story_files = stories.get_story_files(story_id)
-    read_chapters, last_chapter_id, last_read_title = resolve_progress(
-        current_user, story_id, chapter_list, progress, chapters
-    )
-
-    first_unread = next(
-        (c["id"] for c in chapter_list if c["id"] not in read_chapters), None
-    )
+        first_unread = next(
+            (c["id"] for c in chapter_list if c["id"] not in read_chapters), None
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
 
     return templates.TemplateResponse("pages/story.html", {
         "request": request,

@@ -2,6 +2,7 @@
     "use strict";
 
     let isLoading = false;
+    let selectedChapters = [];  // ← NEW
 
     const $ = (id) => document.getElementById(id);
 
@@ -11,7 +12,7 @@
     // -----------------------------
     // PANEL CONTROL
     // -----------------------------
-    function setOpen(open, step = 1) {
+    function setOpen(open) {
         const panel = $("addStoryPanel");
         const backdrop = $("addStoryBackdrop");
 
@@ -26,40 +27,131 @@
         panel.setAttribute("aria-hidden", open ? "false" : "true");
         document.body.style.overflow = open ? "hidden" : "";
 
-        showStep(step);
+        if (!open) {
+            selectedChapters = [];  // ← RESET on close
+        }
     }
 
     window.openAddStoryPanel = function () {
-        setOpen(true, 1);
+        setOpen(true);
     };
 
     window.closeAddStoryPanel = function () {
         setOpen(false);
     };
 
-    // -----------------------------
-    // STEP CONTROL (FIXED)
-    // IMPORTANT: uses BOTH class styles safely
-    // -----------------------------
-    function showStep(step) {
-        const steps = [
-            $("addStoryStep1"),
-            $("addStoryStep2"),
-            $("addStoryStep3"),
-        ];
+    window.openAddStoryPanelWithLoading = async function (
+        url,
+        title = "",
+        author = ""
+    ) {
+        try {
 
-        steps.forEach((el, i) => {
-            if (!el) return;
+            setOpen(true);
 
-            const active = i === step - 1;
+            const urlInput = document.getElementById("addStoryUrl");
 
-            // support both patterns
-            el.classList.toggle("hidden", !active);
-            el.classList.toggle("is-active", active);
-        });
+            if (!urlInput) {
+                throw new Error("addStoryUrl input not found");
+            }
+
+            urlInput.value = url;
+
+            await previewStoryMetadata();
+
+        } catch (e) {
+            console.error("[AddStory]", e);
+        }
+    };
+
+    // ← NEW: Tab switching
+    window.switchAddStoryTab = function(btn, tabId) {
+        document.querySelectorAll('.add-story-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.add-story-step').forEach(p => p.classList.add('hidden'));
+        btn.classList.add('active');
+        document.getElementById(tabId).classList.remove('hidden');
+    };
+
+    // ← NEW: Handle action button based on current tab
+    window.handleAddStoryAction = function() {
+        const activeTab = document.querySelector('.add-story-tab.active');
+        const tabText = activeTab?.textContent.trim().toLowerCase() || '';
+
+        if (tabText.includes('url')) {
+            previewStoryMetadata();
+        } else if (tabText.includes('metadata')) {
+            showChaptersTab();
+        } else if (tabText.includes('chapter')) {
+            confirmAddStory();
+        }
+    };
+
+
+    // ← NEW: Show chapters tab after metadata preview
+    function showChaptersTab() {
+        const tabs = document.querySelectorAll('.add-story-tab');
+        const steps = document.querySelectorAll('.add-story-step');
+        
+        tabs.forEach(t => t.classList.remove('active'));
+        steps.forEach(s => s.classList.add('hidden'));
+        
+        if (tabs[2]) tabs[2].classList.add('active');
+        if (steps[2]) steps[2].classList.remove('hidden');
+
+        const btn = document.getElementById('addStoryActionBtn');
+        if (btn) {
+            btn.innerHTML = '<i class="fa-solid fa-download"></i> Download Story';
+        }
     }
 
-    window.showStep = showStep;
+    // ← NEW: Display chapters in the list
+    window.displayChapters = function(chapters) {
+        const list = document.getElementById('chaptersList');
+        if (!list) return;
+
+        list.innerHTML = chapters.map((ch, idx) => `
+            <div class="chapter-item">
+                <input 
+                    type="checkbox" 
+                    id="ch-${idx}"
+                    data-chapter-number="${ch.number}"
+                    checked
+                    onchange="updateChapterSelection()"
+                />
+                <label for="ch-${idx}">
+                    <span class="chapter-number">Chapter ${ch.number}</span>
+                    <span class="chapter-title">${ch.title || '(no title)'}</span>
+                </label>
+            </div>
+        `).join('');
+
+        document.getElementById('chapterTotalCount').textContent = chapters.length;
+        updateChapterSelection();
+    };
+
+    // ← NEW: Update selected chapters count
+    window.updateChapterSelection = function() {
+        const checkboxes = document.querySelectorAll('#chaptersList input[type="checkbox"]');
+        selectedChapters = Array.from(checkboxes)
+            .filter(cb => cb.checked)
+            .map(cb => parseInt(cb.dataset.chapterNumber));
+
+        const countEl = document.getElementById('chapterSelectCount');
+        if (countEl) {
+            countEl.textContent = selectedChapters.length;
+        }
+    };
+
+    // ← NEW: Select/deselect all chapters
+    window.selectAllChapters = function() {
+        document.querySelectorAll('#chaptersList input[type="checkbox"]').forEach(cb => cb.checked = true);
+        updateChapterSelection();
+    };
+
+    window.deselectAllChapters = function() {
+        document.querySelectorAll('#chaptersList input[type="checkbox"]').forEach(cb => cb.checked = false);
+        updateChapterSelection();
+    };
 
     // -----------------------------
     // SAFE JSON FETCH
@@ -80,14 +172,17 @@
         }
     }
 
-    // -----------------------------
-    // PREVIEW
-    // -----------------------------
-    window.openAddStoryPanelWithLoading = async function (url) {
+    // ← UPDATED: Preview with chapters
+    window.previewStoryMetadata = async function() {
         if (isLoading) return;
         isLoading = true;
 
-        setOpen(true, 3);
+        const url = $("addStoryUrl")?.value;
+        if (!url) {
+            err("URL is required");
+            isLoading = false;
+            return;
+        }
 
         try {
             log("Preview:", url);
@@ -98,9 +193,9 @@
                 body: JSON.stringify({ url }),
             });
 
-            log("DATA:", data);
+            log("Preview data:", data);
 
-            $("addStoryUrl").value = data.url || url || "";
+            // Populate metadata fields
             $("addStoryTitle").value = data.title || "";
             $("addStoryAuthor").value = data.author || "";
             $("addStorySubtitle").value = data.subtitle || "";
@@ -110,17 +205,41 @@
 
             $("chapterCountValue").textContent = data.chapter_count ?? "—";
 
-            showStep(2);
+            // ← NEW: Display chapters
+            if (data.chapters && data.chapters.length > 0) {
+                displayChapters(data.chapters);
+            }
+
+            // Switch to metadata tab
+            const tabs = document.querySelectorAll('.add-story-tab');
+            const steps = document.querySelectorAll('.add-story-step');
+            
+            tabs.forEach(t => t.classList.remove('active'));
+            steps.forEach(s => s.classList.add('hidden'));
+            
+            if (tabs[1]) tabs[1].classList.add('active');
+            if (steps[1]) steps[1].classList.remove('hidden');
+
+            // Update button label
+            const btn = document.getElementById('addStoryActionBtn');
+            if (btn) {
+                btn.innerHTML = '<i class="fa-solid fa-arrow-right"></i> Next: Chapters';
+            }
+
         } catch (e) {
             err(e);
-            showStep(2);
+            const status = $("addStoryStatus");
+            if (status) {
+                status.textContent = e.message;
+                status.classList.add("error");
+            }
         }
 
         isLoading = false;
     };
 
     // -----------------------------
-    // TAG EXTRACTION (FIXED)
+    // TAG EXTRACTION
     // -----------------------------
     function getTagValues(wrapperId) {
         const wrap = $(wrapperId);
@@ -133,10 +252,9 @@
 
     window.getTagValues = getTagValues;
 
-    // -----------------------------
-    // CONFIRM ADD STORY (FIXED ENDPOINT + SAFE FETCH)
-    // -----------------------------
+    // ← UPDATED: Include selected chapters
     window.confirmAddStory = async function () {
+        log("Confirming add story with selected chapters:", selectedChapters);
         try {
             const payload = {
                 url: $("addStoryUrl")?.value || "",
@@ -152,13 +270,21 @@
                 genres: getTagValues("addStoryGenresWrap"),
                 tags: getTagValues("addStoryTagsWrap"),
                 auto_update: $("addStoryAutoUpdate")?.checked || false,
+                selected_chapters: selectedChapters.length > 0 ? selectedChapters : null,  // ← NEW
             };
 
             log("ADD payload:", payload);
 
-            showStep(3);
+            // Switch to download tab
+            const tabs = document.querySelectorAll('.add-story-tab');
+            const steps = document.querySelectorAll('.add-story-step');
+            
+            tabs.forEach(t => t.classList.remove('active'));
+            steps.forEach(s => s.classList.add('hidden'));
+            
+            if (tabs[3]) tabs[3].classList.add('active');
+            if (steps[3]) steps[3].classList.remove('hidden');
 
-            // IMPORTANT FIX: your backend is mounted under /stories (NOT /api/stories)
             const res = await fetch("/api/stories/add", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -179,15 +305,27 @@
                 throw new Error(data.detail || "Failed to add story");
             }
 
-            $("addStoryProgressText").textContent = "Story added successfully";
+            const chapterInfo = selectedChapters.length > 0 
+                ? ` (${selectedChapters.length} chapters)`
+                : " (all chapters)";
+            
+            $("addStoryProgressText").textContent = "Story added successfully" + chapterInfo;
             $("addStoryProgressFill").style.width = "100%";
 
-            setTimeout(() => setOpen(false), 800);
+            setTimeout(() => setOpen(false), 1200);
 
         } catch (e) {
             err(e);
 
-            showStep(2);
+            // Back to chapters tab
+            const tabs = document.querySelectorAll('.add-story-tab');
+            const steps = document.querySelectorAll('.add-story-step');
+            
+            tabs.forEach(t => t.classList.remove('active'));
+            steps.forEach(s => s.classList.add('hidden'));
+            
+            if (tabs[2]) tabs[2].classList.add('active');
+            if (steps[2]) steps[2].classList.remove('hidden');
 
             const status = $("addStoryStatus");
             if (status) {
@@ -198,3 +336,4 @@
     };
 
 })();
+

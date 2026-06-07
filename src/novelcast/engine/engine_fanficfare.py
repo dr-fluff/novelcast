@@ -73,8 +73,48 @@ class FanFicFareEngine(StoryEngine):
             "author": raw.get("author"),
             "url": url,
             "raw": raw,
-            "chapters": self._normalize_chapters(raw),
+            "chapters": self._extract_chapter_details(raw),
         }
+
+    def _extract_chapter_details(self, raw: dict) -> list[dict]:
+        chapters_raw = raw.get("chapters") or raw.get("zchapters") or []
+
+        chapters = []
+
+        for idx, item in enumerate(chapters_raw, 1):
+            num = idx
+            title = None
+
+            try:
+                # ✔️ YOUR REAL FORMAT: [number, {title: ...}]
+                if isinstance(item, (list, tuple)) and len(item) >= 2:
+
+                    # number
+                    if isinstance(item[0], int):
+                        num = item[0]
+
+                    # title (THIS is the important fix)
+                    if isinstance(item[1], dict):
+                        title = item[1].get("title")
+
+                # fallback safety
+                elif isinstance(item, dict):
+                    title = item.get("title") or item.get("name")
+
+                elif isinstance(item, str):
+                    title = item
+
+                chapters.append({
+                    "number": num,
+                    "title": title,
+                    "selected": True,
+                    "raw": item,
+                })
+
+            except Exception:
+                logger.warning("Skipping bad chapter: %s", item)
+
+        return chapters
 
     # -------------------------
     # CORE RUNNER

@@ -59,37 +59,28 @@
     <script>
         (function () {
 
-            function openStoryPanel(url, title, author, attempt = 0) {
-
-                // HARD CHECK
-                if (window.openAddStoryPanelWithLoading) {
-                    window.openAddStoryPanelWithLoading(url, title, author);
-                    return;
-                }
-
-                // Retry logic (safe + bounded)
-                if (attempt < 20) {
-                    setTimeout(() => {
-                        openStoryPanel(url, title, author, attempt + 1);
-                    }, 100);
-                } else {
-                    console.error("[AddStory] Panel function never loaded");
-                }
-            }
-
             document.querySelectorAll(".result-card").forEach(card => {
+
                 card.addEventListener("click", e => {
                     e.preventDefault();
 
-                    openStoryPanel(
+                    if (!window.openAddStoryPanelWithLoading) {
+                        console.error(
+                            "[AddStory] openAddStoryPanelWithLoading not found"
+                        );
+                        return;
+                    }
+
+                    window.openAddStoryPanelWithLoading(
                         card.dataset.url,
                         card.dataset.title,
                         card.dataset.author
                     );
                 });
+
             });
 
         })();
-        </script>
+    </script>
 
 {% endif %}

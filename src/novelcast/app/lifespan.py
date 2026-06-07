@@ -8,6 +8,7 @@ import asyncio
 from novelcast.core.context import AppContext
 from novelcast.api.ws.notifications import manager as ws_manager
 
+from novelcast.core.defaults import DEFAULT_CHAPTER_PATTERNS
 from novelcast.db.repositories.password_reset_repository import PasswordResetRepository
 from novelcast.services.password_reset_service import PasswordResetService
 
@@ -26,6 +27,12 @@ async def lifespan(app: FastAPI):
         # CONTEXT
         # ─────────────────────────────
         ctx = AppContext(app.state.config)
+        
+        try:
+            ctx.chapter_pattern_repo.seed_defaults(DEFAULT_CHAPTER_PATTERNS)
+            logger.info("Chapter patterns seeded")
+        except Exception:
+            logger.exception("Failed to seed chapter patterns")
 
         # inject websocket system
         asyncio.create_task(event_worker(ctx))

@@ -11,6 +11,13 @@ router = APIRouter(prefix="/stories", tags=["stories"])
 logger = logging.getLogger(__name__)
 
 
+from typing import Optional
+
+class Chapter(BaseModel):
+    number: int
+    title: Optional[str] = None
+    selected: bool
+
 class AddStoryRequest(BaseModel):
     url: str
     title: str | None = None
@@ -23,6 +30,7 @@ class AddStoryRequest(BaseModel):
     genres: list[str] | None = None
     tags: list[str] | None = None
     auto_update: bool = False
+    selected_chapters: list[int] | None = None  # ← NEW
 
 
 class MetadataPreview(BaseModel):
@@ -37,6 +45,7 @@ class MetadataPreview(BaseModel):
     genres: list[str] | None
     tags: list[str] | None
     chapter_count: int | None
+    chapters: list[Chapter] | None  # ← NEW
 
 
 # ── Preview metadata without downloading ───────────────────────────────
@@ -70,12 +79,13 @@ async def preview_story_metadata(
             genres=metadata.get("genres"),
             tags=metadata.get("tags"),
             chapter_count=len(chapters),
+            chapters=chapters,
         )
 
     except Exception as e:
         logger.exception("Failed to preview story metadata")
         raise HTTPException(status_code=400, detail=str(e))
-    
+
 # ── Add story with pre-configured metadata ─────────────────────────────
 
 @router.post("/add")
@@ -87,11 +97,15 @@ async def add_story_with_metadata(
 ):
     """
     Add a story with pre-configured metadata.
+    Optionally filter to selected chapters only.
     Downloads the full file in background.
     """
     try:
         # Add the story (this downloads everything)
-        story_id = download.add_story(request.url)
+        story_id = download.add_story(
+            request.url,
+            selected_chapters=request.selected_chapters,  # ← NEW
+        )
         
         # Update with user-edited metadata
         stories.update_story_metadata(
@@ -112,6 +126,7 @@ async def add_story_with_metadata(
             "status": "started",
             "story_id": story_id,
             "auto_update": request.auto_update,
+            "selected_chapters": request.selected_chapters or "all",
         }
     except Exception as e:
         logger.exception("Failed to add story")

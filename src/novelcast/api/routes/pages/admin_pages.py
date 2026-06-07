@@ -18,28 +18,7 @@ from novelcast.services import (
     UserService,
 )
 from novelcast.services.chapter_filter_service import ChapterFilterService
-from novelcast.parser.epub_parser import DEFAULT_PATTERNS
-
-
-_BUILTIN_PATTERN_LABELS = {
-    r"\bchapter\s*:?\s*\d+":    "Chapter N / Chapter: N",
-    r"\bchapter\s*\?+":         "Chapter ???",
-    r"\bch\.?\s*\d+":           "Ch. 42 / Ch42",
-    r"^\[?\d+\.\d+":            "1.1 / 3.10 / [1.1]",
-    r"^\[?\d+\s*[-–]":          "1 - Title / [1 - Title]",
-    r"^\[?\d+\.":               "1. Title / [1. Title]",
-    r"\bpart\s*\d+":            "Part 1 / Part 9 (3.10)",
-    r"\bpart\s+[ivxlcdm]+\b":   "Part IV (Roman numerals)",
-    r"\bprologue\b":            "Prologue",
-    r"\bepilogue\b":            "Epilogue",
-    r"\binterlude\b":           "Interlude / Bestiary Interlude : Hydra",
-    r"\bafterword\b":           "Afterword",
-    r"\bglossary\b":            "Glossary",
-    r"\bappendix\b":            "Appendix",
-    r"\bcover\b":               "Cover page",
-    r"\bby\s+\w+":              "Story Title by Author",
-    r"\w.*\s+\d+\s*[-–]":      "Series Title 26 - Chapter Name",
-}
+from novelcast.core.defaults import DEFAULT_CHAPTER_PATTERNS
 
 
 @router.get("/admin")
@@ -111,29 +90,6 @@ def check_updates(
     }
 
 
-@router.get("/admin/chapter-patterns")
-def chapter_patterns_page(
-    request: Request,
-    chapter_filter: ChapterFilterService = Depends(get_chapter_filter),
-    current_user: dict | None = Depends(get_current_user),
-    templates: Jinja2Templates = Depends(get_templates),
-):
-    if not current_user or not current_user.get("is_root"):
-        raise HTTPException(status_code=403, detail="Admin access required")
-
-    builtin = [
-        {"pattern": p, "description": _BUILTIN_PATTERN_LABELS.get(p, "")}
-        for p in DEFAULT_PATTERNS
-    ]
-
-    return templates.TemplateResponse("pages/chapter_patterns.html", {
-        "request":          request,
-        "user":             current_user,
-        "chapter_patterns": chapter_filter.get_all_patterns(),
-        "builtin_patterns": builtin,
-    })
-
-
 @router.get("/admin/users")
 def users(
     request: Request,
@@ -178,3 +134,104 @@ def edit_user_page(
         "show_role": True,
         "form_user": target_user,
     })
+    
+# Add these endpoints to novelcast/api/routes/pages/admin_pages.py
+
+from pydantic import BaseModel
+
+
+class PatternRequest(BaseModel):
+    pattern: str
+    description: str = ""
+
+
+class PatternTestRequest(BaseModel):
+    pattern: str
+    samples: list[str]
+
+
+class PatternUpdateRequest(BaseModel):
+    enabled: bool | None = None
+
+
+@router.get("/admin/chapter-patterns")
+def chapter_patterns_page(
+    request: Request,
+    chapter_filter: ChapterFilterService = Depends(get_chapter_filter),
+    current_user: dict | None = Depends(get_current_user),
+    templates: Jinja2Templates = Depends(get_templates),
+):
+    if not current_user or not current_user.get("is_root"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    # Get all patterns from DB (builtin + custom)
+    all_patterns = chapter_filter.get_all_patterns()
+
+    return templates.TemplateResponse("pages/chapter_patterns.html", {
+        "request": request,
+        "user": current_user,
+        "chapter_patterns": all_patterns,
+    })
+
+@router.post("/admin/chapter-patterns")
+def create_pattern(
+    req: PatternRequest,
+    chapter_filter: ChapterFilterService = Depends(get_chapter_filter),
+    current_user: dict | None = Depends(get_current_user),
+):
+    if not current_user or not current_user.get("is_root"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    try:
+        result = chapter_filter.add_pattern(req.pattern, req.description)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/admin/chapter-patterns/test")
+def test_pattern(
+    req: PatternTestRequest,
+    chapter_filter: ChapterFilterService = Depends(get_chapter_filter),
+    current_user: dict | None = Depends(get_current_user),
+):
+    if not current_user or not current_user.get("is_root"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    try:
+        results = chapter_filter.test_pattern(req.pattern, req.samples)
+        return results
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.patch("/admin/chapter-patterns/{pattern_id}")
+def update_pattern(
+    pattern_id: int,
+    req: PatternUpdateRequest,
+    chapter_filter: ChapterFilterService = Depends(get_chapter_filter),
+    current_user: dict | None = Depends(get_current_user),
+):
+    if not current_user or not current_user.get("is_root"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    if req.enabled is not None:
+        chapter_filter.set_enabled(pattern_id, req.enabled)
+    
+    return {"success": True}
+
+
+@router.delete("/admin/chapter-patterns/{pattern_id}")
+def delete_pattern(
+    pattern_id: int,
+    chapter_filter: ChapterFilterService = Depends(get_chapter_filter),
+    current_user: dict | None = Depends(get_current_user),
+):
+    if not current_user or not current_user.get("is_root"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    try:
+        chapter_filter.delete_pattern(pattern_id)
+        return {"success": True}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))

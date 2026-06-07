@@ -1,3 +1,4 @@
+# novelcast/parser/epub_parser.py
 import re
 from pathlib import Path
 from zipfile import ZipFile
@@ -6,26 +7,6 @@ from xml.etree import ElementTree as ET
 from bs4 import BeautifulSoup
 
 from novelcast.parser.base import BaseParser, Story
-
-DEFAULT_PATTERNS: list[str] = [
-    r"\bchapter\s*:?\s*\d+",       # Chapter 1 / Chapter: 1 / Chapter 930
-    r"\bchapter\s*\?+",            # Chapter ???
-    r"\bch\.?\s*\d+",              # Ch. 42 / Ch42
-    r"^\[?\d+\.\d+",               # 1.1 / 3.10 / [1.1]
-    r"^\[?\d+\s*[-–—‑−]",          # 1 - / 1 – / 1 — / 1 ‑ / 1 − (all dash variants)
-    r"^\[?\d+\.",                   # 1. Aine ~ Garden / [1. ...]
-    r"\bpart\s*\d+",               # Part 1 / Part 9 (3.10)
-    r"\bpart\s+[ivxlcdm]+\b",      # Part IV (Roman numerals)
-    r"\bprologue\b",               # Prologue / The Prologue
-    r"\bepilogue\b",               # Epilogue
-    r"\binterlude\b",              # Interlude / Bestiary Interlude : Hydra
-    r"\bafterword\b",              # Afterword
-    r"\bglossary\b",               # Glossary
-    r"\bappendix\b",               # Appendix
-    r"\bcover\b",                  # Cover page
-    r"\bby\s+\w+",                 # "Azarinth Healer by Rhaegar"
-    r"\w.*\s+\d+\s*[-–—‑−]",       # "In Search of Harmony 26 - ..." (all dash variants)
-]
 
 
 def _compile(patterns: list[str]) -> list[re.Pattern]:
@@ -40,12 +21,12 @@ def _is_chapter(title: str, compiled: list[re.Pattern]) -> bool:
 
 
 class EpubParser(BaseParser):
-    def __init__(self, extra_patterns: list[str] | None = None):
-        self._patterns = _compile(DEFAULT_PATTERNS + (extra_patterns or []))
-
-    def set_extra_patterns(self, patterns: list[str]) -> None:
-        """Hot-reload patterns (e.g. after a DB query returns user-defined ones)."""
-        self._patterns = _compile(DEFAULT_PATTERNS + patterns)
+    def __init__(self, patterns: list[str] | None = None):
+        self._patterns = _compile(patterns or [])
+        
+    def set_patterns(self, patterns: list[str]) -> None:
+        """Update patterns (e.g., after DB reload)."""
+        self._patterns = _compile(patterns)
 
     def parse(self, data: dict) -> Story:
         epub_path = Path(data["file_path"])
@@ -186,16 +167,16 @@ class EpubParser(BaseParser):
         return title, content
 
     def _parse_chapter_number(self, title: str) -> int | None:
-        import re
-
         if not title:
             return None
 
-        match = re.search(r"chapter\s*#?\s*(\d+)", title, re.IGNORECASE)
-        if match:
-            try:
-                return int(match.group(1))
-            except ValueError:
-                return None
+        # Try to extract a number from any of the chapter patterns
+        for compiled_pattern in self._patterns:
+            match = compiled_pattern.search(title)
+            if match and match.groups():
+                try:
+                    return int(match.group(1))
+                except (IndexError, ValueError):
+                    pass
 
         return None

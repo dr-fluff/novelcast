@@ -1,7 +1,7 @@
 # Roadmap
 
 ## 🔴 Critical
-- [ ] Check file extracktion from epub
+- [x] Check file extracktion from epub
 - [ ] Logfile is not creating new files
 - [ ] When pressing chapter and going back it is marked as read even thow user haven gon to the end of chapter
 - [ ] Update covers if new one is avalebal but perfer user set metadata

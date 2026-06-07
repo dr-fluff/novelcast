@@ -270,3 +270,25 @@ SETTINGS = {
         },
     },
 }
+
+
+DEFAULT_CHAPTER_PATTERNS: dict[str, str] = {
+    r"^(\d+)\s*[-–—‑−]": "Leading number (53 —, 102 —)",
+    r"\bchapter\s*:?\s*(\d+)": "Chapter format (Chapter 1, Chapter: 1)",
+    r"\bchapter\s*\?+": "Unknown chapter (Chapter ???)",
+    r"\bch\.?\s*(\d+)": "Short form (Ch. 42, Ch42)",
+    r"^\[?(\d+\.\d+)": "Decimal format (1.1, 3.10, [1.1])",
+    r"^\[?(\d+)\.": "Simple numbering (1. Title, [1. Title])",
+    r"\bpart\s*(\d+)": "Part numbering (Part 1, Part 9)",
+    r"\bpart\s+[ivxlcdm]+\b": "Roman numeral parts (Part IV)",
+    r"\bprologue\b": "Prologue",
+    r"\bepilogue\b": "Epilogue",
+    r"\binterlude\b": "Interlude",
+    r"\bafterword\b": "Afterword",
+    r"\bglossary\b": "Glossary",
+    r"\bappendix\b": "Appendix",
+    r"\bcover\b": "Cover page",
+    r"\bby\s+\w+": "Author attribution",
+    r"\w.*\s+(\d+)\s*[-–—‑−]": "Text with trailing number (In Search of Harmony 26 —)",
+}
+ 
