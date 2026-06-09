@@ -23,6 +23,30 @@ SETTINGS = {
             "default": "",
             "label": "Password",
         },
+        "access_token": {
+            "type": "secret",
+            "description": "OAuth access token",
+            "default": "",
+            "label": "Access Token",
+        },
+        "refresh_token": {
+            "type": "secret",
+            "description": "OAuth refresh token",
+            "default": "",
+            "label": "Refresh Token",
+        },
+        "token_expiry": {
+            "type": "string",
+            "description": "Token expiry timestamp (ISO 8601)",
+            "default": "",
+            "label": "Token Expiry",
+        },
+        "creator_id": {
+            "type": "string",
+            "description": "Your Patreon creator ID",
+            "default": "",
+            "label": "Creator ID",
+        },
     },
     "fanficfare": {
         "config_path": {
@@ -290,5 +314,5 @@ DEFAULT_CHAPTER_PATTERNS: dict[str, str] = {
     r"\bcover\b": "Cover page",
     r"\bby\s+\w+": "Author attribution",
     r"\w.*\s+(\d+)\s*[-–—‑−]": "Text with trailing number (In Search of Harmony 26 —)",
+    r"^\s*ch\.?\s*(\d+)\b(?:\s*[-–—-−]?\s*.*)?$": "CH format (CH7, CH13- Title, CH1 Prologue)",
 }
- 

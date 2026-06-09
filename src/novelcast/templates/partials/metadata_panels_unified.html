@@ -1,0 +1,232 @@
+{# novelcast/templates/partials/metadata_panels_unified.html #}
+{# 
+  Unified Metadata & Author Panels
+  Usage: {% include "partials/metadata_panels_unified.html" %}
+#}
+
+{# ════════════════════════════════════════════════════════════════════
+    METADATA PANEL
+    ════════════════════════════════════════════════════════════════════ #}
+
+<div class="unified-panel-backdrop" id="metaPanel-backdrop" onclick="UnifiedPanel.close('metaPanel')"></div>
+
+<div class="unified-panel" id="metaPanel" role="dialog" aria-label="Edit metadata" aria-hidden="true">
+
+    <div class="unified-panel-header">
+        <h2 class="unified-panel-title">
+            <i class="fa-solid fa-pen-to-square"></i> Edit Metadata
+        </h2>
+        <button class="unified-panel-close" onclick="UnifiedPanel.close('metaPanel')" aria-label="Close">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </div>
+
+    <div class="unified-panel-tabs">
+        <button class="unified-panel-tab active" onclick="UnifiedPanel.switchTab('metaPanel', 'tabDetails', this)">Details</button>
+        <button class="unified-panel-tab" onclick="UnifiedPanel.switchTab('metaPanel', 'tabCover', this)">Cover</button>
+        <button class="unified-panel-tab" onclick="UnifiedPanel.switchTab('metaPanel', 'tabTools', this)">Tools</button>
+    </div>
+
+    <div class="unified-panel-body">
+
+        {# ── Details tab ──────────────────────────────────────────────── #}
+        <div class="unified-panel-content" id="tabDetails-metaPanel">
+
+            <div class="form-row-two">
+                <div class="form-group">
+                    <label for="metaTitle-metaPanel">Title</label>
+                    <input type="text" id="metaTitle-metaPanel" placeholder="Story title" class="form-input" />
+                </div>
+                <div class="form-group">
+                    <label for="metaSubtitle-metaPanel">Subtitle</label>
+                    <input type="text" id="metaSubtitle-metaPanel" placeholder="Subtitle" class="form-input" />
+                </div>
+            </div>
+
+            <div class="form-row-two">
+                <div class="form-group">
+                    <label for="metaAuthorName-metaPanel">Author(s)</label>
+                    <input type="text" id="metaAuthorName-metaPanel" placeholder="Author name" class="form-input" />
+                </div>
+                <div class="form-group">
+                    <label for="metaPublishYear-metaPanel">Publish Year</label>
+                    <input type="text" id="metaPublishYear-metaPanel" placeholder="2024" class="form-input" />
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Series</label>
+                <div class="tags-input" id="metaSeriesWrap-metaPanel">
+                    <input type="text" class="tag-entry" id="metaSeriesInput-metaPanel" placeholder="Add series"
+                        onkeydown="if (event.key === 'Enter' || event.key === ',') { event.preventDefault(); this.parentNode.querySelector('.tag-add').click(); }" />
+                    <button type="button" class="tag-add" aria-label="Add series">
+                        <i class="fa-solid fa-plus"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="metaDescription-metaPanel">Description</label>
+                <div class="description-toolbar">
+                    <button type="button" class="toolbar-btn" title="Bold"><b>B</b></button>
+                    <button type="button" class="toolbar-btn" title="Italic"><i>I</i></button>
+                    <button type="button" class="toolbar-btn" title="Strikethrough"><s>S</s></button>
+                    <button type="button" class="toolbar-btn" title="Link"><i class="fa-solid fa-link"></i></button>
+                    <div class="toolbar-sep"></div>
+                    <button type="button" class="toolbar-btn" title="Bullet list"><i class="fa-solid fa-list-ul"></i></button>
+                    <button type="button" class="toolbar-btn" title="Ordered list"><i class="fa-solid fa-list-ol"></i></button>
+                </div>
+                <textarea id="metaDescription-metaPanel" rows="5" placeholder="Story description…" class="form-input"></textarea>
+            </div>
+
+            <div class="form-row-two">
+                <div class="form-group">
+                    <label>Genres</label>
+                    <div class="tags-input" id="metaGenresWrap-metaPanel">
+                        <input type="text" class="tag-entry" id="metaGenresInput-metaPanel" placeholder="Add genre"
+                            onkeydown="if (event.key === 'Enter' || event.key === ',') { event.preventDefault(); this.parentNode.querySelector('.tag-add').click(); }" />
+                        <button type="button" class="tag-add" aria-label="Add genre">
+                            <i class="fa-solid fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Tags</label>
+                    <div class="tags-input" id="metaTagsWrap-metaPanel">
+                        <input type="text" class="tag-entry" id="metaTagsInput-metaPanel" placeholder="Add tag"
+                            onkeydown="if (event.key === 'Enter' || event.key === ',') { event.preventDefault(); this.parentNode.querySelector('.tag-add').click(); }" />
+                        <button type="button" class="tag-add" aria-label="Add tag">
+                            <i class="fa-solid fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="metaLanguage-metaPanel">Language</label>
+                <input type="text" id="metaLanguage-metaPanel" placeholder="English" class="form-input" />
+            </div>
+
+            <div class="form-group">
+                <label for="metaSourceUrl-metaPanel">Source URL</label>
+                <input type="url" id="metaSourceUrl-metaPanel" placeholder="https://…" class="form-input" />
+            </div>
+
+        </div>
+
+        {# ── Cover tab ────────────────────────────────────────────────── #}
+        <div class="unified-panel-content" id="tabCover-metaPanel" style="display:none">
+            <div class="cover-upload">
+                <div class="cover-preview">
+                    <i class="fa-solid fa-image"></i>
+                    <p>No cover image</p>
+                </div>
+                <div class="cover-actions">
+                    <button class="btn btn-outline"><i class="fa-solid fa-upload"></i> Upload image</button>
+                    <button class="btn btn-outline"><i class="fa-solid fa-link"></i> From URL</button>
+                </div>
+            </div>
+        </div>
+
+        {# ── Tools tab ────────────────────────────────────────────────── #}
+        <div class="unified-panel-content" id="tabTools-metaPanel" style="display:none">
+            <div class="form-group">
+                <div class="form-switch">
+                    <input type="checkbox" id="metaAutoUpdate-metaPanel" />
+                    <label for="metaAutoUpdate-metaPanel" style="margin:0">Auto-update story</label>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="unified-panel-footer">
+        <span class="unified-panel-status" id="status-metaPanel"></span>
+        <div class="unified-panel-actions">
+            <button class="btn btn-secondary" onclick="UnifiedPanel.close('metaPanel')">Cancel</button>
+            <button class="btn btn-primary" id="metaSaveBtn-metaPanel" onclick="UnifiedPanel.handleAction('metaPanel', 'save')">Save</button>
+        </div>
+    </div>
+
+</div>
+
+{# ════════════════════════════════════════════════════════════════════
+    AUTHOR PANEL
+    ════════════════════════════════════════════════════════════════════ #}
+
+<div class="unified-panel-backdrop" id="authorPanel-backdrop" onclick="UnifiedPanel.close('authorPanel')"></div>
+
+<div class="unified-panel" id="authorPanel" role="dialog" aria-label="Edit author" aria-hidden="true">
+
+    <div class="unified-panel-header">
+        <h2 class="unified-panel-title">
+            <i class="fa-solid fa-user-pen"></i> Edit Author
+        </h2>
+        <button class="unified-panel-close" onclick="UnifiedPanel.close('authorPanel')" aria-label="Close">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </div>
+
+    <div class="unified-panel-tabs">
+        <button class="unified-panel-tab active" onclick="UnifiedPanel.switchTab('authorPanel', 'tabAuthorBasic', this)">Basic Info</button>
+        <button class="unified-panel-tab" onclick="UnifiedPanel.switchTab('authorPanel', 'tabAuthorBio', this)">Biography</button>
+    </div>
+
+    <div class="unified-panel-body">
+
+        {# ── Basic Info tab ───────────────────────────────────────────── #}
+        <div class="unified-panel-content" id="tabAuthorBasic-authorPanel">
+            <div class="form-group">
+                <label for="authorName-authorPanel">Author Name</label>
+                <input type="text" id="authorName-authorPanel" placeholder="Full name" class="form-input" />
+            </div>
+        </div>
+
+        {# ── Biography tab ────────────────────────────────────────────── #}
+        <div class="unified-panel-content" id="tabAuthorBio-authorPanel" style="display:none">
+            <div class="form-group">
+                <label for="authorBio-authorPanel">Biography</label>
+                <textarea id="authorBio-authorPanel" rows="6" placeholder="Author bio and background…" class="form-input"></textarea>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="unified-panel-footer">
+        <span class="unified-panel-status" id="status-authorPanel"></span>
+        <div class="unified-panel-actions">
+            <button class="btn btn-secondary" onclick="UnifiedPanel.close('authorPanel')">Cancel</button>
+            <button class="btn btn-primary" id="authorSaveBtn-authorPanel" onclick="UnifiedPanel.handleAction('authorPanel', 'save')">Save</button>
+        </div>
+    </div>
+
+</div>
+
+<script>
+{# Attach tag handlers for metadata panel #}
+document.addEventListener('DOMContentLoaded', () => {
+    const panelId = 'metaPanel';
+    
+    ['metaSeriesWrap', 'metaGenresWrap', 'metaTagsWrap'].forEach(wrapperId => {
+        const wrap = document.getElementById(`${wrapperId}-${panelId}`);
+        if (!wrap) return;
+        
+        wrap.querySelector('.tag-add').addEventListener('click', () => {
+            const input = wrap.querySelector('.tag-entry');
+            if (!input.value.trim()) return;
+            
+            const value = input.value.trim();
+            const tag = document.createElement('span');
+            tag.className = 'tag';
+            tag.dataset.value = value;
+            tag.innerHTML = value + ' <button type="button" class="tag-remove"><i class="fa-solid fa-xmark"></i></button>';
+            tag.querySelector('.tag-remove').onclick = () => tag.remove();
+            
+            const addBtn = wrap.querySelector('.tag-add');
+            wrap.insertBefore(tag, addBtn);
+            input.value = '';
+            input.focus();
+        });
+    });
+});
+</script>

@@ -1,0 +1,197 @@
+{# novelcast/templates/partials/add_story_panel_unified.html #}
+{# 
+  Unified Add Story Panel
+  Usage: {% include "partials/add_story_panel_unified.html" %}
+#}
+
+<div class="unified-panel-backdrop" id="addStoryPanel-backdrop" onclick="UnifiedPanel.close('addStoryPanel')"></div>
+
+<div class="unified-panel" id="addStoryPanel" role="dialog" aria-label="Add new story" aria-hidden="true">
+
+    <div class="unified-panel-header">
+        <h2 class="unified-panel-title">
+            <i class="fa-solid fa-plus"></i> Add New Story
+        </h2>
+        <button class="unified-panel-close" onclick="UnifiedPanel.close('addStoryPanel')" aria-label="Close">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </div>
+
+    <div class="unified-panel-tabs">
+        <button class="unified-panel-tab active" onclick="UnifiedPanel.switchTab('addStoryPanel', 'addStoryTabUrl', this)">URL</button>
+        <button class="unified-panel-tab" onclick="UnifiedPanel.switchTab('addStoryPanel', 'addStoryTabMetadata', this)">Metadata</button>
+        <button class="unified-panel-tab" onclick="UnifiedPanel.switchTab('addStoryPanel', 'addStoryTabChapters', this)">Chapters</button>
+        <button class="unified-panel-tab" onclick="UnifiedPanel.switchTab('addStoryPanel', 'addStoryTabDownload', this)">Download</button>
+    </div>
+
+    <div class="unified-panel-body">
+
+        {# ── Tab 1: URL ──────────────────────────────────────────────── #}
+        <div class="unified-panel-content" id="addStoryTabUrl-addStoryPanel">
+            <div class="panel-section">
+                <h3>Enter Story URL</h3>
+                <div class="form-group">
+                    <label for="addStoryUrl-addStoryPanel">Story URL</label>
+                    <input type="url" id="addStoryUrl-addStoryPanel" placeholder="https://www.royalroad.com/fiction/12345/story-title" class="form-input" />
+                </div>
+                <p class="form-hint">Supported: RoyalRoad, ScribbleHub, FanFiction, and more</p>
+            </div>
+        </div>
+
+        {# ── Tab 2: Metadata ─────────────────────────────────────────── #}
+        <div class="unified-panel-content" id="addStoryTabMetadata-addStoryPanel" style="display:none">
+            <div class="panel-section">
+                <h3>Review & Edit Metadata</h3>
+                
+                <div class="form-row-two">
+                    <div class="form-group">
+                        <label for="addStoryTitle-addStoryPanel">Title</label>
+                        <input type="text" id="addStoryTitle-addStoryPanel" class="form-input" />
+                    </div>
+                    <div class="form-group">
+                        <label for="addStoryAuthor-addStoryPanel">Author</label>
+                        <input type="text" id="addStoryAuthor-addStoryPanel" class="form-input" />
+                    </div>
+                </div>
+
+                <div class="form-row-two">
+                    <div class="form-group">
+                        <label for="addStorySubtitle-addStoryPanel">Subtitle</label>
+                        <input type="text" id="addStorySubtitle-addStoryPanel" class="form-input" />
+                    </div>
+                    <div class="form-group">
+                        <label for="addStoryPublishYear-addStoryPanel">Publish Year</label>
+                        <input type="number" id="addStoryPublishYear-addStoryPanel" class="form-input" />
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="addStoryDescription-addStoryPanel">Description</label>
+                    <textarea id="addStoryDescription-addStoryPanel" rows="4" class="form-input"></textarea>
+                </div>
+
+                <div class="form-row-two">
+                    <div class="form-group">
+                        <label>Genres</label>
+                        <div class="tags-input" id="addStoryGenresWrap-addStoryPanel">
+                            <input type="text" class="tag-entry" id="addStoryGenresInput-addStoryPanel" placeholder="Add genre" 
+                                onkeydown="if (event.key === 'Enter' || event.key === ',') { event.preventDefault(); this.parentNode.querySelector('.tag-add').click(); }" />
+                            <button type="button" class="tag-add" aria-label="Add genre">
+                                <i class="fa-solid fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Tags</label>
+                        <div class="tags-input" id="addStoryTagsWrap-addStoryPanel">
+                            <input type="text" class="tag-entry" id="addStoryTagsInput-addStoryPanel" placeholder="Add tag"
+                                onkeydown="if (event.key === 'Enter' || event.key === ',') { event.preventDefault(); this.parentNode.querySelector('.tag-add').click(); }" />
+                            <button type="button" class="tag-add" aria-label="Add tag">
+                                <i class="fa-solid fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Series</label>
+                    <div class="tags-input" id="addStorySeriesWrap-addStoryPanel">
+                        <input type="text" class="tag-entry" id="addStorySeriesInput-addStoryPanel" placeholder="Add series"
+                            onkeydown="if (event.key === 'Enter' || event.key === ',') { event.preventDefault(); this.parentNode.querySelector('.tag-add').click(); }" />
+                        <button type="button" class="tag-add" aria-label="Add series">
+                            <i class="fa-solid fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-row-two">
+                    <div class="form-group">
+                        <label for="addStoryLanguage-addStoryPanel">Language</label>
+                        <input type="text" id="addStoryLanguage-addStoryPanel" placeholder="English" class="form-input" />
+                    </div>
+                    <div class="form-info-box">
+                        <p class="form-info-text">
+                            <i class="fa-solid fa-book"></i>
+                            <span id="chapterCountValue-addStoryPanel">—</span> chapters available
+                        </p>
+                    </div>
+                </div>
+
+                <div class="form-checkbox-label">
+                    <input type="checkbox" id="addStoryAutoUpdate-addStoryPanel" />
+                    <span>Enable auto-update for this story</span>
+                </div>
+            </div>
+        </div>
+
+        {# ── Tab 3: Chapters ─────────────────────────────────────────── #}
+        <div class="unified-panel-content" id="addStoryTabChapters-addStoryPanel" style="display:none">
+            <div class="panel-section">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem">
+                    <h3 style="margin:0">Select Chapters (<span id="chapterSelectCount-addStoryPanel">0</span>/<span id="chapterTotalCount-addStoryPanel">0</span>)</h3>
+                    <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+                        <button class="btn btn-secondary" style="padding:0.3rem 0.7rem;font-size:0.8rem" onclick="UnifiedPanel.selectAllChapters('addStoryPanel')">Select All</button>
+                        <button class="btn btn-secondary" style="padding:0.3rem 0.7rem;font-size:0.8rem" onclick="UnifiedPanel.deselectAllChapters('addStoryPanel')">Deselect All</button>
+                    </div>
+                </div>
+                
+                <div id="chaptersList-addStoryPanel" style="border: 1px solid rgba(0,0,0,0.15); border-radius: 7px; max-height: 400px; overflow-y: auto; display: flex; flex-direction: column;">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+        </div>
+
+        {# ── Tab 4: Download ─────────────────────────────────────────── #}
+        <div class="unified-panel-content" id="addStoryTabDownload-addStoryPanel" style="display:none">
+            <div class="panel-center">
+                <i class="fa-solid fa-spinner fa-spin panel-spinner"></i>
+                <h3>Downloading and Processing</h3>
+                <p id="addStoryProgressText-addStoryPanel">Preparing story files…</p>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="addStoryProgressFill-addStoryPanel"></div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="unified-panel-footer">
+        <span class="unified-panel-status" id="status-addStoryPanel"></span>
+        <div class="unified-panel-actions">
+            <button class="btn btn-secondary" onclick="UnifiedPanel.close('addStoryPanel')">Cancel</button>
+            <button class="btn btn-primary" id="addStoryActionBtn-addStoryPanel" onclick="UnifiedPanel.handleAction('addStoryPanel', 'previewMetadata')">
+                <i class="fa-solid fa-search"></i> Preview Metadata
+            </button>
+        </div>
+    </div>
+
+</div>
+
+<script>
+{# Attach tag handlers #}
+document.addEventListener('DOMContentLoaded', () => {
+    const panelId = 'addStoryPanel';
+    
+    ['addStoryGenresWrap', 'addStoryTagsWrap', 'addStorySeriesWrap'].forEach(wrapperId => {
+        const wrap = document.getElementById(`${wrapperId}-${panelId}`);
+        if (!wrap) return;
+        
+        wrap.querySelector('.tag-add').addEventListener('click', () => {
+            const input = wrap.querySelector('.tag-entry');
+            if (!input.value.trim()) return;
+            
+            const value = input.value.trim();
+            const tag = document.createElement('span');
+            tag.className = 'tag';
+            tag.dataset.value = value;
+            tag.innerHTML = value + ' <button type="button" class="tag-remove"><i class="fa-solid fa-xmark"></i></button>';
+            tag.querySelector('.tag-remove').onclick = () => tag.remove();
+            
+            const addBtn = wrap.querySelector('.tag-add');
+            wrap.insertBefore(tag, addBtn);
+            input.value = '';
+            input.focus();
+        });
+    });
+});
+</script>

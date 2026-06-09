@@ -25,62 +25,58 @@
     </div>
 
     {% if results %}
-        <p class="result-count">{{ results|length }} result{{ 's' if results|length != 1 }}</p>
-        <div class="results-grid">
-            {% for r in results %}
-            <a href="#" class="result-card" data-url="{{ r.url }}" data-title="{{ r.title }}" data-author="{{ r.author or '' }}">
-                <div class="result-card__cover">
-                    {% if r.cover_url %}
-                        <img src="{{ r.cover_url }}" alt="{{ r.title }}" loading="lazy" />
-                    {% else %}
-                        <div class="result-card__cover-placeholder">
-                            <i class="fa-solid fa-{% if r.kind == 'author' %}user{% else %}book{% endif %}"></i>
-                        </div>
-                    {% endif %}
-                    <span class="result-card__site-badge site-badge--{{ r.site }}">{{ r.site }}</span>
-                </div>
-                <div class="result-card__body">
-                    <h3 class="result-card__title">{{ r.title }}</h3>
-                    {% if r.author %}
-                        <p class="result-card__author">{{ r.author }}</p>
-                    {% endif %}
-                    {% if r.description %}
-                        <p class="result-card__desc">{{ r.description }}</p>
-                    {% endif %}
-                </div>
-            </a>
-            {% endfor %}
-        </div>
-
-    {% else %}
-        <p class="search-empty">No results found for "<strong>{{ parsed.identifier }}</strong>".</p>
-    {% endif %}
+    <p class="result-count">{{ results|length }} result{{ 's' if results|length != 1 }}</p>
+    <div class="results-grid">
+        {% for r in results %}
+        <a href="#" class="result-card" data-url="{{ r.url }}" data-title="{{ r.title }}" data-author="{{ r.author or '' }}">
+            <div class="result-card__cover">
+                {% if r.cover_url %}
+                    <img src="{{ r.cover_url }}" alt="{{ r.title }}" loading="lazy" />
+                {% else %}
+                    <div class="result-card__cover-placeholder">
+                        <i class="fa-solid fa-{% if r.kind == 'author' %}user{% else %}book{% endif %}"></i>
+                    </div>
+                {% endif %}
+                <span class="result-card__site-badge site-badge--{{ r.site }}">{{ r.site }}</span>
+            </div>
+            <div class="result-card__body">
+                <h3 class="result-card__title">{{ r.title }}</h3>
+                {% if r.author %}
+                    <p class="result-card__author">{{ r.author }}</p>
+                {% endif %}
+                {% if r.description %}
+                    <p class="result-card__desc">{{ r.description }}</p>
+                {% endif %}
+            </div>
+        </a>
+        {% endfor %}
+    </div>
 
     <script>
         (function () {
-
             document.querySelectorAll(".result-card").forEach(card => {
-
                 card.addEventListener("click", e => {
                     e.preventDefault();
 
-                    if (!window.openAddStoryPanelWithLoading) {
-                        console.error(
-                            "[AddStory] openAddStoryPanelWithLoading not found"
-                        );
-                        return;
-                    }
+                    const url = card.dataset.url;
+                    const title = card.dataset.title;
+                    const author = card.dataset.author;
 
-                    window.openAddStoryPanelWithLoading(
-                        card.dataset.url,
-                        card.dataset.title,
-                        card.dataset.author
-                    );
+                    // Open panel and set URL
+                    UnifiedPanel.open('add_story', 'addStoryPanel');
+                    
+                    // Populate and auto-preview
+                    setTimeout(() => {
+                        document.getElementById('addStoryUrl-addStoryPanel').value = url;
+                        UnifiedPanel.previewMetadata('addStoryPanel');
+                    }, 100);
                 });
-
             });
-
         })();
     </script>
+
+{% else %}
+    <p class="search-empty">No results found for "<strong>{{ parsed.identifier }}</strong>".</p>
+{% endif %}
 
 {% endif %}

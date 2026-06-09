@@ -114,65 +114,10 @@ class PaginatedEReader {
   // PAGINATION ENGINE
   // ======================
 
-  paginate() {
-    const container = this.el.container;
-    if (!container) return;
-
-    if (!this.state.originalContent) {
-      this.state.originalContent = container.innerHTML;
-    }
-
-    this.state.pages = [];
-
-    const temp = document.createElement('div');
-    temp.innerHTML = this.state.originalContent;
-
-    const elements = [...temp.querySelectorAll('p, blockquote, ul, ol, h2, h3')];
-
-    const page = this.createPageMeasurer(container);
-    const maxHeight = this.getAvailableHeight();
-
-    const flush = () => {
-      if (page.innerHTML.trim()) {
-        this.state.pages.push(page.innerHTML);
-        page.innerHTML = '';
-      }
-    };
-
-    for (const elem of elements) {
-      const clone = elem.cloneNode(true);
-      page.appendChild(clone);
-
-      // Check if it fits
-      if (page.scrollHeight <= maxHeight) {
-        // ✅ Fits! Keep it on this page
-        continue;
-      }
-
-      // ❌ Doesn't fit - remove it
-      page.removeChild(clone);
-
-      // If page is empty, force add this element (prevent infinite loop)
-      if (!page.innerHTML.trim()) {
-        page.appendChild(clone);
-        console.warn('⚠️ Element larger than page height:', elem.tagName);
-      }
-
-      // Flush current page
-      flush();
-
-      // If element didn't fit and we added it to empty page, continue to next
-      if (!page.innerHTML.trim()) {
-        page.appendChild(clone);
-      }
-    }
-
-    flush();
-    page.remove();
-
-    this.state.totalPages = Math.max(1, this.state.pages.length);
-
-    console.log('✅ Pagination complete:', this.state.totalPages, 'pages');
+  getAvailableHeight() {
+    const headerH = this.el.header?.offsetHeight || 70;
+    // Use a smaller, more predictable buffer
+    return window.innerHeight - headerH - 120;
   }
 
   createPageMeasurer(container) {
@@ -209,9 +154,175 @@ class PaginatedEReader {
     return page;
   }
 
-  getAvailableHeight() {
-    const headerH = this.el.header?.offsetHeight || 70;
-    return window.innerHeight - headerH - 180;
+  /**
+   * Split a paragraph into chunks if it's too long to fit on one page.
+   * Tries to break at sentence boundaries to keep meaning intact.
+   */
+  splitLongParagraph(elem, page, maxHeight) {
+    const html = elem.innerHTML;
+    
+    // Try splitting by sentences (. ! ?)
+    const sentences = html.match(/[^.!?]*[.!?]+/g) || [html];
+    
+    if (sentences.length === 1) {
+      // Can't split by sentences, return as-is
+      return [elem];
+    }
+
+    const chunks = [];
+    let current = '';
+
+    for (const sentence of sentences) {
+      const test = current + sentence;
+      const clone = elem.cloneNode(false);
+      clone.innerHTML = test;
+      page.innerHTML = '';
+      page.appendChild(clone);
+
+      if (page.scrollHeight <= maxHeight) {
+        current = test;
+      } else {
+        // Current chunk is full, start a new one
+        if (current.trim()) {
+          const fullElem = elem.cloneNode(false);
+          fullElem.innerHTML = current;
+          chunks.push(fullElem);
+        }
+        current = sentence;
+      }
+    }
+
+    // Add remaining content
+    if (current.trim()) {
+      const fullElem = elem.cloneNode(false);
+      fullElem.innerHTML = current;
+      chunks.push(fullElem);
+    }
+
+    return chunks.length > 0 ? chunks : [elem];
+  }
+
+  /**
+   * Split a paragraph by word boundaries if it's too long for a page.
+   * Returns an array of cloned paragraphs with split text content.
+   */
+  splitParagraphByWords(elem, page, maxHeight) {
+    const text = elem.textContent;
+    const words = text.split(' ');
+    
+    const paragraphs = [];
+    let currentText = '';
+
+    for (const word of words) {
+      const testText = currentText ? currentText + ' ' + word : word;
+      const testClone = elem.cloneNode(false);
+      testClone.textContent = testText;
+
+      // Test if this text fits
+      page.innerHTML = '';
+      page.appendChild(testClone);
+
+      if (page.scrollHeight <= maxHeight) {
+        // ✅ Still fits, keep accumulating
+        currentText = testText;
+      } else {
+        // ❌ Doesn't fit - save current chunk and start new one
+        if (currentText) {
+          const newP = elem.cloneNode(false);
+          newP.textContent = currentText;
+          paragraphs.push(newP);
+        }
+        currentText = word;
+      }
+    }
+
+    // Add remaining text
+    if (currentText) {
+      const newP = elem.cloneNode(false);
+      newP.textContent = currentText;
+      paragraphs.push(newP);
+    }
+
+    return paragraphs.length > 0 ? paragraphs : [elem];
+  }
+
+  paginate() {
+    const container = this.el.container;
+    if (!container) return;
+
+    if (!this.state.originalContent) {
+      this.state.originalContent = container.innerHTML;
+    }
+
+    this.state.pages = [];
+
+    const temp = document.createElement('div');
+    temp.innerHTML = this.state.originalContent;
+
+    const elements = [...temp.querySelectorAll('p, blockquote, ul, ol, h2, h3')];
+
+    const page = this.createPageMeasurer(container);
+    const maxHeight = this.getAvailableHeight();
+
+    const flush = () => {
+      if (page.innerHTML.trim()) {
+        this.state.pages.push(page.innerHTML);
+        page.innerHTML = '';
+      }
+    };
+
+    for (const elem of elements) {
+      const clone = elem.cloneNode(true);
+      page.appendChild(clone);
+
+      // Check if it fits on current page
+      if (page.scrollHeight <= maxHeight) {
+        // ✅ Fits! Keep it, continue to next element
+        continue;
+      }
+
+      // ❌ Doesn't fit on current page
+      page.removeChild(clone);
+
+      // Save current page if it has content
+      if (page.innerHTML.trim()) {
+        flush();
+      }
+
+      // Try to add element to fresh page
+      page.appendChild(clone);
+
+      if (page.scrollHeight <= maxHeight) {
+        // ✅ Fits on fresh page! Keep it
+        continue;
+      }
+
+      // ❌ Element too big even for fresh page - split it by words
+      page.removeChild(clone);
+
+      const splitParagraphs = this.splitParagraphByWords(elem, page, maxHeight);
+
+      for (const p of splitParagraphs) {
+        page.appendChild(p.cloneNode(true));
+
+        // Check if this split paragraph fits
+        if (page.scrollHeight > maxHeight) {
+          // Doesn't fit - remove it and flush current page
+          page.removeChild(page.lastChild);
+          flush();
+          // Add it to new page
+          page.appendChild(p.cloneNode(true));
+        }
+      }
+    }
+
+    // Save final page
+    flush();
+    page.remove();
+
+    this.state.totalPages = Math.max(1, this.state.pages.length);
+
+    console.log('✅ Pagination complete:', this.state.totalPages, 'pages');
   }
 
   // ======================
@@ -243,7 +354,6 @@ class PaginatedEReader {
   // ======================
   // NAVIGATION
   // ======================
-  
 
   nextPage = () => {
     const { currentPage, totalPages, nextChapterId, storyId } = this.state;
@@ -253,7 +363,7 @@ class PaginatedEReader {
       this.render(currentPage + 1);
     } else if (cleanNextChapterId) {
       window.location.href = `/chapter?story_id=${storyId}&chapter_id=${cleanNextChapterId}`;
-    }else {
+    } else {
       window.location.href = `/story?story_id=${storyId}`;
     }
   };
@@ -265,7 +375,7 @@ class PaginatedEReader {
       this.render(currentPage - 1);
     } else if (cleanPrevChapterId) {
       window.location.href = `/chapter?story_id=${storyId}&chapter_id=${cleanPrevChapterId}&lastPage=1`;
-    }else {
+    } else {
       window.location.href = `/story?story_id=${storyId}`;
     }
   };

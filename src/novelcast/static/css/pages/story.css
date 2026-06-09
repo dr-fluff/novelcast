@@ -206,6 +206,7 @@
     color: var(--text, #0f172a);
     text-decoration: none;
     border-radius: 8px;
+    width: 100%;
     transition: background 0.12s ease;
 }
 

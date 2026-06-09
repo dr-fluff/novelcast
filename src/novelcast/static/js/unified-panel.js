@@ -1,0 +1,681 @@
+// novelcast/static/js/unified-panel.js
+// Handles: add_story, metadata, author panels with config-driven behavior
+
+const UnifiedPanel = (() => {
+    "use strict";
+
+    let panelStates = {}; // Track state per panel ID
+    let handlers = {}; // Panel-type-specific handlers
+
+    const $ = (id) => document.getElementById(id);
+    const log = (type, ...args) => console.log(`[Panel:${type}]`, ...args);
+    const err = (type, ...args) => console.error(`[Panel:${type}]`, ...args);
+
+    // ─────────────────────────────────────────────────────────────────
+    // PANEL STATE MANAGEMENT
+    // ─────────────────────────────────────────────────────────────────
+
+    function getState(panelId) {
+        if (!panelStates[panelId]) {
+            panelStates[panelId] = { isLoading: false, panelType: null };
+        }
+        return panelStates[panelId];
+    }
+
+    function setState(panelId, updates) {
+        Object.assign(getState(panelId), updates);
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // CORE PANEL OPERATIONS
+    // ─────────────────────────────────────────────────────────────────
+
+    function setOpen(panelId, open) {
+        const panel = $(`${panelId}`);
+        const backdrop = $(`${panelId}-backdrop`);
+
+        if (!panel || !backdrop) {
+            console.warn(`Panel or backdrop not found for ${panelId}`);
+            return;
+        }
+
+        panel.classList.toggle("open", open);
+        backdrop.classList.toggle("open", open);
+        panel.setAttribute("aria-hidden", open ? "false" : "true");
+        document.body.style.overflow = open ? "hidden" : "";
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // TAB SWITCHING
+    // ─────────────────────────────────────────────────────────────────
+
+    function switchTab(panelId, tabId, tabButton) {
+        const panel = $(panelId);
+        if (!panel) return;
+
+        // Deactivate all tabs and hide all content
+        panel.querySelectorAll(".unified-panel-tab").forEach((t) => {
+            t.classList.remove("active");
+        });
+        panel.querySelectorAll(".unified-panel-content").forEach((c) => {
+            c.style.display = "none";
+        });
+
+        // Activate clicked tab and show content
+        if (tabButton) tabButton.classList.add("active");
+        const contentEl = $(`${tabId}-${panelId}`);
+        if (contentEl) contentEl.style.display = "";
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // TAG HELPERS
+    // ─────────────────────────────────────────────────────────────────
+
+    function getTagValues(containerId, panelId) {
+        const wrap = $(`${containerId}-${panelId}`);
+        if (!wrap) return [];
+
+        return Array.from(wrap.querySelectorAll(".tag"))
+            .map((el) => el.dataset.value || el.textContent.split("\n")[0].trim())
+            .filter(Boolean);
+    }
+
+    function parseCommaList(raw) {
+        if (!raw) return [];
+        return String(raw)
+            .split(/,|;/)
+            .map((item) => item.trim())
+            .filter(Boolean);
+    }
+
+    function renderTagList(containerId, panelId, values) {
+        const container = $(`${containerId}-${panelId}`);
+        if (!container) return;
+        
+        // Remove existing tags
+        container.querySelectorAll(".tag").forEach((el) => el.remove());
+        
+        const addBtn = container.querySelector(".tag-add");
+        const list = Array.isArray(values) ? values : [];
+        
+        list.forEach((value) => {
+            const tag = document.createElement("span");
+            tag.className = "tag";
+            tag.dataset.value = value;
+            tag.innerHTML = value + ' <button type="button" class="tag-remove" aria-label="Remove"><i class="fa-solid fa-xmark"></i></button>';
+            
+            tag.querySelector(".tag-remove").onclick = () => tag.remove();
+            
+            if (addBtn) container.insertBefore(tag, addBtn);
+            else container.appendChild(tag);
+        });
+    }
+
+    function collectTagList(containerId, panelId) {
+        const container = $(`${containerId}-${panelId}`);
+        if (!container) return [];
+        
+        const values = new Set();
+        container.querySelectorAll(".tag").forEach((tag) => {
+            const value = (tag.dataset.value || "").trim();
+            if (value) values.add(value);
+        });
+
+        // Also collect from input
+        const input = container.querySelector(".tag-entry");
+        if (input) {
+            parseCommaList(input.value).forEach((value) => values.add(value));
+        }
+
+        return Array.from(values);
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // FORM HELPERS
+    // ─────────────────────────────────────────────────────────────────
+
+    function getVal(fieldId, panelId) {
+        const node = $(`${fieldId}-${panelId}`);
+        return node ? node.value.trim() : "";
+    }
+
+    function setVal(fieldId, panelId, value) {
+        const node = $(`${fieldId}-${panelId}`);
+        if (node) node.value = value || "";
+    }
+
+    function setStatus(panelId, msg, cls) {
+        const statusEl = $(`status-${panelId}`);
+        if (!statusEl) return;
+        statusEl.textContent = msg;
+        statusEl.className = "unified-panel-status" + (cls ? " " + cls : "");
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // SAFE JSON FETCH
+    // ─────────────────────────────────────────────────────────────────
+
+    async function fetchJSON(url, options = {}) {
+        const res = await fetch(url, options);
+        const text = await res.text();
+
+        if (!text) {
+            throw new Error("Empty response from server");
+        }
+
+        try {
+            return { ok: res.ok, data: JSON.parse(text), status: res.status };
+        } catch (e) {
+            console.error("Non-JSON response:", text);
+            throw new Error("Server did not return valid JSON");
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // PANEL TYPE: ADD_STORY
+    // ─────────────────────────────────────────────────────────────────
+
+    handlers.add_story = {
+        name: "add_story",
+        
+        open(panelId) {
+            setState(panelId, { panelType: "add_story", selectedChapters: [] });
+            setStatus(panelId, "", "");
+            setOpen(panelId, true);
+        },
+
+        close(panelId) {
+            setOpen(panelId, false);
+            setState(panelId, { selectedChapters: [] });
+        },
+
+        async previewMetadata(panelId) {
+            const state = getState(panelId);
+            if (state.isLoading) return;
+
+            const url = getVal("addStoryUrl", panelId);
+            if (!url) {
+                setStatus(panelId, "URL is required", "error");
+                return;
+            }
+
+            setState(panelId, { isLoading: true });
+            setStatus(panelId, "Previewing…", "");
+
+            try {
+                const result = await fetchJSON("/api/stories/preview", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ url }),
+                });
+
+                if (!result.ok) {
+                    throw new Error(result.data.detail || "Preview failed");
+                }
+
+                const data = result.data;
+                
+                // Populate fields
+                setVal("addStoryTitle", panelId, data.title || "");
+                setVal("addStoryAuthor", panelId, data.author || "");
+                setVal("addStorySubtitle", panelId, data.subtitle || "");
+                setVal("addStoryDescription", panelId, data.description || "");
+                setVal("addStoryPublishYear", panelId, data.publish_year || "");
+                setVal("addStoryLanguage", panelId, data.language || "");
+
+                // Update chapter count
+                const countEl = $(
+                    `chapterCountValue-${panelId}`
+                );
+                if (countEl) countEl.textContent = data.chapter_count ?? "—";
+
+                // Display chapters
+                if (data.chapters && data.chapters.length > 0) {
+                    this.displayChapters(panelId, data.chapters);
+                }
+
+                // Switch to metadata tab
+                const tabs = $(`${panelId}`).querySelectorAll(
+                    ".unified-panel-tab"
+                );
+                if (tabs[1]) this.switchTabByIndex(panelId, 1);
+
+                setStatus(panelId, "", "");
+            } catch (e) {
+                err("add_story", e);
+                setStatus(panelId, e.message, "error");
+            } finally {
+                setState(panelId, { isLoading: false });
+            }
+        },
+
+        displayChapters(panelId, chapters) {
+            const list = $(`chaptersList-${panelId}`);
+            if (!list) return;
+
+            list.innerHTML = chapters
+                .map(
+                    (ch, idx) => `
+                <div class="chapter-item">
+                    <input 
+                        type="checkbox" 
+                        id="ch-${idx}-${panelId}"
+                        data-chapter-number="${ch.number}"
+                        checked
+                        onchange="UnifiedPanel.updateChapterSelection('${panelId}')"
+                    />
+                    <label for="ch-${idx}-${panelId}">
+                        <span class="chapter-number">Chapter ${ch.number}</span>
+                        <span class="chapter-title">${ch.title || "(no title)"}</span>
+                    </label>
+                </div>
+            `
+                )
+                .join("");
+
+            const countEl = $(`chapterTotalCount-${panelId}`);
+            if (countEl) countEl.textContent = chapters.length;
+            
+            this.updateChapterSelection(panelId);
+        },
+
+        updateChapterSelection(panelId) {
+            const list = $(`chaptersList-${panelId}`);
+            if (!list) return;
+
+            const checkboxes = list.querySelectorAll('input[type="checkbox"]');
+            const selected = Array.from(checkboxes)
+                .filter((cb) => cb.checked)
+                .map((cb) => parseInt(cb.dataset.chapterNumber));
+
+            setState(panelId, { selectedChapters: selected });
+
+            const countEl = $(`chapterSelectCount-${panelId}`);
+            if (countEl) countEl.textContent = selected.length;
+        },
+
+        selectAllChapters(panelId) {
+            const list = $(`chaptersList-${panelId}`);
+            if (!list) return;
+            list.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+                cb.checked = true;
+            });
+            this.updateChapterSelection(panelId);
+        },
+
+        deselectAllChapters(panelId) {
+            const list = $(`chaptersList-${panelId}`);
+            if (!list) return;
+            list.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+                cb.checked = false;
+            });
+            this.updateChapterSelection(panelId);
+        },
+
+        switchTabByIndex(panelId, index) {
+            const panel = $(panelId);
+            const tabs = panel.querySelectorAll(".unified-panel-tab");
+            const contents = panel.querySelectorAll(".unified-panel-content");
+
+            tabs.forEach((t) => t.classList.remove("active"));
+            contents.forEach((c) => (c.style.display = "none"));
+
+            if (tabs[index]) tabs[index].classList.add("active");
+            if (contents[index]) contents[index].style.display = "";
+        },
+
+        async confirm(panelId) {
+            const state = getState(panelId);
+            if (state.isLoading) return;
+
+            setState(panelId, { isLoading: true });
+
+            try {
+                const payload = {
+                    url: getVal("addStoryUrl", panelId) || "",
+                    title: getVal("addStoryTitle", panelId) || "",
+                    author: getVal("addStoryAuthor", panelId) || "",
+                    subtitle: getVal("addStorySubtitle", panelId) || "",
+                    description: getVal("addStoryDescription", panelId) || "",
+                    publish_year: getVal("addStoryPublishYear", panelId)
+                        ? Number(getVal("addStoryPublishYear", panelId))
+                        : null,
+                    language: getVal("addStoryLanguage", panelId) || "",
+                    series: collectTagList("addStorySeriesWrap", panelId),
+                    genres: collectTagList("addStoryGenresWrap", panelId),
+                    tags: collectTagList("addStoryTagsWrap", panelId),
+                    auto_update: $(`addStoryAutoUpdate-${panelId}`)
+                        ?.checked || false,
+                    selected_chapters: state.selectedChapters.length > 0
+                        ? state.selectedChapters
+                        : null,
+                };
+
+                log("add_story", "Payload:", payload);
+
+                // Switch to download tab
+                this.switchTabByIndex(panelId, 3);
+
+                const result = await fetchJSON("/api/stories/add", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload),
+                });
+
+                if (!result.ok) {
+                    throw new Error(
+                        result.data.detail || "Failed to add story"
+                    );
+                }
+
+                const chapterInfo =
+                    state.selectedChapters.length > 0
+                        ? ` (${state.selectedChapters.length} chapters)`
+                        : " (all chapters)";
+
+                const progressText = $(
+                    `addStoryProgressText-${panelId}`
+                );
+                if (progressText) {
+                    progressText.textContent =
+                        "Story added successfully" + chapterInfo;
+                }
+                
+                const progressFill = $(
+                    `addStoryProgressFill-${panelId}`
+                );
+                if (progressFill) progressFill.style.width = "100%";
+
+                setTimeout(() => this.close(panelId), 1200);
+            } catch (e) {
+                err("add_story", e);
+                setStatus(panelId, e.message, "error");
+                // Back to chapters tab
+                this.switchTabByIndex(panelId, 2);
+            } finally {
+                setState(panelId, { isLoading: false });
+            }
+        },
+    };
+
+    // ─────────────────────────────────────────────────────────────────
+    // PANEL TYPE: METADATA
+    // ─────────────────────────────────────────────────────────────────
+
+    handlers.metadata = {
+        name: "metadata",
+        storyId: null,
+        authorId: null,
+
+        open(panelId, storyId) {
+            this.storyId = storyId;
+            setState(panelId, { panelType: "metadata" });
+            setStatus(panelId, "", "");
+            setOpen(panelId, true);
+            this.loadData(panelId);
+        },
+
+        close(panelId) {
+            setOpen(panelId, false);
+        },
+
+        async loadData(panelId) {
+            if (!this.storyId) return;
+
+            try {
+                const result = await fetchJSON(
+                    `/api/stories/${this.storyId}`
+                );
+                if (result.ok) {
+                    const st = result.data.story || {};
+                    setVal("metaTitle", panelId, st.title || "");
+                    setVal("metaSubtitle", panelId, st.subtitle || "");
+                    setVal("metaDescription", panelId, st.description || "");
+                    setVal("metaPublishYear", panelId, st.publish_year || "");
+                    setVal("metaLanguage", panelId, st.language || "");
+                    setVal("metaSourceUrl", panelId, st.source_url || "");
+                    const autoUpdateEl = $(
+                        `metaAutoUpdate-${panelId}`
+                    );
+                    if (autoUpdateEl)
+                        autoUpdateEl.checked = Boolean(st.auto_update);
+                    
+                    renderTagList(
+                        "metaSeriesWrap",
+                        panelId,
+                        st.series_list || parseCommaList(st.series)
+                    );
+                    renderTagList(
+                        "metaGenresWrap",
+                        panelId,
+                        st.genres_list || parseCommaList(st.genres)
+                    );
+                    renderTagList(
+                        "metaTagsWrap",
+                        panelId,
+                        st.tags_list || parseCommaList(st.tags)
+                    );
+                }
+            } catch (_) {}
+
+            // Load author
+            try {
+                const result = await fetchJSON(
+                    `/api/stories/${this.storyId}/authors`
+                );
+                if (result.ok) {
+                    const authors = result.data.authors || [];
+                    if (authors.length > 0) {
+                        const a = authors[0];
+                        this.authorId = a.id;
+                        setVal("metaAuthorName", panelId, a.name || "");
+                    }
+                }
+            } catch (_) {}
+        },
+
+        async save(panelId) {
+            const saveBtn = $(`metaSaveBtn-${panelId}`);
+            if (saveBtn) saveBtn.disabled = true;
+            setStatus(panelId, "Saving…", "");
+
+            try {
+                const title = getVal("metaTitle", panelId);
+                const authorName = getVal("metaAuthorName", panelId);
+                const sourceUrl = getVal("metaSourceUrl", panelId) || null;
+
+                if (!title) {
+                    throw new Error("Title is required");
+                }
+
+                const payload = {
+                    title,
+                    author: authorName || null,
+                    subtitle: getVal("metaSubtitle", panelId) || null,
+                    description: getVal("metaDescription", panelId) || null,
+                    publish_year: getVal("metaPublishYear", panelId)
+                        ? parseInt(getVal("metaPublishYear", panelId), 10)
+                        : null,
+                    language: getVal("metaLanguage", panelId) || null,
+                    series: collectTagList("metaSeriesWrap", panelId),
+                    genres: collectTagList("metaGenresWrap", panelId),
+                    tags: collectTagList("metaTagsWrap", panelId),
+                    source_url: sourceUrl,
+                    auto_update: $(
+                        `metaAutoUpdate-${panelId}`
+                    )?.checked || false,
+                };
+
+                const result = await fetchJSON(
+                    `/api/stories/${this.storyId}/metadata`,
+                    {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(payload),
+                    }
+                );
+
+                if (!result.ok) {
+                    throw new Error(
+                        result.data.detail || "Failed to save"
+                    );
+                }
+
+                setStatus(panelId, "Saved!", "success");
+                setTimeout(() => this.close(panelId), 1200);
+            } catch (e) {
+                err("metadata", e);
+                setStatus(panelId, e.message, "error");
+            } finally {
+                if (saveBtn) saveBtn.disabled = false;
+            }
+        },
+    };
+
+    // ─────────────────────────────────────────────────────────────────
+    // PANEL TYPE: AUTHOR
+    // ─────────────────────────────────────────────────────────────────
+
+    handlers.author = {
+        name: "author",
+        storyId: null,
+        authorId: null,
+
+        open(panelId, storyId, authorId) {
+            this.storyId = storyId;
+            this.authorId = authorId;
+            setState(panelId, { panelType: "author" });
+            setStatus(panelId, "", "");
+            setOpen(panelId, true);
+            this.loadData(panelId);
+        },
+
+        close(panelId) {
+            setOpen(panelId, false);
+        },
+
+        async loadData(panelId) {
+            if (!this.storyId || !this.authorId) return;
+
+            try {
+                const result = await fetchJSON(
+                    `/api/stories/${this.storyId}/authors`
+                );
+                if (result.ok) {
+                    const authors = result.data.authors || [];
+                    const author = authors.find(
+                        (a) => a.id === this.authorId
+                    );
+                    if (author) {
+                        setVal("authorName", panelId, author.name || "");
+                        setVal("authorBio", panelId, author.bio || "");
+                    }
+                }
+            } catch (_) {}
+        },
+
+        async save(panelId) {
+            const saveBtn = $(`authorSaveBtn-${panelId}`);
+            if (saveBtn) saveBtn.disabled = true;
+            setStatus(panelId, "Saving…", "");
+
+            try {
+                const name = getVal("authorName", panelId);
+                if (!name) {
+                    throw new Error("Author name is required");
+                }
+
+                const payload = {
+                    name,
+                    bio: getVal("authorBio", panelId) || null,
+                };
+
+                const result = await fetchJSON(
+                    `/api/stories/${this.storyId}/authors/${this.authorId}`,
+                    {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(payload),
+                    }
+                );
+
+                if (!result.ok) {
+                    throw new Error(
+                        result.data.detail || "Failed to save"
+                    );
+                }
+
+                setStatus(panelId, "Saved!", "success");
+                setTimeout(() => this.close(panelId), 1200);
+            } catch (e) {
+                err("author", e);
+                setStatus(panelId, e.message, "error");
+            } finally {
+                if (saveBtn) saveBtn.disabled = false;
+            }
+        },
+    };
+
+    // ─────────────────────────────────────────────────────────────────
+    // PUBLIC API
+    // ─────────────────────────────────────────────────────────────────
+
+    return {
+        // Open panel by type
+        open(panelType, panelId, ...args) {
+            const handler = handlers[panelType];
+            if (!handler) {
+                console.warn(`Unknown panel type: ${panelType}`);
+                return;
+            }
+            handler.open(panelId, ...args);
+        },
+
+        // Close panel
+        close(panelId) {
+            const state = getState(panelId);
+            const handler = handlers[state.panelType];
+            if (handler) handler.close(panelId);
+        },
+
+        // Switch tab
+        switchTab(panelId, tabId, btn) {
+            switchTab(panelId, tabId, btn);
+        },
+
+        // Handle action
+        handleAction(panelId, actionId) {
+            const state = getState(panelId);
+            const handler = handlers[state.panelType];
+            if (!handler) return;
+
+            const action = handler[actionId];
+            if (typeof action === "function") {
+                action.call(handler, panelId);
+            }
+        },
+
+        // Add story specific
+        updateChapterSelection(panelId) {
+            handlers.add_story?.updateChapterSelection(panelId);
+        },
+
+        selectAllChapters(panelId) {
+            handlers.add_story?.selectAllChapters(panelId);
+        },
+
+        deselectAllChapters(panelId) {
+            handlers.add_story?.deselectAllChapters(panelId);
+        },
+
+        // Metadata specific
+        // (methods called from template actions)
+        previewMetadata(panelId) {
+            handlers.add_story?.previewMetadata(panelId);
+        },
+
+        confirm(panelId) {
+            handlers.add_story?.confirm(panelId);
+        },
+    };
+})();

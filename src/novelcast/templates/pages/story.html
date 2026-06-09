@@ -92,7 +92,7 @@
                         <i class="fa-solid fa-play"></i> Read
                     </button>
                 {% endif %}
-                <button class="btn-action-icon" onclick="openMetaPanel()" title="Edit metadata">
+                <button class="btn-action-icon" onclick="UnifiedPanel.open('metadata', 'metaPanel', {{ story['id'] }})" title="Edit metadata">
                     <i class="fa-solid fa-pen-to-square"></i>
                 </button>
                 <button class="btn-action-icon btn-action-danger" onclick="confirmDeleteStory()" title="Delete story">
@@ -242,12 +242,10 @@
     </div>
 </div>
 
-{% include "partials/metadata_panel.html" %}
 
 {% endblock %}
 
 {% block scripts %}
 <script src="/static/js/story_page.js" defer></script>
-<script src="/static/js/metadata_panel.js" defer></script>
 <script src="/static/js/pagination.js" defer></script>
 {% endblock %}

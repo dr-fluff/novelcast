@@ -25,19 +25,21 @@
     <link rel="stylesheet" href="/static/css/components/modal.css" />
     <link rel="stylesheet" href="/static/css/components/notifications.css" />
     <link rel="stylesheet" href="/static/css/components/pagination.css" />
-    <link rel="stylesheet" href="/static/css/components/add_story_panel.css">
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
-    {% block head %}{% endblock %}
+    <link rel="stylesheet" href="/static/css/components/unified-panel.css">
+    <script src="/static/js/unified-panel.js"></script>
 
-    <!-- Load add_story panel script without defer so it's available immediately -->
-    <script src="/static/js/add_story_panel.js"></script>
+    {% block head %}{% endblock %}
 
   </head>
 
   <body>
-    {% include "partials/add_story_panel.html" %}
+    {% include "partials/add_story_panel_unified.html" %}
+    {% include "partials/metadata_author_panels_unified.html" %}
+    {% include "partials/metadata_panels_unified.html" %}
+
     {% block content %}{% endblock %}
 
     {% include "components/notifications.html" %}
