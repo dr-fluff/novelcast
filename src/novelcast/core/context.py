@@ -46,6 +46,7 @@ from novelcast.parser import (
     FanFicFareParser,
     HtmlParser,
     ParserRegistry,
+    PatreonParser
 )
 
 from novelcast.pipeline.story_pipeline import StoryPipeline
@@ -197,17 +198,18 @@ class AppContext:
     # PARSER REGISTRY
     # ─────────────────────────────
     def _init_parser_registry(self):
-        self.parser_registry = ParserRegistry()
-        self.parser_registry.register("fanficfare", FanFicFareParser())
-        self.parser_registry.register("html", HtmlParser())
+        patterns = self.chapter_filter.get_enabled_regexes()
 
-        # EpubParser gets DB patterns injected at construction time
-        epub_parser = EpubParser(
-            patterns=self.chapter_filter.get_enabled_regexes()  # ← changed from extra_patterns
+        self.epub_parser = EpubParser(patterns=patterns)
+
+        self.parser_registry = ParserRegistry(
+            {
+                "fanficfare": FanFicFareParser(),
+                "html": HtmlParser(),
+                "epub": self.epub_parser,
+                "patreon": PatreonParser(),
+            }
         )
-        self.parser_registry.register("epub", epub_parser)
-        self.epub_parser = epub_parser
-
     # ─────────────────────────────
     # PARSER
     # ─────────────────────────────

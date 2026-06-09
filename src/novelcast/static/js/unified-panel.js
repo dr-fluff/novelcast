@@ -68,6 +68,52 @@ const UnifiedPanel = (() => {
     }
 
     // ─────────────────────────────────────────────────────────────────
+    // CONTEXT-AWARE ACTION BUTTON
+    // ─────────────────────────────────────────────────────────────────
+
+    function getActiveTabIndex(panelId) {
+        const panel = $(panelId);
+        if (!panel) return 0;
+
+        const contents = panel.querySelectorAll(".unified-panel-content");
+        for (let i = 0; i < contents.length; i++) {
+            if (contents[i].style.display !== "none") {
+                return i;
+            }
+        }
+        return 0;
+    }
+
+    function updateActionButton(panelId) {
+        const state = getState(panelId);
+        const btn = $(`addStoryActionBtn-${panelId}`);
+        if (!btn || state.panelType !== "add_story") return;
+
+        const tabIndex = getActiveTabIndex(panelId);
+
+        switch (tabIndex) {
+            case 0: // URL tab
+                btn.innerHTML = '<i class="fa-solid fa-download"></i> Preview';
+                btn.disabled = false;
+                btn.onclick = () => handlers.add_story.previewMetadata(panelId);
+                break;
+            case 1: // Metadata tab
+                btn.innerHTML = '<i class="fa-solid fa-arrow-right"></i> Select Chapters';
+                btn.disabled = false;
+                btn.onclick = () => handlers.add_story.switchTabByIndex(panelId, 2);
+                break;
+            case 2: // Chapters tab
+                btn.innerHTML = '<i class="fa-solid fa-download"></i> Download';
+                btn.disabled = false;
+                btn.onclick = () => handlers.add_story.confirm(panelId);
+                break;
+            case 3: // Download tab
+                btn.style.display = "none";
+                break;
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────
     // TAG HELPERS
     // ─────────────────────────────────────────────────────────────────
 
@@ -182,6 +228,7 @@ const UnifiedPanel = (() => {
             setState(panelId, { panelType: "add_story", selectedChapters: [] });
             setStatus(panelId, "", "");
             setOpen(panelId, true);
+            updateActionButton(panelId);
         },
 
         close(panelId) {
@@ -235,10 +282,7 @@ const UnifiedPanel = (() => {
                 }
 
                 // Switch to metadata tab
-                const tabs = $(`${panelId}`).querySelectorAll(
-                    ".unified-panel-tab"
-                );
-                if (tabs[1]) this.switchTabByIndex(panelId, 1);
+                this.switchTabByIndex(panelId, 1);
 
                 setStatus(panelId, "", "");
             } catch (e) {
@@ -322,6 +366,8 @@ const UnifiedPanel = (() => {
 
             if (tabs[index]) tabs[index].classList.add("active");
             if (contents[index]) contents[index].style.display = "";
+
+            updateActionButton(panelId);
         },
 
         async confirm(panelId) {
@@ -641,6 +687,7 @@ const UnifiedPanel = (() => {
         // Switch tab
         switchTab(panelId, tabId, btn) {
             switchTab(panelId, tabId, btn);
+            updateActionButton(panelId);
         },
 
         // Handle action
@@ -676,6 +723,11 @@ const UnifiedPanel = (() => {
 
         confirm(panelId) {
             handlers.add_story?.confirm(panelId);
+        },
+
+        // Update button text/action based on active tab
+        updateActionButton(panelId) {
+            updateActionButton(panelId);
         },
     };
 })();

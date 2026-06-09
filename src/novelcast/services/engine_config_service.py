@@ -223,16 +223,28 @@ class FanFicFareConfigService(BaseEngineConfigService):
 
         return builder
 
+
 class PatreonConfigService(BaseEngineConfigService):
+    """Config service for Patreon engine - follows FanFicFareConfigService pattern"""
+    
+    SECTION_ORDER = ["defaults"]
+
     def section_key(self) -> str:
         return "patreon"
 
-    def post_build(self, builder: IniBuilder) -> IniBuilder:
-        encrypted_password = self.settings_service.get_raw_server_setting(
-            "patreon.password", ""
-        )
+    def section_order(self) -> list[str]:
+        order = list(self.SECTION_ORDER)
+        schema = self.settings_service.schema.get(self.section_key(), {})
 
-        if encrypted_password:
-            builder.add("www.royalroad.com", "password", encrypted_password)
+        for meta in schema.values():
+            scope = meta.get("scope", "defaults")
+            if scope not in order:
+                order.append(scope)
 
+        return order
+
+    def post_build(self, builder):
+        """Hook to add any Patreon-specific config mutations"""
+        # Currently just uses settings as-is
+        # Can be extended for future features
         return builder

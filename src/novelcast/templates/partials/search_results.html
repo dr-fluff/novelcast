@@ -1,4 +1,4 @@
-<!-- novelcast/templates/partials/search_results.html -->
+{# novelcast/templates/partials/search_results.html #}
 
 {% if error %}
     <p class="search-error">{{ error }}</p>
@@ -28,7 +28,11 @@
     <p class="result-count">{{ results|length }} result{{ 's' if results|length != 1 }}</p>
     <div class="results-grid">
         {% for r in results %}
-        <a href="#" class="result-card" data-url="{{ r.url }}" data-title="{{ r.title }}" data-author="{{ r.author or '' }}">
+        <a href="#" class="result-card" 
+           data-url="{{ r.url }}" 
+           data-title="{{ r.title }}" 
+           data-author="{{ r.author or '' }}"
+           data-patreon="{{ r.patreon_url or '' }}">
             <div class="result-card__cover">
                 {% if r.cover_url %}
                     <img src="{{ r.cover_url }}" alt="{{ r.title }}" loading="lazy" />
@@ -47,6 +51,13 @@
                 {% if r.description %}
                     <p class="result-card__desc">{{ r.description }}</p>
                 {% endif %}
+                {% if r.patreon_url %}
+                    <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(0,0,0,0.1);">
+                        <a href="{{ r.patreon_url }}" target="_blank" rel="noopener" class="result-card__link" onclick="event.stopPropagation()">
+                            <i class="fa-brands fa-patreon"></i> Patreon
+                        </a>
+                    </div>
+                {% endif %}
             </div>
         </a>
         {% endfor %}
@@ -61,6 +72,7 @@
                     const url = card.dataset.url;
                     const title = card.dataset.title;
                     const author = card.dataset.author;
+                    const patreonUrl = card.dataset.patreon;
 
                     // Open panel and set URL
                     UnifiedPanel.open('add_story', 'addStoryPanel');
@@ -68,6 +80,12 @@
                     // Populate and auto-preview
                     setTimeout(() => {
                         document.getElementById('addStoryUrl-addStoryPanel').value = url;
+                        
+                        // Store Patreon URL for reference (optional - can be used for auto-fill if needed)
+                        if (patreonUrl) {
+                            console.log('[Search] Patreon URL available:', patreonUrl);
+                        }
+                        
                         UnifiedPanel.previewMetadata('addStoryPanel');
                     }, 100);
                 });
@@ -80,3 +98,20 @@
 {% endif %}
 
 {% endif %}
+
+<style>
+.result-card__link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.85rem;
+    color: var(--color-primary, #ff424f);
+    text-decoration: none;
+    font-weight: 500;
+    transition: opacity 0.2s;
+}
+
+.result-card__link:hover {
+    opacity: 0.8;
+}
+</style>

@@ -259,6 +259,7 @@ class PaginatedEReader {
     const temp = document.createElement('div');
     temp.innerHTML = this.state.originalContent;
 
+    temp.querySelectorAll('.author-note-portlet').forEach(el => el.remove());
     const elements = [...temp.querySelectorAll('p, blockquote, ul, ol, h2, h3')];
 
     const page = this.createPageMeasurer(container);
@@ -314,6 +315,7 @@ class PaginatedEReader {
           page.appendChild(p.cloneNode(true));
         }
       }
+
     }
 
     // Save final page

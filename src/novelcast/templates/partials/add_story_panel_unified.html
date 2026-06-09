@@ -159,8 +159,8 @@
         <span class="unified-panel-status" id="status-addStoryPanel"></span>
         <div class="unified-panel-actions">
             <button class="btn btn-secondary" onclick="UnifiedPanel.close('addStoryPanel')">Cancel</button>
-            <button class="btn btn-primary" id="addStoryActionBtn-addStoryPanel" onclick="UnifiedPanel.handleAction('addStoryPanel', 'previewMetadata')">
-                <i class="fa-solid fa-search"></i> Preview Metadata
+            <button class="btn btn-primary" id="addStoryActionBtn-addStoryPanel">
+                <i class="fa-solid fa-download"></i> Preview
             </button>
         </div>
     </div>
@@ -193,5 +193,8 @@ document.addEventListener('DOMContentLoaded', () => {
             input.focus();
         });
     });
+    
+    // Set initial button state
+    UnifiedPanel.updateActionButton(panelId);
 });
 </script>
