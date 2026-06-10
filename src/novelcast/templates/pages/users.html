@@ -50,15 +50,19 @@
               </td>
               <td>{{ account.created_at.strftime("%Y-%m-%d %H:%M") }}</td>
               <td>
-                <a href="/admin/users/{{ account.id }}/edit" class="btn-ghost btn-sm">Edit</a>
+                <a href="#"
+                  class="btn-ghost btn-sm delete-btn" data-user-id="{{ account.id }}">
+                    Delete
+                </a>
+                <a href="#" class="btn-ghost btn-sm" onclick="deleteUser({{ account.id }})">
+                  Delete
+                </a>
               </td>
             </tr>
             {% endfor %}
           {% else %}
             <tr>
-              <td colspan="5" style="text-align:center;padding:20px;color:var(--color-text-muted)">
-                No users found.
-              </td>
+              <td colspan="5" style="text-align:center;padding:20px;color:var(--color-text-muted)">No users found.</td>
             </tr>
           {% endif %}
         </tbody>
@@ -66,4 +70,13 @@
     </div>
   </div>
 
+  <script type="module">
+  window.deleteUser = function(userId) {
+      console.log(userId);
+      const response = await fetch('/api/admin/delete/user/'userId, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+  };
+  </script>
 {% endblock %}

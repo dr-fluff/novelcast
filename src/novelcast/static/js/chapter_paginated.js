@@ -1,3 +1,12 @@
+/**
+ * novelcast/static/js/chapter_paginated.js - UPDATED
+ * 
+ * Paginated e-reader with improved settings panel
+ * - Font size as buttons (12, 14, 16, 18, 20)
+ * - Font weight as buttons (Light, Normal, Bold)
+ * - Smaller settings panel positioned on right side
+ */
+
 class PaginatedEReader {
   constructor() {
     console.log('🚀 Paginated E-Reader loaded');
@@ -16,13 +25,17 @@ class PaginatedEReader {
     this.resizeTimer = null;
     this.touch = { startX: 0, endX: 0, threshold: 50 };
 
+    // Default settings
     this.settings = {
-      theme: localStorage.getItem('novelcast_theme') || 'light',
-      fontFamily: localStorage.getItem('novelcast_fontFamily') || 'serif',
-      fontSize: Number(localStorage.getItem('novelcast_fontSize')) || 100,
-      lineSpacing: Number(localStorage.getItem('novelcast_lineSpacing')) || 100,
-      fontWeight: Number(localStorage.getItem('novelcast_fontWeight')) || 0,
+      theme: 'light',
+      fontFamily: 'serif',
+      fontSize: 110,          // 16px (default)
+      lineSpacing: 100,
+      fontWeight: 1,          // 0=Light, 1=Normal, 2=Bold
+      paragraphSpacing: 100,
     };
+
+    this.userLoaded = false;
 
     document.readyState === 'loading'
       ? document.addEventListener('DOMContentLoaded', () => this.init())
@@ -30,27 +43,64 @@ class PaginatedEReader {
   }
 
   // ======================
-  // INIT
+  // INITIALIZATION
   // ======================
 
-  init() {
+  async init() {
     console.log('⚙️ Initializing E-Reader...');
 
     this.cacheContainerData();
     this.cacheElements();
+    await this.loadUserSettings();
     this.applySettings();
     this.attachEvents();
-
     this.paginate();
     this.render(0);
 
     console.log('✅ Ready. Pages:', this.state.totalPages);
   }
 
+  async loadUserSettings() {
+    try {
+      const response = await fetch('/api/chapter-settings', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        this.settings = { ...this.settings, ...data.settings };
+        this.userLoaded = true;
+        console.log('✅ User settings loaded');
+      } else {
+        console.log('ℹ️ Using default settings');
+      }
+    } catch (err) {
+      console.warn('⚠️ Could not load user settings:', err);
+    }
+  }
+
+  async saveUserSettings() {
+    if (!this.userLoaded) return;
+
+    try {
+      const response = await fetch('/api/chapter-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ settings: this.settings }),
+      });
+
+      if (response.ok) {
+        console.log('✅ Settings saved');
+      }
+    } catch (err) {
+      console.warn('⚠️ Could not save settings:', err);
+    }
+  }
+
   cacheContainerData() {
     const container = document.querySelector('.reader-container');
     if (!container) return;
-
     Object.assign(this.state, container.dataset);
   }
 
@@ -60,27 +110,22 @@ class PaginatedEReader {
     this.el = {
       container: document.querySelector('.chapter-text'),
       header: document.querySelector('.reader-header'),
-
       settingsBtn: $('settingsBtn'),
       closeSettingsBtn: $('closeSettings'),
       settingsPanel: $('settingsPanel'),
       settingsOverlay: $('settingsOverlay'),
-
-      fontSizeSlider: $('fontSizeSlider'),
-      fontSizeValue: $('fontSizeValue'),
       lineSpacingSlider: $('lineSpacingSlider'),
       lineSpacingValue: $('lineSpacingValue'),
-      fontWeightSlider: $('fontWeightSlider'),
-      fontWeightValue: $('fontWeightValue'),
-
+      paragraphSpacingSlider: $('paragraphSpacingSlider'),
+      paragraphSpacingValue: $('paragraphSpacingValue'),
       themeBtns: document.querySelectorAll('.theme-btn'),
       fontFamilyBtns: document.querySelectorAll('.font-family-btn'),
-
+      fontSizeBtns: document.querySelectorAll('.font-size-btn'),
+      fontSizeValue: $('fontSizeValue'),
+      fontWeightBtns: document.querySelectorAll('.font-weight-btn'),
       nextBtn: $('nextChapterFloating'),
       prevBtn: $('prevChapter'),
-      nextChapterBtn: $('nextChapterBtn'),
       backBtn: document.querySelector('.back-btn'),
-
       pageCounter: this.createPageCounter(),
     };
   }
@@ -116,134 +161,80 @@ class PaginatedEReader {
 
   getAvailableHeight() {
     const headerH = this.el.header?.offsetHeight || 70;
-    // Use a smaller, more predictable buffer
     return window.innerHeight - headerH - 120;
   }
 
   createPageMeasurer(container) {
-    const page = container.cloneNode(false);
-    const style = getComputedStyle(container);
+    const page = document.createElement('div');
 
     Object.assign(page.style, {
       position: 'absolute',
       visibility: 'hidden',
       left: '-9999px',
       top: '0',
-
       width: container.clientWidth + 'px',
       minHeight: this.getAvailableHeight() + 'px',
-
-      fontFamily: style.fontFamily,
-      fontSize: style.fontSize,
-      fontWeight: style.fontWeight,
-      lineHeight: style.lineHeight,
-
-      letterSpacing: style.letterSpacing,
-      wordSpacing: style.wordSpacing,
-
-      padding: style.padding,
-      margin: style.margin,
-
       boxSizing: 'border-box',
-
       overflow: 'visible',
       whiteSpace: 'normal',
+      padding: getComputedStyle(container).padding,
+      margin: '0',
     });
 
     document.body.appendChild(page);
     return page;
   }
 
-  /**
-   * Split a paragraph into chunks if it's too long to fit on one page.
-   * Tries to break at sentence boundaries to keep meaning intact.
-   */
-  splitLongParagraph(elem, page, maxHeight) {
-    const html = elem.innerHTML;
-    
-    // Try splitting by sentences (. ! ?)
-    const sentences = html.match(/[^.!?]*[.!?]+/g) || [html];
-    
-    if (sentences.length === 1) {
-      // Can't split by sentences, return as-is
+  splitParagraphIfNeeded(elem, measurer, maxHeight) {
+    const clone = elem.cloneNode(true);
+    measurer.innerHTML = '';
+    measurer.appendChild(clone);
+
+    if (measurer.scrollHeight <= maxHeight) {
+      return [elem];
+    }
+
+    const text = elem.textContent;
+    const words = text.split(/\s+/).filter(w => w.length > 0);
+
+    if (words.length <= 1) {
       return [elem];
     }
 
     const chunks = [];
-    let current = '';
+    let currentChunk = [];
 
-    for (const sentence of sentences) {
-      const test = current + sentence;
-      const clone = elem.cloneNode(false);
-      clone.innerHTML = test;
-      page.innerHTML = '';
-      page.appendChild(clone);
+    for (const word of words) {
+      currentChunk.push(word);
 
-      if (page.scrollHeight <= maxHeight) {
-        current = test;
-      } else {
-        // Current chunk is full, start a new one
-        if (current.trim()) {
-          const fullElem = elem.cloneNode(false);
-          fullElem.innerHTML = current;
-          chunks.push(fullElem);
+      const testClone = elem.cloneNode(false);
+      testClone.textContent = currentChunk.join(' ');
+      measurer.innerHTML = '';
+      measurer.appendChild(testClone);
+
+      if (measurer.scrollHeight > maxHeight) {
+        if (currentChunk.length > 1) {
+          currentChunk.pop();
+          const p = elem.cloneNode(false);
+          p.textContent = currentChunk.join(' ');
+          chunks.push(p);
+          currentChunk = [word];
+        } else {
+          const p = elem.cloneNode(false);
+          p.textContent = word;
+          chunks.push(p);
+          currentChunk = [];
         }
-        current = sentence;
       }
     }
 
-    // Add remaining content
-    if (current.trim()) {
-      const fullElem = elem.cloneNode(false);
-      fullElem.innerHTML = current;
-      chunks.push(fullElem);
+    if (currentChunk.length > 0) {
+      const p = elem.cloneNode(false);
+      p.textContent = currentChunk.join(' ');
+      chunks.push(p);
     }
 
     return chunks.length > 0 ? chunks : [elem];
-  }
-
-  /**
-   * Split a paragraph by word boundaries if it's too long for a page.
-   * Returns an array of cloned paragraphs with split text content.
-   */
-  splitParagraphByWords(elem, page, maxHeight) {
-    const text = elem.textContent;
-    const words = text.split(' ');
-    
-    const paragraphs = [];
-    let currentText = '';
-
-    for (const word of words) {
-      const testText = currentText ? currentText + ' ' + word : word;
-      const testClone = elem.cloneNode(false);
-      testClone.textContent = testText;
-
-      // Test if this text fits
-      page.innerHTML = '';
-      page.appendChild(testClone);
-
-      if (page.scrollHeight <= maxHeight) {
-        // ✅ Still fits, keep accumulating
-        currentText = testText;
-      } else {
-        // ❌ Doesn't fit - save current chunk and start new one
-        if (currentText) {
-          const newP = elem.cloneNode(false);
-          newP.textContent = currentText;
-          paragraphs.push(newP);
-        }
-        currentText = word;
-      }
-    }
-
-    // Add remaining text
-    if (currentText) {
-      const newP = elem.cloneNode(false);
-      newP.textContent = currentText;
-      paragraphs.push(newP);
-    }
-
-    return paragraphs.length > 0 ? paragraphs : [elem];
   }
 
   paginate() {
@@ -260,69 +251,124 @@ class PaginatedEReader {
     temp.innerHTML = this.state.originalContent;
 
     temp.querySelectorAll('.author-note-portlet').forEach(el => el.remove());
-    const elements = [...temp.querySelectorAll('p, blockquote, ul, ol, h2, h3')];
+    temp.querySelectorAll('.portlet.solid.author-note-portlet').forEach(el => el.remove());
+    temp.querySelectorAll('.author-note').forEach(el => el.remove());
 
-    const page = this.createPageMeasurer(container);
+    const elements = [...temp.querySelectorAll('p, blockquote, ul, ol, h2, h3, div')].filter(
+      el => el.textContent.trim().length > 0 && !el.querySelector('p, ul, ol, blockquote, h2, h3')
+    );
+
+    const measurer = this.createPageMeasurer(container);
     const maxHeight = this.getAvailableHeight();
-
-    const flush = () => {
-      if (page.innerHTML.trim()) {
-        this.state.pages.push(page.innerHTML);
-        page.innerHTML = '';
-      }
-    };
+    const pages = [];
+    let currentPageHTML = '';
+    let currentPageHeight = 0;
 
     for (const elem of elements) {
-      const clone = elem.cloneNode(true);
-      page.appendChild(clone);
+      const elemClone = elem.cloneNode(true);
 
-      // Check if it fits on current page
-      if (page.scrollHeight <= maxHeight) {
-        // ✅ Fits! Keep it, continue to next element
-        continue;
-      }
+      const testContainer = document.createElement('div');
+      testContainer.innerHTML = currentPageHTML;
+      testContainer.appendChild(elemClone.cloneNode(true));
 
-      // ❌ Doesn't fit on current page
-      page.removeChild(clone);
+      measurer.innerHTML = testContainer.innerHTML;
+      const testHeight = measurer.scrollHeight;
 
-      // Save current page if it has content
-      if (page.innerHTML.trim()) {
-        flush();
-      }
+      if (testHeight <= maxHeight) {
+        currentPageHTML = testContainer.innerHTML;
+        currentPageHeight = testHeight;
+      } else if (currentPageHTML.trim()) {
+        pages.push(currentPageHTML);
+        currentPageHTML = elemClone.outerHTML;
+        currentPageHeight = 0;
 
-      // Try to add element to fresh page
-      page.appendChild(clone);
+        measurer.innerHTML = elemClone.outerHTML;
+        currentPageHeight = measurer.scrollHeight;
 
-      if (page.scrollHeight <= maxHeight) {
-        // ✅ Fits on fresh page! Keep it
-        continue;
-      }
+        if (currentPageHeight > maxHeight) {
+          const split = this.splitParagraphIfNeeded(elem, measurer, maxHeight);
 
-      // ❌ Element too big even for fresh page - split it by words
-      page.removeChild(clone);
+          for (const piece of split) {
+            measurer.innerHTML = piece.outerHTML;
+            if (measurer.scrollHeight > maxHeight) {
+              if (currentPageHTML !== piece.outerHTML) {
+                pages.push(currentPageHTML);
+                currentPageHTML = piece.outerHTML;
+              }
+              currentPageHeight = measurer.scrollHeight;
+            } else {
+              if (currentPageHTML && currentPageHTML !== piece.outerHTML) {
+                const testDiv = document.createElement('div');
+                testDiv.innerHTML = currentPageHTML + piece.outerHTML;
+                measurer.innerHTML = testDiv.innerHTML;
 
-      const splitParagraphs = this.splitParagraphByWords(elem, page, maxHeight);
+                if (measurer.scrollHeight <= maxHeight) {
+                  currentPageHTML += piece.outerHTML;
+                  currentPageHeight = measurer.scrollHeight;
+                } else {
+                  pages.push(currentPageHTML);
+                  currentPageHTML = piece.outerHTML;
+                  measurer.innerHTML = currentPageHTML;
+                  currentPageHeight = measurer.scrollHeight;
+                }
+              } else {
+                currentPageHTML = piece.outerHTML;
+                currentPageHeight = measurer.scrollHeight;
+              }
+            }
+          }
+        }
+      } else {
+        currentPageHTML = elemClone.outerHTML;
+        measurer.innerHTML = currentPageHTML;
+        currentPageHeight = measurer.scrollHeight;
 
-      for (const p of splitParagraphs) {
-        page.appendChild(p.cloneNode(true));
+        if (currentPageHeight > maxHeight) {
+          const split = this.splitParagraphIfNeeded(elem, measurer, maxHeight);
 
-        // Check if this split paragraph fits
-        if (page.scrollHeight > maxHeight) {
-          // Doesn't fit - remove it and flush current page
-          page.removeChild(page.lastChild);
-          flush();
-          // Add it to new page
-          page.appendChild(p.cloneNode(true));
+          currentPageHTML = '';
+          for (const piece of split) {
+            measurer.innerHTML = piece.outerHTML;
+            const pieceHeight = measurer.scrollHeight;
+
+            if (pieceHeight > maxHeight) {
+              if (currentPageHTML) {
+                pages.push(currentPageHTML);
+              }
+              pages.push(piece.outerHTML);
+              currentPageHTML = '';
+              currentPageHeight = 0;
+            } else {
+              if (currentPageHTML) {
+                const testDiv = document.createElement('div');
+                testDiv.innerHTML = currentPageHTML + piece.outerHTML;
+                measurer.innerHTML = testDiv.innerHTML;
+
+                if (measurer.scrollHeight <= maxHeight) {
+                  currentPageHTML += piece.outerHTML;
+                  currentPageHeight = measurer.scrollHeight;
+                } else {
+                  pages.push(currentPageHTML);
+                  currentPageHTML = piece.outerHTML;
+                  currentPageHeight = pieceHeight;
+                }
+              } else {
+                currentPageHTML = piece.outerHTML;
+                currentPageHeight = pieceHeight;
+              }
+            }
+          }
         }
       }
-
     }
 
-    // Save final page
-    flush();
-    page.remove();
+    if (currentPageHTML.trim()) {
+      pages.push(currentPageHTML);
+    }
 
-    this.state.totalPages = Math.max(1, this.state.pages.length);
+    this.state.pages = pages;
+    this.state.totalPages = Math.max(1, pages.length);
+    measurer.remove();
 
     console.log('✅ Pagination complete:', this.state.totalPages, 'pages');
   }
@@ -332,12 +378,10 @@ class PaginatedEReader {
   // ======================
 
   render(index) {
-    const { pages } = this.state;
-    if (!pages.length || index < 0 || index >= pages.length) return;
+    if (index < 0 || index >= this.state.pages.length) return;
 
     this.state.currentPage = index;
-    this.el.container.innerHTML = pages[index];
-
+    this.el.container.innerHTML = this.state.pages[index];
     this.updateUI();
   }
 
@@ -373,6 +417,7 @@ class PaginatedEReader {
   prevPage = () => {
     const { currentPage, prevChapterId, storyId } = this.state;
     const cleanPrevChapterId = prevChapterId === "None" ? null : prevChapterId;
+
     if (currentPage > 0) {
       this.render(currentPage - 1);
     } else if (cleanPrevChapterId) {
@@ -402,6 +447,7 @@ class PaginatedEReader {
   applyCSSVariables() {
     const root = document.documentElement;
 
+    // Font size (convert percentage to rem)
     const baseFontSize = 1.05;
     const fontSize = (baseFontSize * this.settings.fontSize) / 100;
     root.style.setProperty('--font-size-base', fontSize + 'rem');
@@ -410,48 +456,60 @@ class PaginatedEReader {
     const lineHeight = (baseLineHeight * this.settings.lineSpacing) / 100;
     root.style.setProperty('--line-height', lineHeight);
 
-    const fontWeight = 400 + this.settings.fontWeight * 3;
+    // Font weight (0=400, 1=400, 2=400+100*3=700)
+    const fontWeights = [400, 400, 700]; // Light, Normal, Bold
+    const fontWeight = fontWeights[this.settings.fontWeight] || 400;
     root.style.setProperty('--font-weight', fontWeight);
+
+    const baseParagraphMargin = 1.5;
+    const paragraphMargin = (baseParagraphMargin * this.settings.paragraphSpacing) / 100;
+    root.style.setProperty('--paragraph-margin', paragraphMargin + 'rem');
   }
 
   updateSettingsUI() {
+    // Theme buttons
     this.el.themeBtns.forEach(btn => {
       btn.classList.toggle('active', btn.dataset.theme === this.settings.theme);
     });
 
+    // Font family buttons
     this.el.fontFamilyBtns.forEach(btn => {
       btn.classList.toggle('active', btn.dataset.font === this.settings.fontFamily);
     });
 
-    if (this.el.fontSizeSlider) {
-      this.el.fontSizeSlider.value = this.settings.fontSize;
-      if (this.el.fontSizeValue) this.el.fontSizeValue.textContent = this.settings.fontSize + '%';
+    // Font size buttons (80=12, 95=14, 110=16, 125=18, 145=20)
+    const fontSizeMap = {
+      80: '12',
+      95: '14',
+      110: '16',
+      125: '18',
+      145: '20',
+    };
+
+    this.el.fontSizeBtns.forEach(btn => {
+      btn.classList.toggle('active', Number(btn.dataset.size) === this.settings.fontSize);
+    });
+
+    if (this.el.fontSizeValue) {
+      this.el.fontSizeValue.textContent = fontSizeMap[this.settings.fontSize] || '16';
     }
 
+    // Line spacing slider
     if (this.el.lineSpacingSlider) {
       this.el.lineSpacingSlider.value = this.settings.lineSpacing;
       if (this.el.lineSpacingValue) this.el.lineSpacingValue.textContent = this.settings.lineSpacing + '%';
     }
 
-    if (this.el.fontWeightSlider) {
-      this.el.fontWeightSlider.value = this.settings.fontWeight;
-      const weight = this.settings.fontWeight;
-      if (weight <= 30) {
-        this.el.fontWeightValue.textContent = 'Light';
-      } else if (weight <= 70) {
-        this.el.fontWeightValue.textContent = 'Normal';
-      } else {
-        this.el.fontWeightValue.textContent = 'Bold';
-      }
-    }
-  }
+    // Font weight buttons
+    this.el.fontWeightBtns.forEach(btn => {
+      btn.classList.toggle('active', Number(btn.dataset.weight) === this.settings.fontWeight);
+    });
 
-  saveSettings() {
-    localStorage.setItem('novelcast_theme', this.settings.theme);
-    localStorage.setItem('novelcast_fontFamily', this.settings.fontFamily);
-    localStorage.setItem('novelcast_fontSize', this.settings.fontSize);
-    localStorage.setItem('novelcast_lineSpacing', this.settings.lineSpacing);
-    localStorage.setItem('novelcast_fontWeight', this.settings.fontWeight);
+    // Paragraph spacing slider
+    if (this.el.paragraphSpacingSlider) {
+      this.el.paragraphSpacingSlider.value = this.settings.paragraphSpacing;
+      if (this.el.paragraphSpacingValue) this.el.paragraphSpacingValue.textContent = this.settings.paragraphSpacing + '%';
+    }
   }
 
   // ======================
@@ -459,13 +517,12 @@ class PaginatedEReader {
   // ======================
 
   attachEvents() {
-    // Keyboard navigation
+    // Keyboard
     document.addEventListener('keydown', (e) => {
       if (['ArrowRight', 'ArrowDown', ' '].includes(e.key)) {
         e.preventDefault();
         this.nextPage();
       }
-
       if (['ArrowLeft', 'ArrowUp'].includes(e.key)) {
         e.preventDefault();
         this.prevPage();
@@ -491,10 +548,9 @@ class PaginatedEReader {
       });
     }
 
-    // Window resize - re-paginate
+    // Window resize
     window.addEventListener('resize', () => {
       clearTimeout(this.resizeTimer);
-
       this.resizeTimer = setTimeout(() => {
         const page = this.state.currentPage;
         this.paginate();
@@ -503,8 +559,7 @@ class PaginatedEReader {
     });
 
     // Settings panel
-    this.el.settingsBtn?.addEventListener('click', (e) => {
-      e.preventDefault();
+    this.el.settingsBtn?.addEventListener('click', () => {
       this.el.settingsPanel.classList.add('active');
       this.el.settingsOverlay.classList.add('active');
     });
@@ -524,7 +579,7 @@ class PaginatedEReader {
       btn.addEventListener('click', (e) => {
         this.settings.theme = e.currentTarget.dataset.theme;
         this.applySettings();
-        this.saveSettings();
+        this.saveUserSettings();
       });
     });
 
@@ -533,31 +588,34 @@ class PaginatedEReader {
       btn.addEventListener('click', (e) => {
         this.settings.fontFamily = e.currentTarget.dataset.font;
         this.applySettings();
-        this.saveSettings();
+        this.saveUserSettings();
       });
     });
 
-    // Font size slider
-    this.el.fontSizeSlider?.addEventListener('input', (e) => {
-      this.settings.fontSize = Number(e.target.value);
-      this.applyCSSVariables();
-      this.saveSettings();
+    // Font size buttons
+    this.el.fontSizeBtns.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        this.settings.fontSize = Number(e.currentTarget.dataset.size);
+        this.applyCSSVariables();
+        this.updateSettingsUI();
+        this.saveUserSettings();
 
-      // Re-paginate after font size changes
-      setTimeout(() => {
-        const page = this.state.currentPage;
-        this.paginate();
-        this.render(Math.min(page, this.state.totalPages - 1));
-      }, 100);
+        // Re-paginate after font size changes
+        setTimeout(() => {
+          const page = this.state.currentPage;
+          this.paginate();
+          this.render(Math.min(page, this.state.totalPages - 1));
+        }, 100);
+      });
     });
 
     // Line spacing slider
     this.el.lineSpacingSlider?.addEventListener('input', (e) => {
       this.settings.lineSpacing = Number(e.target.value);
       this.applyCSSVariables();
-      this.saveSettings();
+      this.updateSettingsUI();
+      this.saveUserSettings();
 
-      // Re-paginate after line spacing changes
       setTimeout(() => {
         const page = this.state.currentPage;
         this.paginate();
@@ -565,22 +623,33 @@ class PaginatedEReader {
       }, 100);
     });
 
-    // Font weight slider
-    this.el.fontWeightSlider?.addEventListener('input', (e) => {
-      this.settings.fontWeight = Number(e.target.value);
+    // Font weight buttons
+    this.el.fontWeightBtns.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        this.settings.fontWeight = Number(e.currentTarget.dataset.weight);
+        this.applyCSSVariables();
+        this.updateSettingsUI();
+        this.saveUserSettings();
+      });
+    });
+
+    // Paragraph spacing slider
+    this.el.paragraphSpacingSlider?.addEventListener('input', (e) => {
+      this.settings.paragraphSpacing = Number(e.target.value);
       this.applyCSSVariables();
-      this.saveSettings();
       this.updateSettingsUI();
+      this.saveUserSettings();
+
+      setTimeout(() => {
+        const page = this.state.currentPage;
+        this.paginate();
+        this.render(Math.min(page, this.state.totalPages - 1));
+      }, 100);
     });
 
     // Navigation buttons
     this.el.nextBtn?.addEventListener('click', this.nextPage);
     this.el.prevBtn?.addEventListener('click', this.prevPage);
-    this.el.nextChapterBtn?.addEventListener('click', () => {
-      if (this.state.nextChapterId) {
-        window.location.href = `/chapter?story_id=${this.state.storyId}&chapter_id=${this.state.nextChapterId}`;
-      }
-    });
     this.el.backBtn?.addEventListener('click', () => {
       window.location.href = '/';
     });

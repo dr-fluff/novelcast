@@ -6,8 +6,6 @@ from novelcast.utils.secrets import decrypt_secret, encrypt_secret, is_encrypted
 
 logger = logging.getLogger(__name__)
 
-# Prefix used for all per-site fanficfare keys in server_settings:
-#   fanficfare.site.<domain>.<field>
 _SITE_PREFIX = "fanficfare.site."
 
 
@@ -18,7 +16,7 @@ class SettingsService:
         self.secret_key = secret_key
 
     # ─────────────────────────────
-    # SERVER SETTINGS
+    # SERVER SETTINGS (unchanged)
     # ─────────────────────────────
 
     def get_scoped_server_settings(self) -> dict:
@@ -61,10 +59,6 @@ class SettingsService:
         return self.repo.get_all_server_settings() or {}
 
     def get_resolved_server_settings(self):
-        """
-        Merge DB values + schema defaults.
-        Keys of type 'site_map' are skipped here — use get_site_overrides() instead.
-        """
         db_values = self.get_server_settings()
         resolved = {}
 
@@ -72,7 +66,6 @@ class SettingsService:
             resolved[section] = {}
 
             for key, meta in fields.items():
-                # site_map entries are not flat keys — handled separately
                 if meta.get("type") == "site_map":
                     continue
 
@@ -158,24 +151,21 @@ class SettingsService:
         return decrypt_secret(value, self.secret_key)
 
     # ─────────────────────────────
-    # SITE OVERRIDES  (fanficfare)
+    # SITE OVERRIDES (unchanged)
     # ─────────────────────────────
 
     def get_site_overrides(self) -> dict[str, dict]:
-        # Start with schema-defined site defaults
         schema_defaults: dict[str, dict] = (
             self.schema
             .get("fanficfare", {})
             .get("site_overrides", {})
             .get("default", {})
         )
-        # Deep-copy so we don't mutate the schema
         sites: dict[str, dict] = {
             domain: dict(fields)
             for domain, fields in schema_defaults.items()
         }
 
-        # Overlay with DB values (user overrides win)
         raw = self.repo.get_server_settings_by_prefix(_SITE_PREFIX)
         for full_key, value in raw.items():
             remainder = full_key[len(_SITE_PREFIX):]
@@ -192,10 +182,6 @@ class SettingsService:
         return sites
 
     def set_site_override(self, domain: str, field: str, value) -> None:
-        """
-        Persist a single field for a site.
-        Secrets are encrypted before storage.
-        """
         if not domain or not field:
             raise ValueError("domain and field must be non-empty strings")
 
@@ -209,21 +195,15 @@ class SettingsService:
         self.repo.set_server_setting(key, value)
 
     def delete_site_override(self, domain: str, field: str | None = None) -> None:
-        """
-        Delete a single field for a site, or the entire site block when
-        *field* is None.
-        """
         if field:
             self.repo.delete_server_setting(f"{_SITE_PREFIX}{domain}.{field}")
         else:
-            # Delete every key that belongs to this domain
             prefix = f"{_SITE_PREFIX}{domain}."
             keys = self.repo.get_server_settings_by_prefix(prefix)
             for key in keys:
                 self.repo.delete_server_setting(key)
 
     def _is_secret_site_field(self, field: str) -> bool:
-        """Check the site_overrides field schema for secret type."""
         fields = (
             self.schema
             .get("fanficfare", {})
@@ -233,18 +213,27 @@ class SettingsService:
         return fields.get(field, {}).get("type") == "secret"
 
     # ─────────────────────────────
-    # USER SETTINGS
+    # USER SETTINGS (UPDATED)
     # ─────────────────────────────
 
     def get_user_settings(self, user_id: int):
+        """Get all user settings including chapter reading preferences."""
         row = self.repo.get_user_settings(user_id)
 
         defaults = {
             "user_id": user_id,
+            # Display settings (existing)
             "theme": "light",
             "font_size": 14,
             "line_height": 1.5,
             "auto_update": 1,
+            # Chapter reading settings (new)
+            "chapter_theme": "light",
+            "chapter_font_family": "serif",
+            "chapter_font_size": 100,
+            "chapter_line_spacing": 100,
+            "chapter_font_weight": 0,
+            "chapter_paragraph_spacing": 100,
         }
 
         if not row:
@@ -252,10 +241,18 @@ class SettingsService:
 
         return {
             "user_id": row.get("user_id", user_id),
+            # Display settings
             "theme": row.get("theme", "light"),
             "font_size": row.get("font_size", 14),
             "line_height": row.get("line_height", 1.5),
             "auto_update": row.get("auto_update", 1),
+            # Chapter reading settings
+            "chapter_theme": row.get("chapter_theme", "light"),
+            "chapter_font_family": row.get("chapter_font_family", "serif"),
+            "chapter_font_size": row.get("chapter_font_size", 100),
+            "chapter_line_spacing": row.get("chapter_line_spacing", 100),
+            "chapter_font_weight": row.get("chapter_font_weight", 0),
+            "chapter_paragraph_spacing": row.get("chapter_paragraph_spacing", 100),
         }
 
     def save_user_settings(
@@ -265,9 +262,17 @@ class SettingsService:
         font_size,
         line_height,
         auto_update,
+        # NEW: Chapter reading settings
+        chapter_theme: str = None,
+        chapter_font_family: str = None,
+        chapter_font_size: int = None,
+        chapter_line_spacing: int = None,
+        chapter_font_weight: int = None,
+        chapter_paragraph_spacing: int = None,
     ):
         """Sanitized write to avoid corrupted DB values from forms."""
 
+        # Validate & sanitize display settings
         theme = theme if theme in ("light", "dark") else "light"
 
         try:
@@ -283,10 +288,60 @@ class SettingsService:
 
         auto_update = 1 if str(auto_update) in ("1", "true", "True") else 0
 
+        # NEW: Validate & sanitize chapter reading settings
+        if chapter_theme is not None:
+            chapter_theme = chapter_theme if chapter_theme in ("light", "sepia", "dark") else "light"
+
+        if chapter_font_family is not None:
+            chapter_font_family = chapter_font_family if chapter_font_family in ("serif", "sans") else "serif"
+
+        if chapter_font_size is not None:
+            try:
+                chapter_font_size = max(80, min(int(chapter_font_size), 170))
+            except Exception:
+                chapter_font_size = 100
+
+        if chapter_line_spacing is not None:
+            try:
+                chapter_line_spacing = max(80, min(int(chapter_line_spacing), 150))
+            except Exception:
+                chapter_line_spacing = 100
+
+        if chapter_font_weight is not None:
+            try:
+                chapter_font_weight = max(-30, min(int(chapter_font_weight), 100))
+            except Exception:
+                chapter_font_weight = 0
+
+        if chapter_paragraph_spacing is not None:
+            try:
+                chapter_paragraph_spacing = max(50, min(int(chapter_paragraph_spacing), 200))
+            except Exception:
+                chapter_paragraph_spacing = 100
+
         return self.repo.save_user_settings(
             user_id,
             theme,
             font_size,
             line_height,
             auto_update,
+            chapter_theme=chapter_theme,
+            chapter_font_family=chapter_font_family,
+            chapter_font_size=chapter_font_size,
+            chapter_line_spacing=chapter_line_spacing,
+            chapter_font_weight=chapter_font_weight,
+            chapter_paragraph_spacing=chapter_paragraph_spacing,
         )
+
+    # NEW: Convenience method for chapter reader JS
+    def get_chapter_reading_settings(self, user_id: int) -> dict:
+        """Get only chapter reading settings (for reader JS API)."""
+        settings = self.get_user_settings(user_id)
+        return {
+            "theme": settings.get("chapter_theme", "light"),
+            "fontFamily": settings.get("chapter_font_family", "serif"),
+            "fontSize": settings.get("chapter_font_size", 100),
+            "lineSpacing": settings.get("chapter_line_spacing", 100),
+            "fontWeight": settings.get("chapter_font_weight", 0),
+            "paragraphSpacing": settings.get("chapter_paragraph_spacing", 100),
+        }

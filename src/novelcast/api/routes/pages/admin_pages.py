@@ -107,6 +107,23 @@ def users(
     })
 
 
+@router.get("/admin/users/{user_id}/delete")
+def delete_user(
+    request: Request,
+    user_id: int,
+    users: UserService = Depends(get_users),
+    current_user: dict | None = Depends(get_current_user),
+    templates: Jinja2Templates = Depends(get_templates),
+):
+    if not current_user or not current_user.get("is_root"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    target_user = users.get_user_by_id(user_id)
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return 
+
 @router.get("/admin/users/{user_id}/edit")
 def edit_user_page(
     request: Request,

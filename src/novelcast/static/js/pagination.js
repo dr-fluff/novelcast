@@ -1,6 +1,6 @@
 /* ── Pagination ───────────────────────────────────────────────────────── */
 
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 15;
 
 /**
  * Build a paginator for a list of elements.
@@ -49,9 +49,16 @@ function createPaginator({ getItems, pagerEl, pageSize = PAGE_SIZE }) {
         const cur = currentPage;
 
         // Always show: first, last, cur, cur±1 — ellipsis elsewhere
-        const visible = new Set(
-            [1, total, cur, cur - 1, cur + 1].filter(p => p >= 1 && p <= total)
-        );
+        const range = 3;
+
+        const visible = new Set([1, total]);
+
+        for (let i = -range; i <= range; i++) {
+            const page = cur + i;
+            if (page >= 1 && page <= total) {
+                visible.add(page);
+            }
+        }
         const sorted = [...visible].sort((a, b) => a - b);
 
         let html = `<button class="page-btn" ${cur === 1 ? "disabled" : ""} data-page="${cur - 1}" aria-label="Previous">&#8249;</button>`;

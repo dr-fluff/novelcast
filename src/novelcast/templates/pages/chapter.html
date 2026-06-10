@@ -74,15 +74,17 @@
                 </div>
             </div>
 
-            <!-- Font size slider -->
+            <!-- Font size selector (buttons instead of slider) -->
             <div class="settings-group">
                 <label>Font Size:</label>
-                <div class="slider-container">
-                    <span class="slider-min">A</span>
-                    <input type="range" id="fontSizeSlider" class="slider" min="80" max="170" value="100">
-                    <span class="slider-max">A</span>
+                <div class="button-group">
+                    <button class="font-size-btn" data-size="80" title="Small">12</button>
+                    <button class="font-size-btn" data-size="95" title="Normal">14</button>
+                    <button class="font-size-btn" data-size="110" title="Medium">16</button>
+                    <button class="font-size-btn" data-size="125" title="Large">18</button>
+                    <button class="font-size-btn" data-size="145" title="Extra Large">20</button>
                 </div>
-                <div class="slider-value" id="fontSizeValue">100%</div>
+                <div class="slider-value" id="fontSizeValue">16</div>
             </div>
 
             <!-- Line spacing slider -->
@@ -96,15 +98,31 @@
                 <div class="slider-value" id="lineSpacingValue">100%</div>
             </div>
 
-            <!-- Font weight slider -->
+            <!-- Font weight selector (buttons instead of slider) -->
             <div class="settings-group">
                 <label>Font Weight:</label>
+                <div class="button-group">
+                    <button class="font-weight-btn" data-weight="0" title="Light">
+                        Light
+                    </button>
+                    <button class="font-weight-btn" data-weight="1" title="Normal">
+                        Normal
+                    </button>
+                    <button class="font-weight-btn" data-weight="2" title="Bold">
+                        Bold
+                    </button>
+                </div>
+            </div>
+
+            <!-- Paragraph spacing slider -->
+            <div class="settings-group">
+                <label>Paragraph Spacing:</label>
                 <div class="slider-container">
                     <span class="slider-min">−</span>
-                    <input type="range" id="fontWeightSlider" class="slider" min="0" max="100" value="0">
+                    <input type="range" id="paragraphSpacingSlider" class="slider" min="50" max="200" value="100">
                     <span class="slider-max">+</span>
                 </div>
-                <div class="slider-value" id="fontWeightValue">Normal</div>
+                <div class="slider-value" id="paragraphSpacingValue">100%</div>
             </div>
         </div>
     </div>

@@ -1,4 +1,4 @@
-# novelcast/db/models/settings.py  (updated UserSetting only — rest unchanged)
+# novelcast/db/models/settings.py 
 #
 # Add UniqueConstraint to UserSetting so the upsert in SettingsRepository works.
 

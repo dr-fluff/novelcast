@@ -44,18 +44,19 @@ window.cycleSort = function () {
 
 /* ── Full path toggle ─────────────────────────────────────────────────── */
 
-let _showFullPath = false;
+let showingFullPath = false;
 
-window.toggleFullPath = function () {
-    _showFullPath = !_showFullPath;
+function toggleFullPath() {
+    showingFullPath = !showingFullPath;
+
     document.querySelectorAll(".file-path-text").forEach(el => {
-        el.textContent = _showFullPath
-            ? (el.dataset.full || el.dataset.relative)
+        el.textContent = showingFullPath
+            ? el.dataset.full
             : el.dataset.relative;
+
+        el.classList.toggle("full-path", showingFullPath);
     });
-    const btn = document.getElementById("fullPathBtn");
-    if (btn) btn.classList.toggle("active", _showFullPath);
-};
+}
 
 /* ── Go to first unread ───────────────────────────────────────────────── */
 
