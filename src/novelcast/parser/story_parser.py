@@ -9,9 +9,10 @@ class StoryParser:
         self.registry = registry
 
     def parse(self, raw: dict) -> dict:
-        format_name = raw.get("format", "epub")
+        if raw.get("file_path"):
+            parser = self.registry.get("epub")
+        else:
+            format_name = raw.get("format", "fanficfare")
+            parser = self.registry.get(format_name)
 
-        parser = self.registry.get(format_name)
-        story = parser.parse(raw)
-
-        return story
+        return parser.parse(raw)

@@ -92,12 +92,15 @@
                         <i class="fa-solid fa-play"></i> Read
                     </button>
                 {% endif %}
-                <button class="btn-action-icon" onclick="UnifiedPanel.open('metadata', 'metaPanel', {{ story['id'] }})" title="Edit metadata">
-                    <i class="fa-solid fa-pen-to-square"></i>
-                </button>
-                <button class="btn-action-icon btn-action-danger" onclick="confirmDeleteStory()" title="Delete story">
-                    <i class="fa-solid fa-trash"></i>
-                </button>
+                {% if current_user and current_user.is_root %}
+                    <button class="btn-action-icon" onclick="UnifiedPanel.open('metadata', 'metaPanel', {{ story['id'] }})" title="Edit metadata">
+                        <i class="fa-solid fa-pen-to-square"></i>
+                    </button>
+                
+                    <button class="btn-action-icon btn-action-danger" onclick="confirmDeleteStory()" title="Delete story">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                {% endif %}
                 <div class="file-menu-wrapper">
                     <button class="btn-action-icon" title="More options" onclick="event.stopPropagation(); openStoryMenu(this)">
                         <i class="fa-solid fa-ellipsis"></i>

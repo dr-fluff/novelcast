@@ -14,7 +14,8 @@
      data-chapter-id="{{ chapter_id }}"
      data-next-chapter-id="{{ next_chapter_id }}"
      data-prev-chapter-id="{{ prev_chapter_id }}"
-     data-first-unread-id="{{ first_unread_chapter_id | default('') }}">
+     data-first-unread-id="{{ first_unread_chapter_id | default('') }}"
+     data-chapter-title="{{ chapter | e }}">
 
     <!-- READER HEADER -->
     <div class="reader-header">
@@ -23,11 +24,9 @@
                 <i class="fa-solid fa-chevron-left"></i>
             </a>
         </div>
-        
         <div class="header-center">
             <h1>{{ title }}</h1>
         </div>
-        
         <div class="header-right">
             <button class="settings-btn" id="settingsBtn" title="Settings">
                 <i class="fa-solid fa-sliders"></i>
@@ -45,81 +44,61 @@
                 </button>
             </div>
 
-            <!-- Theme selector -->
             <div class="settings-group">
                 <label>Theme:</label>
                 <div class="button-group">
-                    <button class="theme-btn" data-theme="light" title="Light theme">
-                        <i class="fa-solid fa-sun"></i> Light
-                    </button>
-                    <button class="theme-btn" data-theme="sepia" title="Sepia theme">
-                        <i class="fa-solid fa-book"></i> Sepia
-                    </button>
-                    <button class="theme-btn" data-theme="dark" title="Dark theme">
-                        <i class="fa-solid fa-moon"></i> Dark
-                    </button>
+                    <button class="theme-btn" data-theme="light"><i class="fa-solid fa-sun"></i> Light</button>
+                    <button class="theme-btn" data-theme="sepia"><i class="fa-solid fa-book"></i> Sepia</button>
+                    <button class="theme-btn" data-theme="dark"><i class="fa-solid fa-moon"></i> Dark</button>
                 </div>
             </div>
 
-            <!-- Font family selector -->
             <div class="settings-group">
                 <label>Font Family:</label>
                 <div class="button-group">
-                    <button class="font-family-btn" data-font="sans" title="Sans-serif font">
-                        Sans
-                    </button>
-                    <button class="font-family-btn" data-font="serif" title="Serif font">
-                        Serif
-                    </button>
+                    <button class="font-family-btn" data-font="sans">Sans</button>
+                    <button class="font-family-btn" data-font="serif">Serif</button>
                 </div>
             </div>
 
-            <!-- Font size selector (buttons instead of slider) -->
             <div class="settings-group">
                 <label>Font Size:</label>
                 <div class="button-group">
-                    <button class="font-size-btn" data-size="80" title="Small">12</button>
-                    <button class="font-size-btn" data-size="95" title="Normal">14</button>
-                    <button class="font-size-btn" data-size="110" title="Medium">16</button>
-                    <button class="font-size-btn" data-size="125" title="Large">18</button>
-                    <button class="font-size-btn" data-size="145" title="Extra Large">20</button>
+                    <button class="font-size-btn" data-size="75">12</button>
+                    <button class="font-size-btn" data-size="88">14</button>
+                    <button class="font-size-btn" data-size="100">16</button>
+                    <button class="font-size-btn" data-size="113">18</button>
+                    <button class="font-size-btn" data-size="125">20</button>
+                    <button class="font-size-btn" data-size="150">24</button>
+                    <button class="font-size-btn" data-size="225">36</button>
                 </div>
                 <div class="slider-value" id="fontSizeValue">16</div>
             </div>
 
-            <!-- Line spacing slider -->
             <div class="settings-group">
                 <label>Line Spacing:</label>
                 <div class="slider-container">
                     <span class="slider-min">−</span>
-                    <input type="range" id="lineSpacingSlider" class="slider" min="80" max="150" value="100">
+                    <input type="range" id="lineSpacingSlider" class="slider" min="50" max="150" value="100">
                     <span class="slider-max">+</span>
                 </div>
                 <div class="slider-value" id="lineSpacingValue">100%</div>
             </div>
 
-            <!-- Font weight selector (buttons instead of slider) -->
             <div class="settings-group">
                 <label>Font Weight:</label>
                 <div class="button-group">
-                    <button class="font-weight-btn" data-weight="0" title="Light">
-                        Light
-                    </button>
-                    <button class="font-weight-btn" data-weight="1" title="Normal">
-                        Normal
-                    </button>
-                    <button class="font-weight-btn" data-weight="2" title="Bold">
-                        Bold
-                    </button>
+                    <button class="font-weight-btn" data-weight="0">Light</button>
+                    <button class="font-weight-btn" data-weight="1">Normal</button>
+                    <button class="font-weight-btn" data-weight="2">Bold</button>
                 </div>
             </div>
 
-            <!-- Paragraph spacing slider -->
             <div class="settings-group">
                 <label>Paragraph Spacing:</label>
                 <div class="slider-container">
                     <span class="slider-min">−</span>
-                    <input type="range" id="paragraphSpacingSlider" class="slider" min="50" max="200" value="100">
+                    <input type="range" id="paragraphSpacingSlider" class="slider" min="0" max="200" value="100">
                     <span class="slider-max">+</span>
                 </div>
                 <div class="slider-value" id="paragraphSpacingValue">100%</div>
@@ -130,32 +109,41 @@
     <!-- SETTINGS OVERLAY -->
     <div class="settings-overlay" id="settingsOverlay"></div>
 
-    <!-- CHAPTER SCROLL CONTAINER -->
-    <div class="chapter-scroll-container" id="chapterScroll">
-        <div class="chapter-content">
-            <h2 class="chapter-title">
-                <i class="fa-regular fa-bookmark"></i>
-                {{ chapter }}
-            </h2>
-            <hr/>
-            
-            <div class="chapter-text">
-                {{ content | safe }}
-            </div>
+    <!-- IFRAME MOUNT POINT — JS replaces this with an iframe -->
+    <div class="chapter-scroll-container" id="chapterScroll" style="position: relative; align-items: stretch;">
+        <!-- Hidden source content — JS reads this, then hides it -->
+        <div class="chapter-text" id="chapterSource" style="display:none;">
+            {{ content | safe }}
         </div>
     </div>
 
     <!-- FLOATING NAVIGATION ARROWS -->
     <div class="floating-nav">
-        <button class="nav-arrow prev-chapter" id="prevChapter" title="Previous chapter (← or swipe right)">
+        <button class="nav-arrow prev-chapter" id="prevChapter">
             <i class="fa-solid fa-chevron-left"></i>
         </button>
-        <button class="nav-arrow next-chapter" id="nextChapterFloating" title="Next chapter (→ or swipe left)">
+        <button class="nav-arrow next-chapter" id="nextChapterFloating">
             <i class="fa-solid fa-chevron-right"></i>
         </button>
     </div>
 </div>
 
+{% if hide_author_notes %}
+<style>
+    .author-note-portlet,
+        .author-note-portlet * {
+        display: none !important;
+        }
+
+        .portlet.solid.author-note-portlet {
+        display: none !important;
+        }
+
+        .portlet-body.author-note {
+        display: none !important;
+        }
+</style>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}

@@ -45,7 +45,8 @@ class MetadataPreview(BaseModel):
     genres: list[str] | None
     tags: list[str] | None
     chapter_count: int | None
-    chapters: list[Chapter] | None  # ← NEW
+    chapters: list[Chapter] | None 
+    story_site_id: str | None
 
 
 # ── Preview metadata without downloading ───────────────────────────────
@@ -80,6 +81,8 @@ async def preview_story_metadata(
             tags=metadata.get("tags"),
             chapter_count=len(chapters),
             chapters=chapters,
+            story_site_id=raw.get("storyId") or raw.get("story_site_id"),
+
         )
 
     except Exception as e:
@@ -95,39 +98,40 @@ async def add_story_with_metadata(
     download: StoryDownloadService = Depends(get_download),
     stories: StoryService = Depends(get_stories),
 ):
-    """
-    Add a story with pre-configured metadata.
-    Optionally filter to selected chapters only.
-    Downloads the full file in background.
-    """
     try:
-        # Add the story (this downloads everything)
-        story_id = download.add_story(
-            request.url,
-            selected_chapters=request.selected_chapters,  # ← NEW
-        )
-        
-        # Update with user-edited metadata
-        stories.update_story_metadata(
-            story_id=story_id,
-            title=request.title,
-            author=request.author,
-            subtitle=request.subtitle,
-            description=request.description,
-            publish_year=request.publish_year,
-            language=request.language,
-            series=request.series,
-            genres=request.genres,
-            tags=request.tags,
-            auto_update=request.auto_update,
-        )
-        
+        # Validate URL is not already being downloaded / already exists
+        # (optional guard — add if you want to prevent duplicates)
+
+        def run_download():
+            try:
+                story_id = download.add_story(
+                    request.url,
+                    selected_chapters=request.selected_chapters,
+                )
+                stories.update_story_metadata(
+                    story_id=story_id,
+                    title=request.title,
+                    author=request.author,
+                    subtitle=request.subtitle,
+                    description=request.description,
+                    publish_year=request.publish_year,
+                    language=request.language,
+                    series=request.series,
+                    genres=request.genres,
+                    tags=request.tags,
+                    auto_update=request.auto_update,
+                )
+            except Exception as e:
+                logger.exception("Background download failed for %s", request.url)
+
+        background_tasks.add_task(run_download)
+
         return {
             "status": "started",
-            "story_id": story_id,
             "auto_update": request.auto_update,
             "selected_chapters": request.selected_chapters or "all",
         }
+
     except Exception as e:
-        logger.exception("Failed to add story")
-        raise HTTPException(status_code=400, detail=f"Failed to add story: {str(e)}")
+        logger.exception("Failed to start story download")
+        raise HTTPException(status_code=400, detail=f"Failed to start download: {str(e)}")

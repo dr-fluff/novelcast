@@ -89,6 +89,8 @@ const UnifiedPanel = (() => {
         const btn = $(`addStoryActionBtn-${panelId}`);
         if (!btn || state.panelType !== "add_story") return;
 
+        btn.style.display = "";
+
         const tabIndex = getActiveTabIndex(panelId);
 
         switch (tabIndex) {
@@ -227,8 +229,28 @@ const UnifiedPanel = (() => {
         open(panelId) {
             setState(panelId, { panelType: "add_story", selectedChapters: [] });
             setStatus(panelId, "", "");
+            
+            // Reset all fields
+            setVal("addStoryUrl", panelId, "");
+            setVal("addStoryTitle", panelId, "");
+            setVal("addStoryAuthor", panelId, "");
+            setVal("addStorySubtitle", panelId, "");
+            setVal("addStoryDescription", panelId, "");
+            setVal("addStoryPublishYear", panelId, "");
+            setVal("addStoryLanguage", panelId, "");
+            renderTagList("addStoryGenresWrap", panelId, []);
+            renderTagList("addStoryTagsWrap", panelId, []);
+            renderTagList("addStorySeriesWrap", panelId, []);
+            
+            const chaptersList = $(`chaptersList-${panelId}`);
+            if (chaptersList) chaptersList.innerHTML = "";
+            
+            const countEl = $(`chapterCountValue-${panelId}`);
+            if (countEl) countEl.textContent = "—";
+
+            this.switchTabByIndex(panelId, 0);
             setOpen(panelId, true);
-            updateActionButton(panelId);
+
         },
 
         close(panelId) {
@@ -270,6 +292,14 @@ const UnifiedPanel = (() => {
                 setVal("addStoryPublishYear", panelId, data.publish_year || "");
                 setVal("addStoryLanguage", panelId, data.language || "");
 
+                renderTagList("addStoryGenresWrap", panelId, data.genres || []);
+                renderTagList("addStoryTagsWrap", panelId, data.tags || []);
+                renderTagList("addStorySeriesWrap", panelId, data.series || []);
+                
+                setState(panelId, { 
+                    isLoading: false,
+                    storySiteId: data.story_site_id || null,
+                });
                 // Update chapter count
                 const countEl = $(
                     `chapterCountValue-${panelId}`
@@ -376,6 +406,12 @@ const UnifiedPanel = (() => {
 
             setState(panelId, { isLoading: true });
 
+            // Switch to download tab briefly so user sees it triggered,
+            // then close the panel — download continues in background
+            this.switchTabByIndex(panelId, 3);
+            
+            setTimeout(() => this.close(panelId), 400);  // brief flash then close
+
             try {
                 const payload = {
                     url: getVal("addStoryUrl", panelId) || "",
@@ -390,17 +426,13 @@ const UnifiedPanel = (() => {
                     series: collectTagList("addStorySeriesWrap", panelId),
                     genres: collectTagList("addStoryGenresWrap", panelId),
                     tags: collectTagList("addStoryTagsWrap", panelId),
-                    auto_update: $(`addStoryAutoUpdate-${panelId}`)
-                        ?.checked || false,
+                    auto_update: $(`addStoryAutoUpdate-${panelId}`)?.checked || false,
                     selected_chapters: state.selectedChapters.length > 0
                         ? state.selectedChapters
                         : null,
                 };
 
                 log("add_story", "Payload:", payload);
-
-                // Switch to download tab
-                this.switchTabByIndex(panelId, 3);
 
                 const result = await fetchJSON("/api/stories/add", {
                     method: "POST",
@@ -409,35 +441,18 @@ const UnifiedPanel = (() => {
                 });
 
                 if (!result.ok) {
-                    throw new Error(
-                        result.data.detail || "Failed to add story"
-                    );
+                    throw new Error(result.data.detail || "Failed to add story");
                 }
 
-                const chapterInfo =
-                    state.selectedChapters.length > 0
-                        ? ` (${state.selectedChapters.length} chapters)`
-                        : " (all chapters)";
+                // Done — panel is already closed, nothing more to do here.
+                // The backend will emit a WebSocket event when download completes.
 
-                const progressText = $(
-                    `addStoryProgressText-${panelId}`
-                );
-                if (progressText) {
-                    progressText.textContent =
-                        "Story added successfully" + chapterInfo;
-                }
-                
-                const progressFill = $(
-                    `addStoryProgressFill-${panelId}`
-                );
-                if (progressFill) progressFill.style.width = "100%";
-
-                setTimeout(() => this.close(panelId), 1200);
             } catch (e) {
                 err("add_story", e);
-                setStatus(panelId, e.message, "error");
-                // Back to chapters tab
-                this.switchTabByIndex(panelId, 2);
+                // Panel is closed so we can't show status inside it.
+                // Emit to whatever global notification system you have,
+                // or reopen the panel with an error.
+                console.error("[add_story] Download failed:", e.message);
             } finally {
                 setState(panelId, { isLoading: false });
             }
@@ -480,6 +495,11 @@ const UnifiedPanel = (() => {
                     setVal("metaPublishYear", panelId, st.publish_year || "");
                     setVal("metaLanguage", panelId, st.language || "");
                     setVal("metaSourceUrl", panelId, st.source_url || "");
+                    
+                    const hideAuthorNotesEl = $(`metaHideAuthorNotes-${panelId}`);
+                    if (hideAuthorNotesEl)
+                        hideAuthorNotesEl.checked = Boolean(st.hide_author_notes);
+
                     const autoUpdateEl = $(
                         `metaAutoUpdate-${panelId}`
                     );
@@ -547,9 +567,8 @@ const UnifiedPanel = (() => {
                     genres: collectTagList("metaGenresWrap", panelId),
                     tags: collectTagList("metaTagsWrap", panelId),
                     source_url: sourceUrl,
-                    auto_update: $(
-                        `metaAutoUpdate-${panelId}`
-                    )?.checked || false,
+                    auto_update: $(`metaAutoUpdate-${panelId}`)?.checked || false,
+                    hide_author_notes: $(`metaHideAuthorNotes-${panelId}`)?.checked || false,
                 };
 
                 const result = await fetchJSON(

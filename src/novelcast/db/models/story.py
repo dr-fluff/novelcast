@@ -30,6 +30,7 @@ class Story(Base):
     title: Mapped[str] = mapped_column(String, nullable=False)
     subtitle: Mapped[Optional[str]] = mapped_column(String)
 
+    story_site_id: Mapped[Optional[str]] = mapped_column(String, unique=True, index=True)
     source_url: Mapped[Optional[str]] = mapped_column(String, unique=True)
 
     # cached display (optional denormalization)

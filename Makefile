@@ -57,3 +57,9 @@ clean-log:
 
 clean-config:
 	rm -rf config/
+
+reset-db:
+	rm -f data/novelcast.db data/novelcast.db-wal data/novelcast.db-shm
+	rm -rf alembic/versions/*
+	uv run alembic revision --autogenerate -m "baseline"
+	uv run alembic upgrade head

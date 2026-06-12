@@ -1,6 +1,9 @@
 # novelcast/api/routes/pages/helpers.py
 from pathlib import Path
 from urllib.parse import quote
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def _norm(value) -> str:
@@ -28,17 +31,48 @@ def story_has_unread(story: dict) -> bool:
     last_read = int(story.get("last_read_chapter_number") or 0)
     return last_read < _story_latest_downloaded(story)
 
+def story_has_not_unread(story: dict) -> bool:
+    try:
+        downloaded = int(story.get("downloaded_chapters") or 0)
+        if downloaded <= 0:
+            return False
+
+        last_read = int(story.get("last_read_chapter_number") or 0)
+        latest = int(_story_latest_downloaded(story) or 0)
+        return last_read == latest
+
+    except (TypeError, ValueError):
+        logger.exception("Invalid story data: %s", story)
+        return False
+
+def build_story_view_model(story: dict, progress: dict | None) -> dict:
+    last_read = int((progress or {}).get("last_chapter_number") or 0)
+    latest = int(_story_latest_downloaded(story) or 0)
+    downloaded = int(story.get("downloaded_chapters") or 0)
+
+    return {
+        **story,
+
+        # keep progress separate (IMPORTANT)
+        "progress": {
+            "last_read_chapter": last_read,
+        },
+
+        # derived UI state (single source of truth)
+        "is_caught_up": downloaded > 0 and last_read == latest,
+        "has_unread": downloaded > 0 and last_read < latest,
+    }
 
 def enrich_story_progress(stories: list[dict], progress_rows: list[dict]) -> list[dict]:
     progress_by_story = {row["story_id"]: row for row in progress_rows}
-    enriched = []
-    for story in stories:
-        item = dict(story)
-        progress = progress_by_story.get(item.get("id")) or {}
-        item["last_read_chapter_number"] = progress.get("last_chapter_number")
-        item["has_unread"] = story_has_unread(item)
-        enriched.append(item)
-    return enriched
+
+    return [
+        build_story_view_model(
+            story,
+            progress_by_story.get(story.get("id"))
+        )
+        for story in stories
+    ]
 
 
 def filter_stories(

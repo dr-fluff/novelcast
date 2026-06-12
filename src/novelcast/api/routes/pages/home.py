@@ -80,6 +80,7 @@ def home(
         "status_options": [
             {"key": "",            "label": "Any status"},
             {"key": "unread",      "label": "Has unread chapters"},
+            {"key": "no_unread",      "label": "Hav no unread chapters"},
             {"key": "read",        "label": "All downloaded read"},
             {"key": "not_started", "label": "Not started"},
         ],

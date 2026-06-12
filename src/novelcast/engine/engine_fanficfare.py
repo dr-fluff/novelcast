@@ -56,6 +56,7 @@ class FanFicFareEngine(StoryEngine):
             "file_path": epub_path,
             "chapters": self._normalize_chapters(raw),
             "format": "epub",
+            "story_site_id": self._extract_story_site_id(url, raw),
             "raw": raw,
         }
 
@@ -74,6 +75,7 @@ class FanFicFareEngine(StoryEngine):
             "url": url,
             "raw": raw,
             "chapters": self._extract_chapter_details(raw),
+            "story_site_id": self._extract_story_site_id(url, raw),
         }
 
     def _extract_chapter_details(self, raw: dict) -> list[dict]:
@@ -277,3 +279,18 @@ class FanFicFareEngine(StoryEngine):
             progress_callback("Processing", value)
 
         return value
+    
+    def _extract_story_site_id(self, url: str, raw: dict) -> str | None:
+        import re
+        # Prefer clean numeric ID from URL
+        match = re.search(r'/fiction/(\d+)', url)
+        if match:
+            return match.group(1)
+
+        # Fallback: strip prefix from output_filename
+        output_filename = raw.get("output_filename") or ""
+        match = re.search(r'-([a-z]+_(\d+))\.epub$', output_filename)
+        if match:
+            return match.group(2)  # just the number
+
+        return None

@@ -54,6 +54,7 @@ def story(
 
     return templates.TemplateResponse("pages/story.html", {
         "request": request,
+        "current_user": current_user,
         "story": story,
         "story_authors": story_authors,
         "chapters": chapter_list,

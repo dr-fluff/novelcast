@@ -56,10 +56,12 @@ def chapter(
     first_unread = next(
         (c["id"] for c in chapter_list if c["id"] not in read_chapters), None
     )
+    hide_author_notes = story.get("hide_author_notes", True)
 
     return templates.TemplateResponse("pages/chapter.html", {
         "request": request,
         "title": story.get("title"),
+        "story_link": story.get("source_url"),
         "author": story.get("author"),
         "chapter": chapter.get("title") or f"Chapter {chapter.get('chapter_number')}",
         "content": content,
@@ -68,6 +70,7 @@ def chapter(
         "prev_chapter_id": prev_id,
         "next_chapter_id": next_id,
         "first_unread_chapter_id": first_unread,
+        "hide_author_notes": hide_author_notes,
     })
 
 

@@ -3,10 +3,10 @@
 from pathlib import Path
 from urllib.parse import quote
 import re
-
+import logging
 from novelcast.db.repositories.author_repository import AuthorRepository
 
-
+logger = logging.getLogger(__name__)
 class StoryService:
     def __init__(self, repo, author_repo: AuthorRepository | None = None):
         self.repo        = repo
@@ -61,6 +61,7 @@ class StoryService:
         data = self.repo.get_by_id(story_id)
         if not data:
             return None
+        logger.info(data)
         # resolve cover URL for templates
         data["cover_url"] = self._cover_url(data.get("cover_path"))
         return data
@@ -146,6 +147,7 @@ class StoryService:
         tags: list[str] | None = None,
         source_url: str | None = None,
         auto_update: bool | None = None,
+        hide_author_notes: bool | None = None,  # ← ADD
     ) -> dict | None:
         updated = self.repo.update_full_metadata(
             story_id=story_id,
@@ -165,16 +167,16 @@ class StoryService:
             self._sync_story_authors(story_id, names)
         if updated and auto_update is not None:
             self.repo.set_story_setting(
-                story_id,
-                "auto_update",
+                story_id, "auto_update",
                 "1" if bool(auto_update) else "0",
-                category="story",
-                type="bool",
+                category="story", type="bool",
             )
-        return updated
-        if updated and self.author_repo and author is not None:
-            names = self._parse_comma_separated(author)
-            self._sync_story_authors(story_id, names)
+        if updated and hide_author_notes is not None:  # ← ADD
+            self.repo.set_story_setting(
+                story_id, "hide_author_notes",
+                "1" if bool(hide_author_notes) else "0",
+                category="story", type="bool",
+            )
         return updated
 
     # ── author reads ───────────────────────────────────────────────────────

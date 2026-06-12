@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 from novelcast.api.deps import get_stories
 from novelcast.services import StoryService
+from .utils import require_admin
 
 router = APIRouter(prefix="/stories", tags=["stories"])
 
@@ -23,8 +24,8 @@ class StoryMetadataUpdate(BaseModel):
     tags: list[str] | None = None
     source_url: str | None = None
     auto_update: bool | None = None
-
-
+    hide_author_notes: bool | None = None
+    
 class AuthorUpdate(BaseModel):
     name: str
     bio: str | None = None
@@ -39,31 +40,6 @@ class AuthorLinksUpdate(BaseModel):
     links: list[AuthorLinkItem]
 
 
-# ── story endpoints ────────────────────────────────────────────────────────
-
-@router.get("/{story_id}")
-def get_story(
-    story_id: int,
-    stories: StoryService = Depends(get_stories),
-):
-    story = stories.get_story(story_id)
-    if not story:
-        raise HTTPException(status_code=404, detail="Story not found")
-    return {"story": story}
-
-
-@router.delete("/{story_id}")
-def delete_story(
-    story_id: int,
-    stories: StoryService = Depends(get_stories),
-):
-    if not stories.get_story(story_id):
-        raise HTTPException(status_code=404, detail="Story not found")
-    try:
-        stories.delete_story(story_id)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) from e
-    return {"status": "ok"}
 
 
 @router.patch("/{story_id}/metadata")
@@ -89,11 +65,42 @@ def update_story_metadata(
             tags=body.tags,
             source_url=body.source_url,
             auto_update=body.auto_update,
+            hide_author_notes=body.hide_author_notes,
         )
         request.app.state.ctx.emit("story_updated", {"story_id": story_id})
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
     return {"status": "ok", "story": updated}
+ 
+
+# ── story endpoints ────────────────────────────────────────────────────────
+
+@router.get("/{story_id}")
+def get_story(
+    story_id: int,
+    stories: StoryService = Depends(get_stories),
+):
+    story = stories.get_story(story_id)
+    if not story:
+        raise HTTPException(status_code=404, detail="Story not found")
+    return {"story": story}
+
+
+@router.delete("/{story_id}")
+def delete_story(
+    story_id: int,
+    stories: StoryService = Depends(get_stories),
+    current_user: dict = Depends(require_admin),
+):
+    if not current_user or not current_user.get("is_root"):
+        raise HTTPException(status_code=403, detail="Admins only")
+    if not stories.get_story(story_id):
+        raise HTTPException(status_code=404, detail="Story not found")
+    try:
+        stories.delete_story(story_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+    return {"status": "ok"}
 
 
 # ── author endpoints ───────────────────────────────────────────────────────

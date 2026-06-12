@@ -493,21 +493,8 @@ body[data-theme="dark"] .settings-btn:hover {
   display: none !important;
 }
 
-.author-note-portlet,
-.author-note-portlet * {
-  display: none !important;
-}
-
-.portlet.solid.author-note-portlet {
-  display: none !important;
-}
-
-.portlet-body.author-note {
-  display: none !important;
-}
-
 /* ────────────────────────────────────────────────────────────────
-   FLOATING NAVIGATION ARROWS
+FLOATING NAVIGATION ARROWS
    ──────────────────────────────────────────────────────────────── */
 
 .floating-nav {
@@ -693,4 +680,9 @@ body[data-theme="dark"] .settings-btn:hover {
   .button-group {
     grid-template-columns: 1fr 1fr;
   }
+}
+
+.chapter-scroll-container {
+  position: relative;
+  align-items: stretch;
 }

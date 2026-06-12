@@ -51,12 +51,15 @@
               <td>{{ account.created_at.strftime("%Y-%m-%d %H:%M") }}</td>
               <td>
                 <a href="#"
-                  class="btn-ghost btn-sm delete-btn" data-user-id="{{ account.id }}">
+                  class="btn-ghost btn-sm edit-btn" data-user-id="{{ account.id }}">
+                    edit
+                </a>
+                {% if account.id != user.id %}
+                  <a href="#" class="btn-ghost btn-sm" onclick="deleteUser({{ account.id }})">
                     Delete
-                </a>
-                <a href="#" class="btn-ghost btn-sm" onclick="deleteUser({{ account.id }})">
-                  Delete
-                </a>
+                  </a>
+                {% endif %}
+                
               </td>
             </tr>
             {% endfor %}

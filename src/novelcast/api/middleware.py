@@ -110,7 +110,7 @@ class AuthMiddleware:
             and not path.startswith("/api")
             and not path.startswith("/ws")
         ):
-            response = RedirectResponse("/signup", status_code=303)
+            response = RedirectResponse("/login", status_code=303)
             return await response(scope, receive, send)
 
         return await self.app(scope, receive, send)

@@ -1,9 +1,16 @@
 .grid {
+  --grid-min-card-width: 10vw;
+
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(var(--grid-min-card-width, 220px), 1fr));
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(clamp(160px, 20vw, 260px), 1fr)
+  );
   gap: var(--grid-gap, 1.25rem);
   padding: var(--grid-padding, 2rem);
 }
+
+
 
 .grid-compact {
   --grid-min-card-width: 160px;
@@ -11,7 +18,7 @@
 
 @media (max-width: 700px) {
   .grid {
-    grid-template-columns: 1fr;
-    padding: var(--grid-mobile-padding, 1rem 1rem 3rem);
+    grid-template-columns: repeat(2, 1fr);
+    /* padding: var(--grid-mobile-padding, 1rem 1rem 3rem); */
   }
 }

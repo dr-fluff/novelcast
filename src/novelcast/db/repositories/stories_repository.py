@@ -32,6 +32,9 @@ class StoriesRepository(BaseRepository):
             story = db.scalars(select(Story).where(Story.source_url == url)).first()
             return _to_dict(story)
 
+    def get_story_site_id(self, story_id: int) -> str:
+        pass
+
     def get_chapter_file_paths(self, story_id: int) -> list[str]:
         with self.session_no_commit() as db:
             rows = db.execute(
@@ -97,14 +100,17 @@ class StoriesRepository(BaseRepository):
         genres: list[str] | None = None,
         tags: list[str] | None = None,
         source_url: str | None = None,
-        auto_update: bool | None = None,  # ← ADD THIS
+        auto_update: bool | None = None,
+        hide_author_notes: bool | None = None,
+        story_site_id: str | None = None,
     ) -> dict | None:
         """Used by the metadata edit panel."""
         with self.session() as db:
-            story = db.get(Story, story_id)
+            story = db.get(Story, story_id)  # FIX: was `id` (Python builtin)
             if not story:
                 return None
             story.title = title
+            # FIX: removed bogus `story.story_id = story_id` — Story has no such column
             story.author = author
             story.subtitle = subtitle
             story.description = description
@@ -112,15 +118,22 @@ class StoriesRepository(BaseRepository):
             story.language = language
             if source_url is not None:
                 story.source_url = source_url
-            
-            # ← ADD THIS BLOCK
+            if story_site_id is not None:
+                story.story_site_id = story_site_id
+
             if auto_update is not None:
                 self.set_story_setting(
                     story_id,
                     "auto_update",
                     "1" if auto_update else "0",
                 )
-            
+            if hide_author_notes is not None:
+                self.set_story_setting(
+                    story_id,
+                    "hide_author_notes",
+                    "1" if hide_author_notes else "0",
+                )
+
             _sync_story_relations(db, story, Series, "series", series or [])
             _sync_story_relations(db, story, Genre, "genres", genres or [])
             _sync_story_relations(db, story, Tag, "tags", tags or [])
@@ -213,17 +226,25 @@ def _sync_story_relations(db, story, model, attr_name, names):
 def _to_dict(story: Story | None) -> dict | None:
     if story is None:
         return None
-    return {
+
+    result = {
         "id":                        story.id,
         "title":                     story.title,
         "author":                    story.author,
         "subtitle":                  getattr(story, "subtitle", None),
         "source_url":                story.source_url,
+        "story_site_id":             story.story_site_id,
         "auto_update":               any(
             str(s.value).lower() in ("1", "true", "yes")
             for s in getattr(story, "settings", []) or []
             if s.name == "auto_update"
         ),
+        "hide_author_notes": any(      
+            str(s.value).lower() in ("1", "true", "yes")
+            for s in getattr(story, "settings", []) or []
+            if s.name == "hide_author_notes"
+        ),
+        
         "local_path":                story.local_path,
         "cover_path":                story.cover_path,
         "total_chapters":            story.total_chapters,
@@ -237,37 +258,32 @@ def _to_dict(story: Story | None) -> dict | None:
         "language":                  getattr(story, "language", None),
         "publisher":                 getattr(story, "publisher", None),
         "narrators":                 getattr(story, "narrators", None),
-        # normalized relations: join names into readable strings
         "genres":                    ", ".join([g.name for g in getattr(story, "genres", [])]) if getattr(story, "genres", None) else None,
         "tags":                      ", ".join([t.name for t in getattr(story, "tags", [])]) if getattr(story, "tags", None) else None,
         "series":                    ", ".join([s.name for s in getattr(story, "series", [])]) if getattr(story, "series", None) else None,
-        "genres_list":              [g.name for g in getattr(story, "genres", [])],
-        "tags_list":                [t.name for t in getattr(story, "tags", [])],
-        "series_list":              [s.name for s in getattr(story, "series", [])],
+        "genres_list":               [g.name for g in getattr(story, "genres", [])],
+        "tags_list":                 [t.name for t in getattr(story, "tags", [])],
+        "series_list":               [s.name for s in getattr(story, "series", [])],
         "duration":                  getattr(story, "duration", None),
         "size":                      None,
         "created_at":                story.created_at,
     }
 
-    # try to read computed size from model field or story settings
+    # FIX: size enrichment was unreachable (came after an early return). Now runs correctly.
     try:
         size_field = getattr(story, "size", None)
         if size_field:
-            result = dict(result)
             result["size"] = human_readable_size(int(size_field))
             return result
 
-        # check settings relationship for stored computed.size
         settings = getattr(story, "settings", []) or []
         for s in settings:
             if s.name == "computed.size":
                 try:
-                    bytes_val = int(s.value)
-                    result = dict(result)
-                    result["size"] = human_readable_size(bytes_val)
-                    return result
+                    result["size"] = human_readable_size(int(s.value))
                 except Exception:
-                    break
+                    pass
+                break
     except Exception:
         pass
 

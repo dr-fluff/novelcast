@@ -226,8 +226,9 @@ class AppContext:
             stories_repo=self.stories_repo,
             chapters_repo=self.chapters_repo,
             file_utils=self.file_utils,
+            epub_parser=self.epub_parser,
         )
-
+        
     # ─────────────────────────────
     # ORCHESTRATOR (engine coordination only)
     # ─────────────────────────────

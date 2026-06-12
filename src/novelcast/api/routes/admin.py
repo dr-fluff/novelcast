@@ -8,15 +8,10 @@ from sqlalchemy.exc import IntegrityError
 from novelcast.api.deps import get_current_user, get_users, get_chapter_filter
 from novelcast.services import UserService
 from novelcast.services.chapter_filter_service import ChapterFilterService
+from .utils import require_admin
 
 
 router = APIRouter(tags=["admin"])
-
-
-def _require_admin(current_user: dict | None = Depends(get_current_user)) -> dict:
-    if not current_user or not current_user.get("is_root"):
-        raise HTTPException(status_code=403, detail="Admin access required")
-    return current_user
 
 
 # ── Users ──────────────────────────────────────────────────────────────────
@@ -41,7 +36,7 @@ def edit_user(
     password: str | None = Form(None),
     password_confirm: str | None = Form(None),
     role: str = Form("user"),
-    current_user: dict = Depends(_require_admin),
+    current_user: dict = Depends(require_admin),
     users: UserService = Depends(get_users),
 ):
     if current_user.get("id") == user_id and role != "admin":
@@ -104,7 +99,7 @@ class PatternTest(BaseModel):
 
 @router.get("/chapter-patterns")
 def list_patterns(
-    _user: dict = Depends(_require_admin),
+    _user: dict = Depends(require_admin),
     svc: ChapterFilterService = Depends(get_chapter_filter),
 ):
     return svc.get_all_patterns()
@@ -113,7 +108,7 @@ def list_patterns(
 @router.post("/chapter-patterns", status_code=201)
 def create_pattern(
     body: PatternCreate,
-    _user: dict = Depends(_require_admin),
+    _user: dict = Depends(require_admin),
     svc: ChapterFilterService = Depends(get_chapter_filter),
 ):
     try:
@@ -126,7 +121,7 @@ def create_pattern(
 def patch_pattern(
     pattern_id: int,
     body: PatternPatch,
-    _user: dict = Depends(_require_admin),
+    _user: dict = Depends(require_admin),
     svc: ChapterFilterService = Depends(get_chapter_filter),
 ):
     if body.enabled is not None:
@@ -152,7 +147,7 @@ def patch_pattern(
 @router.delete("/chapter-patterns/{pattern_id}", status_code=204)
 def delete_pattern(
     pattern_id: int,
-    _user: dict = Depends(_require_admin),
+    _user: dict = Depends(require_admin),
     svc: ChapterFilterService = Depends(get_chapter_filter),
 ):
     svc.delete_pattern(pattern_id)
@@ -161,7 +156,7 @@ def delete_pattern(
 @router.post("/chapter-patterns/test")
 def test_pattern(
     body: PatternTest,
-    _user: dict = Depends(_require_admin),
+    _user: dict = Depends(require_admin),
     svc: ChapterFilterService = Depends(get_chapter_filter),
 ):
     try:
