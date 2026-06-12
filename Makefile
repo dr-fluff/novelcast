@@ -63,3 +63,8 @@ reset-db:
 	rm -rf alembic/versions/*
 	uv run alembic revision --autogenerate -m "baseline"
 	uv run alembic upgrade head
+
+ci: test build
+
+build:
+	docker build -t novelcast .
