@@ -52,7 +52,7 @@ class PaginatedEReader {
     await this.loadUserSettings();
     this.updateSettingsUI();
     this.attachEvents();
-    this.buildIframe();
+    this.buildIframe(); 
   }
 
   async loadUserSettings() {
@@ -213,13 +213,91 @@ class PaginatedEReader {
       }
     });
     requestAnimationFrame(() =>
-      requestAnimationFrame(() => {
+      requestAnimationFrame(async () => {
         this.calculatePages();
-        this.render(0);
+        const startPage = await this.resolveStartPage();
+        this.render(startPage);
         this.iframeWin.addEventListener('keydown', e => this.handleKey(e));
       })
     );
+    
   }, { once: true });
+  }
+
+  resolveStartPage() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('lastPage') === '1') return this.state.totalPages - 1;
+
+    const pageParam  = params.get('page');
+    const anchorParam = params.get('anchor');
+
+    if (anchorParam !== null) {
+      return this.findPageForAnchor(parseInt(anchorParam, 10));
+    }
+    if (pageParam !== null) {
+      return Math.min(parseInt(pageParam, 10), this.state.totalPages - 1);
+    }
+    return 0;
+  }
+
+  findPageForAnchor(paragraphIndex) {
+    const doc = this.iframeDoc;
+    if (!doc) return 0;
+    const { w } = this.getPageSize();
+
+    const paragraphs = doc.querySelectorAll('p');
+    const target = paragraphs[paragraphIndex] || paragraphs[0];
+    if (!target) return 0;
+
+    // offsetLeft in a CSS columns layout = horizontal position in the column strip
+    const page = Math.floor(target.offsetLeft / w);
+    return Math.max(0, Math.min(page, this.state.totalPages - 1));
+  }
+
+  saveProgress(page, totalPages) {
+    clearTimeout(this.progressTimer);
+    this.progressTimer = setTimeout(() => {
+      // Find the paragraph index visible on the current page
+      const anchor = this.findAnchorParagraph();
+      
+      fetch('/api/chapter-progress', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chapter_id: Number(this.state.chapterId),
+          story_id:   Number(this.state.storyId),
+          page,
+          total_pages: totalPages,
+          anchor,   // ← paragraph index
+        }),
+      }).catch(() => {});
+    }, 500);
+  }
+
+  findAnchorParagraph() {
+    const doc = this.iframeDoc;
+    if (!doc) return 0;
+    const { w } = this.getPageSize();
+    const scrollLeft = this.state.currentPage * w;
+
+    const paragraphs = doc.querySelectorAll('p');
+    for (let i = 0; i < paragraphs.length; i++) {
+      const rect = paragraphs[i].getBoundingClientRect();
+      // getBoundingClientRect is relative to iframe viewport, not columns
+      // use offsetLeft instead
+      const left = paragraphs[i].offsetLeft;
+      if (left >= scrollLeft - w && left < scrollLeft + w) {
+        return i;
+      }
+    }
+    return 0;
+  }
+
+  getProgress(chapterId) {
+    try {
+      const val = localStorage.getItem(`nc_progress_${chapterId}`);
+      return val !== null ? parseInt(val, 10) : null;
+    } catch (e) { return null; }
   }
 
   buildCSS(w, h) {
@@ -377,10 +455,10 @@ class PaginatedEReader {
     const { w } = this.getPageSize();
     const columnsEl = this.iframeDoc?.getElementById('columns');
     if (columnsEl) {
-      // Slide the column strip left by one page width per page
       columnsEl.style.transform = `translateX(${-i * w}px)`;
     }
 
+    this.saveProgress(i, this.state.totalPages);
     this.updateUI();
   }
 

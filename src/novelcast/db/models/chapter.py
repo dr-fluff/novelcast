@@ -4,10 +4,11 @@
 from datetime import datetime
 from typing import Optional, TYPE_CHECKING
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, func, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from novelcast.db.base import Base
+
 
 if TYPE_CHECKING:
     from novelcast.db.models.story import Story
@@ -66,3 +67,20 @@ class ChapterFile(Base):
 
     def __repr__(self) -> str:
         return f"<ChapterFile id={self.id} chapter_id={self.chapter_id} format={self.format!r}>"
+
+
+class ChapterProgress(Base):
+    __tablename__ = "chapter_progress"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    chapter_id: Mapped[int] = mapped_column(Integer, ForeignKey("chapters.id", ondelete="CASCADE"), nullable=False)
+    page: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
+    anchor: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "chapter_id", name="uq_chapter_progress_user_chapter"),
+    )
+    

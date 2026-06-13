@@ -5,6 +5,7 @@ from urllib.parse import quote
 import re
 import logging
 from novelcast.db.repositories.author_repository import AuthorRepository
+from novelcast.db.models.story import Story
 
 logger = logging.getLogger(__name__)
 class StoryService:
@@ -236,3 +237,16 @@ class StoryService:
         if not self.author_repo:
             return []
         return self.author_repo.set_links(author_id, links)
+
+    # In novelcast/repositories/story_repository.py
+
+    def count_pending_syncs(self) -> int:
+        
+        from sqlalchemy import func
+
+        return (
+            self._db.query(func.count(Story.id))
+            .filter(Story.sync_status == "pending")   # adjust field/value
+            .scalar()
+            or 0
+        )

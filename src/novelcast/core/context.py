@@ -30,6 +30,8 @@ from novelcast.services import (
     PatreonConfigService,
     StoryDownloadService,
     LibrarySyncService,
+    RssService,
+    HealthCheckService,
 )
 from novelcast.services.chapter_filter_service import ChapterFilterService
 
@@ -47,6 +49,10 @@ from novelcast.parser import (
     HtmlParser,
     ParserRegistry,
     PatreonParser
+)
+
+from novelcast.rss import (
+    RoyalRoadRss
 )
 
 from novelcast.pipeline.story_pipeline import StoryPipeline
@@ -75,7 +81,9 @@ class AppContext:
         self._init_pipeline()
         self._init_orchestrator()
         self._init_service_layer()
+        self._init_rss()
         self._validate()
+        
 
         logger.info("AppContext ready")
 
@@ -137,7 +145,21 @@ class AppContext:
         )
         self.settings.migrate_server_secrets()
 
-        self.chapter_filter = ChapterFilterService(self.chapter_pattern_repo)  # ← new
+        self.chapter_filter = ChapterFilterService(self.chapter_pattern_repo)
+
+        # Resolve stories_dir from settings — adjust the key path to match
+        # wherever your storage path lives in your SETTINGS schema.
+        server_settings = self.settings.get_resolved_server_settings()
+        stories_dir: str | None = (
+            server_settings.get("storage", {}).get("stories_dir")
+            or server_settings.get("library", {}).get("stories_dir")
+            or None
+        )
+
+        self.health_check = HealthCheckService(
+            session_factory=self.SessionLocal,
+            stories_dir=stories_dir,
+        )
 
     # ─────────────────────────────
     # ENGINE CONFIG (writers)
@@ -228,6 +250,13 @@ class AppContext:
             file_utils=self.file_utils,
             epub_parser=self.epub_parser,
         )
+    
+    def _init_rss(self):
+        logger.info("Initializing RSS")
+
+        self.rss_service = RssService(readers=[
+            RoyalRoadRss(self.stories),
+        ])
         
     # ─────────────────────────────
     # ORCHESTRATOR (engine coordination only)
@@ -273,8 +302,9 @@ class AppContext:
             "story_parser",
             "engine_selector",
             "story_pipeline",
-            "chapter_filter",       # ← new
-            "chapter_pattern_repo", # ← new
+            "chapter_filter",       
+            "chapter_pattern_repo",
+            "health_check", 
         ]
 
         for r in required:

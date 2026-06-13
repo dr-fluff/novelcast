@@ -60,14 +60,25 @@ function toggleFullPath() {
 
 /* ── Go to first unread ───────────────────────────────────────────────── */
 
-window.goToFirstUnread = function () {
+window.goToFirstUnread = async function () {
     const section   = document.querySelector(".story-page");
     const storyId   = section?.dataset.storyId;
     const chapterId = section?.dataset.firstUnreadId;
-    if (storyId && chapterId) {
-        window.location.href = `/chapter?story_id=${storyId}&chapter_id=${chapterId}`;
+    if (!storyId || !chapterId) return;
+
+    try {
+    const r = await fetch(`/api/chapter-progress?chapter_id=${chapterId}`);
+    if (r.ok) {
+        const data = await r.json();
+        const page = data.page || 0;
+        const url  = `/chapter?story_id=${storyId}&chapter_id=${chapterId}${page > 0 ? `&page=${page}` : ''}`;
+        window.location.href = url;
+        return;
     }
-};
+    } catch (e) { /* fall through */ }
+
+    window.location.href = `/chapter?story_id=${storyId}&chapter_id=${chapterId}`;
+    };
 
 /* ── Metadata panel ───────────────────────────────────────────────────── */
 

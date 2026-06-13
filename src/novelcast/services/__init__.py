@@ -12,3 +12,6 @@ from .story_download_service import StoryDownloadService
 from .story_service import StoryService
 from .sync_service import LibrarySyncService
 from .user_service import UserService
+from .rss_service import RssService
+from .health_check_service import HealthCheckService
+from .chapter_filter_service import ChapterFilterService

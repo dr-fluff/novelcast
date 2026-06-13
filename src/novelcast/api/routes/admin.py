@@ -5,8 +5,14 @@ from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
 
-from novelcast.api.deps import get_current_user, get_users, get_chapter_filter
-from novelcast.services import UserService
+
+from novelcast.api.deps import get_current_user, get_users, get_chapter_filter, get_health_check, get_library_sync
+
+from novelcast.services import (
+    HealthCheckService,
+    LibrarySyncService,
+    UserService,
+)
 from novelcast.services.chapter_filter_service import ChapterFilterService
 from .utils import require_admin
 
@@ -163,3 +169,13 @@ def test_pattern(
         return svc.test_pattern(body.pattern, body.samples)
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
+    
+
+@router.get("/health")
+def health_check(
+    _user: dict = Depends(require_admin),
+    svc: HealthCheckService = Depends(get_health_check),
+    library_sync: LibrarySyncService = Depends(get_library_sync),
+):
+    pending = library_sync.pending_count()
+    return [r.as_dict() for r in svc.run_all(pending_syncs=pending)]

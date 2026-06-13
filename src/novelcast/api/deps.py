@@ -5,6 +5,7 @@
 
 from fastapi import Request
 
+
 from novelcast.services import (
     AuthService,
     UserService,
@@ -17,6 +18,7 @@ from novelcast.services import (
     LibrarySyncService,
     NotifierService,
     PasswordResetService,
+    HealthCheckService
 )
 from novelcast.services.chapter_filter_service import ChapterFilterService
 
@@ -75,3 +77,7 @@ def get_templates(request: Request):
 
 def get_current_user(request: Request) -> dict | None:
     return getattr(request.state, "user", None)
+
+
+def get_health_check(request: Request) -> HealthCheckService:
+    return request.app.state.ctx.health_check

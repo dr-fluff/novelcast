@@ -2,6 +2,7 @@ from fastapi import Depends, HTTPException, Request
 from fastapi.templating import Jinja2Templates
 
 from . import router
+
 from novelcast.api.deps import (
     get_chapter_filter,
     get_current_user,
@@ -10,16 +11,18 @@ from novelcast.api.deps import (
     get_stories,
     get_templates,
     get_users,
+    get_health_check,
 )
+
 from novelcast.services import (
     LibrarySyncService,
     SettingsService,
     StoryService,
     UserService,
+    HealthCheckService,
+    ChapterFilterService,
 )
-from novelcast.services.chapter_filter_service import ChapterFilterService
 from novelcast.core.defaults import DEFAULT_CHAPTER_PATTERNS
-
 
 @router.get("/admin")
 def admin_dashboard(
@@ -30,38 +33,24 @@ def admin_dashboard(
     users: UserService = Depends(get_users),
     current_user: dict | None = Depends(get_current_user),
     templates: Jinja2Templates = Depends(get_templates),
+    health_svc: HealthCheckService = Depends(get_health_check),
 ):
     if not current_user or not current_user.get("is_root"):
         raise HTTPException(status_code=403, detail="Admin access required")
 
-    all_users = users.get_all_users()
+    all_users   = users.get_all_users()
     all_stories = stories.get_all_stories()
+    pending     = library_sync.pending_count()
 
     stats = {
-        "total_users":   len(all_users),
-        "total_stories": len(all_stories),
-        "pending_syncs": library_sync.pending_count(),
+        "total_users":      len(all_users),
+        "total_stories":    len(all_stories),
+        "pending_syncs":    pending,
         "pending_chapters": library_sync.pending_chapter_count(),
-        "need_attention": 0,
+        "need_attention":   0,
     }
 
-    health_checks = [
-        {
-            "name":   "Database",
-            "status": "healthy",
-            "detail": "Connection successful",
-        },
-        {
-            "name":   "Database",
-            "status": "not healthy",
-            "detail": "Connection not successful",
-        },
-        {
-            "name":   "Sync Worker",
-            "status": "healthy",
-            "detail": "Running",
-        },
-    ]
+    health_checks = [r.as_dict() for r in health_svc.run_all(pending_syncs=pending)]
 
     return templates.TemplateResponse("pages/admin.html", {
         "request":       request,

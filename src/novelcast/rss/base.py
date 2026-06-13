@@ -1,22 +1,21 @@
 from abc import ABC, abstractmethod
 
 
-class RssFeed(ABC):
-
-    def __init__(self):
-        self.base_link = None
+class BaseRssReader(ABC):
 
     @abstractmethod
-    def create_link(self) -> str:
-        """Return full RSS URL"""
+    def build_feed(self) -> str:
         pass
 
     @abstractmethod
-    def read_rss(self, url: str):
-        """Fetch RSS XML"""
+    def fetch(self, url: str) -> str:
         pass
 
     @abstractmethod
-    def parse_rss(self, raw_feed):
-        """Convert RSS → structured items"""
+    def parse(self, xml: str) -> list[dict]:
         pass
+
+    def run(self) -> list[dict]:
+        url = self.build_feed()
+        xml = self.fetch(url)
+        return self.parse(xml)

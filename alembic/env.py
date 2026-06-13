@@ -9,6 +9,12 @@ import sys
 from pathlib import Path
 from novelcast.db.base import Base
 
+# Register all models on Base.metadata for autogenerate
+import novelcast.db.models.chapter   # Chapter, ChapterFile, ChapterProgress
+import novelcast.db.models.progress  # ReadingProgress
+import novelcast.db.models.story
+import novelcast.db.models.user
+
 sys.path.append(str(Path(__file__).resolve().parents[1] / "src"))
 db_path = Path(__file__).resolve().parents[1] / "data" / "novelcast.db"
 DATABASE_URL = f"sqlite:///{db_path}"

@@ -1,6 +1,8 @@
 from fastapi import Depends, HTTPException, Request
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import JSONResponse
+from starlette.requests import ClientDisconnect
+
 import logging
 
 from . import router
@@ -51,7 +53,6 @@ def chapter(
         if prog and prog.get("last_chapter_id"):
             last = prog["last_chapter_id"]
             read_chapters = {c["id"] for c in chapter_list if c["id"] <= last}
-        progress.set_progress(current_user["id"], story_id, chapter_id, 0)
 
     first_unread = next(
         (c["id"] for c in chapter_list if c["id"] not in read_chapters), None
@@ -161,3 +162,49 @@ async def update_chapter_settings(
     except Exception as e:
         logger.error(f"Error saving chapter settings for user {current_user['id']}: {e}")
         raise HTTPException(status_code=500, detail="Failed to save settings")
+    
+
+from starlette.requests import ClientDisconnect
+
+@router.post("/api/chapter-progress")
+async def save_chapter_progress(
+    request: Request,
+    current_user: dict | None = Depends(get_current_user),
+    progress: ProgressService = Depends(get_progress),
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+
+    try:
+        body = await request.json()
+    except ClientDisconnect:
+        return {"ok": True}
+
+    chapter_id  = body.get("chapter_id")
+    story_id    = body.get("story_id")
+    page        = body.get("page", 0)
+    total_pages = body.get("total_pages", 1)
+    anchor      = body.get("anchor", 0)
+
+    if not chapter_id or not story_id:
+        raise HTTPException(status_code=400, detail="chapter_id and story_id required")
+
+    progress.set_chapter_page(current_user["id"], chapter_id, page, anchor)
+
+    if page >= total_pages - 1:
+        progress.set_progress(current_user["id"], story_id, chapter_id, page)
+
+    return {"ok": True}
+
+
+@router.get("/api/chapter-progress")
+async def get_chapter_progress(
+    chapter_id: int,
+    current_user: dict | None = Depends(get_current_user),
+    progress: ProgressService = Depends(get_progress),
+):
+    if not current_user:
+        return {"page": 0}
+
+    page = progress.get_chapter_page(current_user["id"], chapter_id)
+    return {"page": page or 0}

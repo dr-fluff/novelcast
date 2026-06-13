@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy import select
 
-from novelcast.db.models.chapter import Chapter
+from novelcast.db.models.chapter import Chapter, ChapterProgress
 from novelcast.db.repositories.base import BaseRepository
 from novelcast.db.models.progress import ReadingProgress
 
@@ -56,7 +56,30 @@ class ProgressRepository(BaseRepository):
                 )
             )
             db.execute(stmt)
+            
+            
 
+    def get_chapter_page(self, user_id: int, chapter_id: int) -> int:
+        with self.session_no_commit() as db:
+            row = db.scalars(
+                select(ChapterProgress).where(
+                    ChapterProgress.user_id == user_id,
+                    ChapterProgress.chapter_id == chapter_id,
+                )
+            ).first()
+            return row.page if row else 0
+
+    def set_chapter_page(self, user_id: int, chapter_id: int, page: int, anchor: int) -> None:
+        with self.session() as db:
+            stmt = (
+                insert(ChapterProgress)
+                .values(user_id=user_id, chapter_id=chapter_id, page=page, anchor=anchor)
+                .on_conflict_do_update(
+                    index_elements=["user_id", "chapter_id"],
+                    set_={"page": page, "anchor": anchor, "updated_at": datetime.now(timezone.utc),},
+                )
+            )
+            db.execute(stmt)
 
 def _progress_to_dict(
     row: ReadingProgress | None,

@@ -1,24 +1,34 @@
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 class RssService:
-    def __init__(self, story_service):
-        self.story_service = story_service
+    def __init__(self, readers: list):
+        self.readers = readers
 
-    def get_royalroad_ids(self) -> list[str]:
-        stories = self.story_service.get_all_stories()
+    def run_all(self) -> list[dict]:
+        logger.debug("RssService.run_all started | readers=%d", len(self.readers))
 
-        return [
-            s["source_url"].split("/")[-1]
-            for s in stories
-            if s.get("auto_update")
-            and s.get("source_url", "").startswith("https://www.royalroad.com/")
-        ]
+        all_items = []
 
-    def build_royalroad_feed(self) -> str:
-        ids = self.get_royalroad_ids()
+        for reader in self.readers:
+            try:
+                logger.debug("Running reader | %s", type(reader).__name__)
 
-        if not ids:
-            return ""
+                items = reader.run()
 
-        return (
-            "https://www.royalroad.com/fiction/syndication/"
-            + ",".join(set(ids))
-        )
+                logger.debug(
+                    "Reader finished | %s | items=%d",
+                    type(reader).__name__,
+                    len(items),
+                )
+
+                all_items.extend(items)
+
+            except Exception:
+                logger.exception("Reader failed | %s", type(reader).__name__)
+
+        logger.debug("RssService finished | total_items=%d", len(all_items))
+
+        return all_items
