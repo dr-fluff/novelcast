@@ -1,6 +1,7 @@
 /* novelcast/static/js/notifications.js */
 
 const activeNotifications = new Map();
+let isIntentionalClose = false;
 
 function ensureNotificationContainer() {
     let container = document.getElementById("notification-container");
@@ -113,6 +114,43 @@ function showNotification(message, type = "info", timeout = 7000, options = {}) 
 
 function buildNotification(payload) {
     switch (payload.type) {
+        case "job:start":
+            return {
+                message: payload.payload.label,
+                type: "info",
+                timeout: 0,
+                options: {
+                    id: payload.payload.job_id,
+                    persistent: true,
+                    indeterminate: true,
+                },
+            };
+        case "job:progress":
+            return {
+                message: payload.payload.message,
+                type: "info",
+                timeout: 0,
+                options: {
+                    id: payload.payload.job_id,
+                    persistent: true,
+                    progress: payload.payload.progress ?? null,
+                    indeterminate: payload.payload.progress == null,
+                },
+            };
+        case "job:done":
+            return {
+                message: `${payload.payload.label} complete`,
+                type: "success",
+                timeout: 5000,
+                options: { id: payload.payload.job_id },
+            };
+        case "job:error":
+            return {
+                message: `${payload.payload.label} failed: ${payload.payload.error || "unknown error"}`,
+                type: "error",
+                timeout: 0,
+                options: { id: payload.payload.job_id },
+            };
         case "download_started":
             return {
                 message: `Downloading: ${payload.source_url}`,
@@ -163,7 +201,7 @@ function buildNotification(payload) {
             };
         case "sync_story_started":
             return {
-                message: `Syncing “${payload.title || payload.story_id}”.`,
+                message: `Syncing "${payload.title || payload.story_id}".`,
                 type: "info",
                 timeout: 0,
                 options: {
@@ -179,7 +217,7 @@ function buildNotification(payload) {
             };
         case "sync_progress":
             return {
-                message: `Syncing “${payload.title || payload.story_id}”: ${payload.new_chapters} new chapter${payload.new_chapters === 1 ? "" : "s"}.`,
+                message: `Syncing "${payload.title || payload.story_id}": ${payload.new_chapters} new chapter${payload.new_chapters === 1 ? "" : "s"}.`,
                 type: "info",
                 timeout: 0,
                 options: {
@@ -189,7 +227,7 @@ function buildNotification(payload) {
             };
         case "sync_story_updated":
             return {
-                message: `Updated “${payload.title || payload.story_id}”: ${payload.new_chapters} new chapter${payload.new_chapters === 1 ? "" : "s"}.`,
+                message: `Updated "${payload.title || payload.story_id}": ${payload.new_chapters} new chapter${payload.new_chapters === 1 ? "" : "s"}.`,
                 type: "success",
                 timeout: 5000,
                 options: {
@@ -227,13 +265,9 @@ function buildNotification(payload) {
 function getWebSocketHost() {
     const hostname = window.location.hostname;
     const port = window.location.port;
-
-    // In browser-sync development mode, the page may be served on port 3000
-    // while the FastAPI backend is still on 8001.
     if ((hostname === "localhost" || hostname === "127.0.0.1") && port === "3000") {
         return `${hostname}:8001`;
     }
-
     return window.location.host;
 }
 
@@ -248,14 +282,10 @@ function initNotificationSocket() {
         return;
     }
 
+    isIntentionalClose = false;
     const url = createWebSocketUrl();
     const socket = new WebSocket(url);
 
-    /*
-    socket.addEventListener("open", () => {
-        showNotification("Notifications connected.", "success", 2000);
-    });
-    */
     socket.addEventListener("message", (event) => {
         try {
             const payload = JSON.parse(event.data);
@@ -264,19 +294,23 @@ function initNotificationSocket() {
             if (!notification) return;
             showNotification(notification.message, notification.type, notification.timeout, notification.options);
         } catch (error) {
-            showNotification("Received invalid notification payload.", "warning");
             console.error("Notification parse error:", error, event.data);
         }
     });
 
     socket.addEventListener("close", () => {
-        showNotification("Notification connection closed. Reconnecting...", "warning", 3000);
+        if (isIntentionalClose) return;
         setTimeout(initNotificationSocket, 2000);
     });
 
     socket.addEventListener("error", () => {
-        showNotification("Notification connection error.", "error", 3000);
+        // errors are always followed by close — let close handle reconnect
     });
+
+    window.addEventListener("beforeunload", () => {
+        isIntentionalClose = true;
+        socket.close();
+    }, { once: true });
 }
 
 window.addEventListener("DOMContentLoaded", initNotificationSocket);
