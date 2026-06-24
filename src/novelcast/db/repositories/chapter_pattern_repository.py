@@ -95,19 +95,16 @@ class ChapterPatternRepository(BaseRepository):
                 db.delete(row)
 
     def seed_defaults(self, default_patterns: dict[str, str]) -> None:
-        """
-        Populate DB with default patterns if table is empty.
-        
-        Args:
-            default_patterns: dict of {pattern: description}
-        """
-        with self.session_no_commit() as db:
-            existing = db.scalar(select(ChapterPattern))
-            if existing:
-                return  # Already seeded
-
         with self.session() as db:
+            existing_patterns = set(
+                db.scalars(
+                    select(ChapterPattern.pattern)
+                ).all()
+            )
+            added = 0
             for pattern, description in default_patterns.items():
+                if pattern in existing_patterns:
+                    continue
                 db.add(
                     ChapterPattern(
                         pattern=pattern,
@@ -116,7 +113,10 @@ class ChapterPatternRepository(BaseRepository):
                         is_builtin=True,
                     )
                 )
+                added += 1
 
+            return added
+        
     def test_pattern(self, pattern: str, samples: list[str]) -> list[dict]:
         """
         Test a regex pattern against sample titles.

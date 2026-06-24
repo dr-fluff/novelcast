@@ -1,26 +1,18 @@
-# novelcast/api/routes/admin.py
-
+# novelcast/api/router/admin/__init__.py
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
 
-
 from novelcast.api.deps import get_current_user, get_users, get_chapter_filter, get_health_check, get_library_sync
-
-from novelcast.services import (
-    HealthCheckService,
-    LibrarySyncService,
-    UserService,
-)
+from novelcast.services import HealthCheckService, LibrarySyncService, UserService
 from novelcast.services.chapter_filter_service import ChapterFilterService
-from .utils import require_admin
+from novelcast.api.routes.utils import require_admin
+
+router = APIRouter()
 
 
-router = APIRouter(tags=["admin"])
-
-
-# ── Users ──────────────────────────────────────────────────────────────────
+# ── Users ─────────────────────────────────────────────────────────────────
 
 @router.post("/users/{user_id}/promote")
 def promote_user(
@@ -46,48 +38,25 @@ def edit_user(
     users: UserService = Depends(get_users),
 ):
     if current_user.get("id") == user_id and role != "admin":
-        return RedirectResponse(
-            f"/admin/users/{user_id}/edit?error=demote",
-            status_code=303,
-        )
-
+        return RedirectResponse(f"/admin/users/{user_id}/edit?error=demote", status_code=303)
     if role not in {"user", "admin"}:
-        return RedirectResponse(
-            f"/admin/users/{user_id}/edit?error=invalid",
-            status_code=303,
-        )
-
-    if password is not None and password != "" and password != password_confirm:
-        return RedirectResponse(
-            f"/admin/users/{user_id}/edit?error=invalid",
-            status_code=303,
-        )
+        return RedirectResponse(f"/admin/users/{user_id}/edit?error=invalid", status_code=303)
+    if password and password != password_confirm:
+        return RedirectResponse(f"/admin/users/{user_id}/edit?error=invalid", status_code=303)
 
     try:
-        updated = users.update_user(
-            user_id,
-            username=username,
-            password=password,
-            is_root=(role == "admin"),
-        )
+        updated = users.update_user(user_id, username=username, password=password, is_root=(role == "admin"))
     except ValueError:
-        return RedirectResponse(
-            f"/admin/users/{user_id}/edit?error=invalid",
-            status_code=303,
-        )
+        return RedirectResponse(f"/admin/users/{user_id}/edit?error=invalid", status_code=303)
     except IntegrityError:
-        return RedirectResponse(
-            f"/admin/users/{user_id}/edit?error=exists",
-            status_code=303,
-        )
+        return RedirectResponse(f"/admin/users/{user_id}/edit?error=exists", status_code=303)
 
     if not updated:
         raise HTTPException(status_code=404, detail="User not found")
-
     return RedirectResponse("/admin/users?success=1", status_code=303)
 
 
-# ── Chapter patterns API ───────────────────────────────────────────────────
+# ── Chapter patterns ──────────────────────────────────────────────────────
 
 class PatternCreate(BaseModel):
     pattern: str
@@ -132,7 +101,6 @@ def patch_pattern(
 ):
     if body.enabled is not None:
         svc.set_enabled(pattern_id, body.enabled)
-
     if body.pattern is not None or body.description is not None:
         existing = svc.get_all_patterns()
         row = next((p for p in existing if p["id"] == pattern_id), None)
@@ -146,7 +114,6 @@ def patch_pattern(
             )
         except ValueError as e:
             raise HTTPException(status_code=422, detail=str(e))
-
     return {"ok": True}
 
 
@@ -169,7 +136,9 @@ def test_pattern(
         return svc.test_pattern(body.pattern, body.samples)
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
-    
+
+
+# ── Health ────────────────────────────────────────────────────────────────
 
 @router.get("/health")
 def health_check(

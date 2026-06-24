@@ -1,5 +1,32 @@
 /* novelcast/static/js/story_page.js */
 
+function getNovelcastDeviceId() {
+    const key = "novelcastDeviceId";
+    let id = localStorage.getItem(key);
+    if (!id) {
+        const random = window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        id = random.replace(/[^A-Za-z0-9_-]/g, "_");
+        localStorage.setItem(key, id);
+    }
+    document.cookie = `novelcast_device_id=${encodeURIComponent(id)}; Path=/; Max-Age=31536000; SameSite=Lax`;
+    return id;
+}
+
+const novelcastDeviceId = getNovelcastDeviceId();
+
+function saveDevicePreference(name, value) {
+    fetch("/api/user-preferences", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            deviceId: novelcastDeviceId,
+            name,
+            value,
+        }),
+        keepalive: true,
+    }).catch(() => {});
+}
+
 /* ── Collapsible sections ─────────────────────────────────────────────── */
 
 window.toggleSection = function (key) {
@@ -13,12 +40,10 @@ window.toggleSection = function (key) {
 /* ── Chapter sort ─────────────────────────────────────────────────────── */
 
 const SORT_MODES = ["asc", "desc"];
-let _sortIndex = 0;
+let chapterSortMode = document.querySelector(".story-page")?.dataset.chapterSort || "asc";
+if (!SORT_MODES.includes(chapterSortMode)) chapterSortMode = "asc";
 
-window.cycleSort = function () {
-    _sortIndex = (_sortIndex + 1) % SORT_MODES.length;
-    const mode = SORT_MODES[_sortIndex];
-
+function applyChapterSort(mode) {
     const list = document.getElementById("chapterList");
     if (!list) return;
 
@@ -40,6 +65,12 @@ window.cycleSort = function () {
     if (window.chapterPaginator) {
         setTimeout(() => window.chapterPaginator.refresh(), 0);
     }
+}
+
+window.cycleSort = function () {
+    chapterSortMode = chapterSortMode === "asc" ? "desc" : "asc";
+    applyChapterSort(chapterSortMode);
+    saveDevicePreference("story.chapters.sort", chapterSortMode);
 };
 
 /* ── Full path toggle ─────────────────────────────────────────────────── */
@@ -57,6 +88,48 @@ function toggleFullPath() {
         el.classList.toggle("full-path", showingFullPath);
     });
 }
+
+/* ── File sort ────────────────────────────────────────────────────────── */
+
+let fileSortMode = document.querySelector(".story-page")?.dataset.fileSort || "asc";
+if (!SORT_MODES.includes(fileSortMode)) fileSortMode = "asc";
+
+function applyFileSort(mode) {
+    const tbody = document.querySelector(".file-table tbody");
+    if (!tbody) return;
+
+    const rows = [...tbody.querySelectorAll(".file-row")];
+    rows.sort((a, b) => {
+        const aPath = a.querySelector(".file-path-text")?.dataset.relative || "";
+        const bPath = b.querySelector(".file-path-text")?.dataset.relative || "";
+        return mode === "asc"
+            ? aPath.localeCompare(bPath, undefined, { numeric: true, sensitivity: "base" })
+            : bPath.localeCompare(aPath, undefined, { numeric: true, sensitivity: "base" });
+    });
+    rows.forEach(row => tbody.appendChild(row));
+
+    const icon = document.getElementById("fileSortIcon");
+    if (icon) {
+        icon.className = mode === "asc"
+            ? "fa-solid fa-arrow-up-wide-short"
+            : "fa-solid fa-arrow-down-wide-short";
+    }
+
+    if (window.filePaginator) {
+        setTimeout(() => window.filePaginator.refresh(), 0);
+    }
+}
+
+window.cycleFileSort = function () {
+    fileSortMode = fileSortMode === "asc" ? "desc" : "asc";
+    applyFileSort(fileSortMode);
+    saveDevicePreference("story.files.sort", fileSortMode);
+};
+
+document.addEventListener("DOMContentLoaded", () => {
+    applyChapterSort(chapterSortMode);
+    applyFileSort(fileSortMode);
+});
 
 /* ── Go to first unread ───────────────────────────────────────────────── */
 
@@ -169,7 +242,8 @@ window.updateStory = async function () {
     }
 
     try {
-        const res = await fetch(`/api/update/story/${storyId}`, {
+        const res = await fetch(`/api/sync/update/story/${storyId}`, {
+
             method: "POST",
         });
         if (!res.ok) {

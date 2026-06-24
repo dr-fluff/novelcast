@@ -61,11 +61,11 @@ class StoryDownloadService:
         logger.debug("Story download requested of URL: %s", url)
         if selected_chapters:
             logger.debug("Filtering to selected chapters: %s", selected_chapters)
- 
+
         normalized_url = normalize_story_url(url)
         download_id    = str(uuid.uuid4())
         self._emit("download_started", {"download_id": download_id, "source_url": normalized_url})
- 
+
         try:
             existing = self.stories_repo.get_by_url(normalized_url)
             if existing:
@@ -75,7 +75,7 @@ class StoryDownloadService:
                     "title":      existing.get("title"),
                 })
                 return existing["id"]
- 
+
             def progress(message: str, progress_value: int | None = None):
                 self._emit("download_progress", {
                     "download_id": download_id,
@@ -83,46 +83,54 @@ class StoryDownloadService:
                     "progress":    progress_value,
                     "indeterminate": progress_value is None,
                 })
- 
+
             raw        = self._download_raw(normalized_url, progress_callback=progress)
             source_url = raw.get("url") or normalized_url
- 
+
             story_id = self.stories_repo.create(
                 raw.get("title") or "Unknown",
                 raw.get("author"),
                 source_url,
             )
- 
+
             parsed = self._parse_raw(raw)
- 
+
             if selected_chapters:
                 parsed = self._filter_chapters(parsed, selected_chapters)
- 
+
             self._update_story_metadata(story_id, raw, parsed)
- 
+
             author_name = parsed.get("author") or raw.get("author")
             if author_name:
                 from novelcast.db.repositories.author_repository import AuthorRepository
                 author_repo = AuthorRepository(self.stories_repo._session_factory)
                 author_id   = author_repo.get_or_create(author_name)
                 author_repo.link_to_story(author_id, story_id)
- 
+
             self.pipeline.persist(story_id, parsed)
             self._refresh_metadata_from_json(story_id)
- 
+            
+            # ── Telegram ──────────────────────────────────
+            telegram = getattr(self, "telegram", None)
+            if telegram:
+                telegram.notify_story_added(
+                    parsed.get("title") or raw.get("title") or "Unknown",
+                    parsed.get("author") or raw.get("author"),
+                )
+
             # Verify all chapter files landed on disk
             check = self.pipeline.integrity_check(story_id)
             if not check["ok"]:
                 self._handle_integrity_failure(story_id, normalized_url, check, download_id)
- 
+
             self._emit("download_finished", {
                 "download_id": download_id,
                 "story_id":    story_id,
                 "title":       parsed.get("title"),
             })
- 
+
             return story_id
- 
+
         except Exception as e:
             self._emit("download_failed", {
                 "download_id": download_id,
@@ -130,44 +138,44 @@ class StoryDownloadService:
                 "error":       str(e),
             })
             raise
- 
+
     def update_story(self, story: dict) -> dict:
         story_id = story.get("id")
         source_url = story.get("source_url")
         title = story.get("title")
         if not story_id or not source_url:
             return {"story_id": story_id, "new_chapters": 0, "skipped": True}
- 
+
         logger.info("Updating story", extra={"story_name": title, "story_id": story_id, "source_url": source_url})
         self._emit("update_story_started", {
             "story_id": story_id,
             "title": title,
             "source_url": source_url,
         })
- 
+
         raw = self._download_raw(source_url)
         parsed = self._parse_raw(raw)
         self._update_story_metadata(story_id, raw, parsed)
- 
+
         existing_numbers = self.pipeline.chapters_repo.get_chapter_numbers(story_id)
         parsed_numbers = [ch["number"] for ch in parsed.get("chapters", [])]
         new_chapters = [number for number in parsed_numbers if number not in existing_numbers]
- 
+
         if raw.get("file_path"):
             self.pipeline.persist(story_id, parsed)
         else:
             new_chapters = self.pipeline.append_new_chapters(story_id, parsed)
- 
+
         self._refresh_metadata_from_json(story_id)
- 
+
         # Always integrity-check after update — catches missing files even
         # when no new chapters were downloaded (no EPUB → no parser run).
         check = self.pipeline.integrity_check(story_id)
         if not check["ok"]:
             self._handle_integrity_failure(story_id, source_url, check, download_id=None)
- 
+
         final_title = parsed.get("title") or title
- 
+
         if new_chapters:
             self._emit("update_progress", {
                 "story_id": story_id,
@@ -179,23 +187,31 @@ class StoryDownloadService:
                 "title": final_title,
                 "new_chapters": len(new_chapters),
             })
- 
+            # ── Telegram ──────────────────────────────
+            telegram = getattr(self, "telegram", None)
+            if telegram:
+                telegram.notify_story_updated(
+                    final_title,
+                    parsed.get("author"),
+                    len(new_chapters),
+                )
+
         self._emit("update_finished", {
             "story_id": story_id,
             "title": final_title,
             "new_chapters": len(new_chapters),
         })
- 
+
         return {
             "story_id": story_id,
             "new_chapters": len(new_chapters),
             "chapter_numbers": new_chapters,
         }
- 
+
     def _handle_integrity_failure(self, story_id: int, source_url: str, check: dict, download_id: str | None) -> None:
         """
         Called when integrity_check reports missing files after persist/update.
- 
+
         - Logs the outcome.
         - Emits events so the frontend can show a warning.
         - If needs_redownload=True, triggers a fresh download.
@@ -203,13 +219,13 @@ class StoryDownloadService:
         restored   = check.get("restored", [])
         not_in_epub = check.get("not_in_epub", [])
         needs_redownload = check.get("needs_redownload", False)
- 
+
         if restored:
             logger.info(
                 "integrity_check: story %s restored %d chapter(s) from local EPUB: %s",
                 story_id, len(restored), restored,
             )
- 
+
         if not_in_epub:
             logger.warning(
                 "integrity_check: story %s has %d chapter(s) missing from both disk and EPUB "
@@ -222,7 +238,7 @@ class StoryDownloadService:
                 "not_in_epub": not_in_epub,
                 "message":     f"{len(not_in_epub)} chapter(s) could not be restored — may have been removed from the site.",
             })
- 
+
         if needs_redownload:
             logger.warning(
                 "integrity_check: story %s has missing files and no local EPUB — triggering redownload",
@@ -242,60 +258,6 @@ class StoryDownloadService:
                 logger.info("integrity_check: redownload complete for story %s", story_id)
             except Exception:
                 logger.exception("integrity_check: redownload failed for story %s", story_id)
-
-    def update_story(self, story: dict) -> dict:
-        story_id = story.get("id")
-        source_url = story.get("source_url")
-        title = story.get("title")
-        if not story_id or not source_url:
-            return {"story_id": story_id, "new_chapters": 0, "skipped": True}
-
-        logger.info("Updating story", extra={"story_name": title, "story_id": story_id, "source_url": source_url})
-        self._emit("update_story_started", {
-            "story_id": story_id,
-            "title": title,
-            "source_url": source_url,
-        })
-
-        raw = self._download_raw(source_url)
-        parsed = self._parse_raw(raw)
-        self._update_story_metadata(story_id, raw, parsed)
-
-        existing_numbers = self.pipeline.chapters_repo.get_chapter_numbers(story_id)
-        parsed_numbers = [ch["number"] for ch in parsed.get("chapters", [])]
-        new_chapters = [number for number in parsed_numbers if number not in existing_numbers]
-
-        if raw.get("file_path"):
-            self.pipeline.persist(story_id, parsed)
-        else:
-            new_chapters = self.pipeline.append_new_chapters(story_id, parsed)
-
-        self._refresh_metadata_from_json(story_id)
-        final_title = parsed.get("title") or title
-
-        if new_chapters:
-            self._emit("update_progress", {
-                "story_id": story_id,
-                "title": final_title,
-                "new_chapters": len(new_chapters),
-            })
-            self._emit("sync_story_updated", {
-                "story_id": story_id,
-                "title": final_title,
-                "new_chapters": len(new_chapters),
-            })
-
-        self._emit("update_finished", {
-            "story_id": story_id,
-            "title": final_title,
-            "new_chapters": len(new_chapters),
-        })
-
-        return {
-            "story_id": story_id,
-            "new_chapters": len(new_chapters),
-            "chapter_numbers": new_chapters,
-        }
 
     def sync_story(self, story: dict) -> dict:
         return self.update_story(story)

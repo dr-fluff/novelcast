@@ -1,8 +1,7 @@
+#factory.py
 from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
-from urllib3 import request
 
 from novelcast.core.config import AppConfig
 from novelcast.core.logging import setup_logging
@@ -14,14 +13,10 @@ from novelcast.api import (
     PermissionMiddleware,
 )
 
-from novelcast.auth.routes import router as auth_router
-
-from novelcast.api.routes import pages, password_reset, users, files, admin, download
-from novelcast.api.routes import api as api_module
-
 from novelcast.app.lifespan import lifespan
-from novelcast.api.ws.notifications import router as ws_router
 from novelcast.core.templates import AppTemplates
+from novelcast.api.routes import router as api_router
+
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -30,49 +25,28 @@ STATIC_DIR = BASE_DIR / "static"
 
 
 def create_app(config: AppConfig) -> FastAPI:
+    setup_logging(config)
+    
     app = FastAPI(
         title="NovelCast",
         lifespan=lifespan,
     )
 
-    # ─────────────────────────────
-    # BASIC SETUP ONLY
-    # ─────────────────────────────
-    setup_logging(config)
-
-#    app.state.templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
-    app.state.templates = AppTemplates(directory=str(TEMPLATES_DIR))
-
-
-    app.state.config = config
-
     register_error_handlers(app)
 
-    # ─────────────────────────────
-    # MIDDLEWARE
-    # ─────────────────────────────
+    app.state.config = config
+    app.state.templates = AppTemplates(directory=str(TEMPLATES_DIR))
+
     app.add_middleware(RequestIDMiddleware)
     app.add_middleware(AuthMiddleware)
     app.add_middleware(PermissionMiddleware)
 
-    # ─────────────────────────────
-    # ROUTES
-    # ─────────────────────────────
-    app.include_router(auth_router)
-    app.include_router(pages.router)
-    app.include_router(password_reset.router)
+    app.include_router(api_router)
 
-    app.include_router(users.router, prefix="/users")
-    app.include_router(files.router, prefix="/files")
-    app.include_router(admin.router, prefix="/admin")
-    app.include_router(api_module.router, prefix="/api")
-
-    app.post("/download/story")(download.add_story)
-    app.include_router(ws_router)
-
-    # ─────────────────────────────
-    # STATIC
-    # ─────────────────────────────
-    app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
-
+    app.mount(
+        "/static",
+        StaticFiles(directory=str(STATIC_DIR)),
+        name="static",
+    )
+    
     return app

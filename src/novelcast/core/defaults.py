@@ -293,6 +293,27 @@ SETTINGS = {
             "label": "Ignore prefixes",
         },
     },
+    
+    "telegram": {
+        "enabled": {
+            "type": "bool",
+            "description": "Enable Telegram bot integration",
+            "default": False,
+            "label": "Enable Telegram",
+        },
+        "bot_token": {
+            "type": "secret",
+            "description": "Telegram Bot API token (from @BotFather)",
+            "default": "",
+            "label": "Bot Token",
+        },
+        "chat_id": {
+            "type": "string",
+            "description": "Telegram chat ID to send messages to",
+            "default": "",
+            "label": "Chat ID",
+        },
+    },
 }
 
 
@@ -315,4 +336,5 @@ DEFAULT_CHAPTER_PATTERNS: dict[str, str] = {
     r"\bby\s+\w+": "Author attribution",
     r"\w.*\s+(\d+)\s*[-–—‑−]": "Text with trailing number (In Search of Harmony 26 —)",
     r"^\s*ch\.?\s*(\d+)\b(?:\s*[-–—-−]?\s*.*)?$": "CH format (CH7, CH13- Title, CH1 Prologue)",
+    r"\bchapter\s+(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|and|[-\s])+": "Chapter with written number (Chapter Ten, Chapter One Hundred and Twenty-One)",   
 }

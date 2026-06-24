@@ -234,16 +234,8 @@ def _to_dict(story: Story | None) -> dict | None:
         "subtitle":                  getattr(story, "subtitle", None),
         "source_url":                story.source_url,
         "story_site_id":             story.story_site_id,
-        "auto_update":               any(
-            str(s.value).lower() in ("1", "true", "yes")
-            for s in getattr(story, "settings", []) or []
-            if s.name == "auto_update"
-        ),
-        "hide_author_notes": any(      
-            str(s.value).lower() in ("1", "true", "yes")
-            for s in getattr(story, "settings", []) or []
-            if s.name == "hide_author_notes"
-        ),
+        "auto_update":               _story_setting_bool(story, "auto_update", default=False),
+        "hide_author_notes":         _story_setting_bool(story, "hide_author_notes", default=True),
         
         "local_path":                story.local_path,
         "cover_path":                story.cover_path,
@@ -288,3 +280,10 @@ def _to_dict(story: Story | None) -> dict | None:
         pass
 
     return result
+
+
+def _story_setting_bool(story: Story, name: str, default: bool = False) -> bool:
+    for setting in getattr(story, "settings", []) or []:
+        if setting.name == name:
+            return str(setting.value).lower() in ("1", "true", "yes")
+    return default

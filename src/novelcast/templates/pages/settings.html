@@ -109,6 +109,28 @@
             {% endif %}
           {% endif %}
         {% endfor %}
+
+        {% if section_name == "telegram" %}
+              <div class="section-card">
+                <div class="field-card">
+                  <div class="field-card__label-col">
+                    <span class="field-label">Connection test</span>
+                    <span class="field-hint">Send a test message to confirm the bot is working.</span>
+                  </div>
+                  <div class="field-card__input-col">
+                    <button
+                      type="button"
+                      class="btn-secondary"
+                      hx-post="/admin/telegram/test"
+                      hx-target="#telegram-test-result"
+                      hx-swap="innerHTML"
+                    >Send Test Message</button>
+                    <div id="telegram-test-result" class="mt-2 text-sm"></div>
+                  </div>
+                </div>
+              </div>
+              {% endif %}
+
       {% endfor %}
 
     </div>
@@ -144,6 +166,9 @@
           </tbody>
         </table>
       </div>
+      
+
+      </div>  {# closes tab-panel #}
     </div>
     {% endif %}
 

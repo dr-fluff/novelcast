@@ -79,6 +79,42 @@ class SettingsRepository(BaseRepository):
                 result[row.name] = _deserialize(row.value)
             return result
 
+    def set_user_setting(
+        self,
+        user_id: int,
+        name: str,
+        value,
+        category: str = "preference",
+        type_: str = "json",
+    ) -> None:
+        with self.session() as db:
+            stmt = (
+                insert(UserSetting)
+                .values(
+                    user_id=user_id,
+                    name=name,
+                    value=json.dumps(value),
+                    category=category,
+                    type=type_,
+                )
+                .on_conflict_do_update(
+                    index_elements=["user_id", "name"],
+                    set_={"value": json.dumps(value)},
+                )
+            )
+            db.execute(stmt)
+
+    def delete_user_setting(self, user_id: int, name: str) -> None:
+        with self.session() as db:
+            row = db.scalar(
+                select(UserSetting).where(
+                    UserSetting.user_id == user_id,
+                    UserSetting.name == name,
+                )
+            )
+            if row:
+                db.delete(row)
+
     def save_user_settings(
         self,
         user_id: int,

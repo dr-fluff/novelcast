@@ -4,18 +4,24 @@ from fastapi import Depends, HTTPException, Request
 from fastapi.templating import Jinja2Templates
 import logging
 
-from . import router
+
 from novelcast.api.deps import (
     get_chapter_filter,
     get_chapters,
     get_current_user,
     get_progress,
+    get_settings,
     get_stories,
     get_templates,
 )
-from novelcast.services import ChaptersService, ProgressService, StoryService
+from novelcast.services import ChaptersService, ProgressService, SettingsService, StoryService
 from novelcast.services.chapter_filter_service import ChapterFilterService
 from .helpers import resolve_progress
+from .preferences import device_preference_key
+
+from fastapi import APIRouter
+
+router = APIRouter()
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +32,7 @@ def story(
     stories: StoryService = Depends(get_stories),
     chapters: ChaptersService = Depends(get_chapters),
     progress: ProgressService = Depends(get_progress),
+    settings: SettingsService = Depends(get_settings),
     current_user: dict | None = Depends(get_current_user),
     templates: Jinja2Templates = Depends(get_templates),
 ):
@@ -50,6 +57,21 @@ def story(
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+    story_preferences = {
+        "chapter_sort": "asc",
+        "file_sort": "asc",
+    }
+    device_id = request.cookies.get("novelcast_device_id")
+    if current_user and device_id:
+        chapter_key = device_preference_key(device_id, "story.chapters.sort")
+        file_key = device_preference_key(device_id, "story.files.sort")
+        chapter_sort = settings.get_user_preference(current_user["id"], chapter_key, "asc") if chapter_key else "asc"
+        file_sort = settings.get_user_preference(current_user["id"], file_key, "asc") if file_key else "asc"
+        if chapter_sort in ("asc", "desc"):
+            story_preferences["chapter_sort"] = chapter_sort
+        if file_sort in ("asc", "desc"):
+            story_preferences["file_sort"] = file_sort
     
 
     return templates.TemplateResponse("pages/story.html", {
@@ -63,4 +85,5 @@ def story(
         "last_chapter_id": last_chapter_id,
         "last_read_title": last_read_title,
         "first_unread_chapter_id": first_unread,
+        "story_preferences": story_preferences,
     })

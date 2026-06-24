@@ -5,11 +5,13 @@ from starlette.requests import ClientDisconnect
 
 import logging
 
-from . import router
 from novelcast.api.deps import get_chapters, get_current_user, get_progress, get_stories, get_templates, get_settings
 from novelcast.services import ChaptersService, ProgressService, StoryService
 from novelcast.services import SettingsService
 
+from fastapi import APIRouter
+
+router = APIRouter()
 
 logger = logging.getLogger(__name__)
 

@@ -1,8 +1,6 @@
 from fastapi import Depends, HTTPException, Request
 from fastapi.templating import Jinja2Templates
 
-from . import router
-
 from novelcast.api.deps import (
     get_chapter_filter,
     get_current_user,
@@ -22,7 +20,10 @@ from novelcast.services import (
     HealthCheckService,
     ChapterFilterService,
 )
-from novelcast.core.defaults import DEFAULT_CHAPTER_PATTERNS
+
+from fastapi import APIRouter
+
+router = APIRouter()
 
 @router.get("/admin")
 def admin_dashboard(

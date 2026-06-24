@@ -80,7 +80,8 @@
                 setVal('metaPublishYear', st.publish_year || '');
                 setVal('metaLanguage', st.language || '');
                 setVal('metaSourceUrl', st.source_url || getVal('metaSourceUrl'));
-                el('metaAutoUpdate').checked = Boolean(st.auto_update);
+                if (el('metaAutoUpdate')) el('metaAutoUpdate').checked = Boolean(st.auto_update);
+                if (el('metaHideAuthorNotes')) el('metaHideAuthorNotes').checked = Boolean(st.hide_author_notes);
                 renderMetaTagList('metaSeriesWrap', st.series_list ?? parseCommaList(st.series));
                 renderMetaTagList('metaGenresWrap', st.genres_list ?? parseCommaList(st.genres));
                 renderMetaTagList('metaTagsWrap', st.tags_list ?? parseCommaList(st.tags));
@@ -245,6 +246,7 @@
                     tags: tags,
                     source_url: sourceUrl,
                     auto_update: el('metaAutoUpdate')?.checked || false,
+                    hide_author_notes: el('metaHideAuthorNotes')?.checked || false,
                 }),
             });
             if (!storyRes.ok) {

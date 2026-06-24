@@ -9,6 +9,20 @@ from logging.handlers import RotatingFileHandler
 request_id_ctx: ContextVar[str] = ContextVar("request_id", default=None)
 
 
+import re
+
+TOKEN_RE = re.compile(r"bot\d+:[A-Za-z0-9:_-]+")
+BEARER_RE = re.compile(r"Bearer\s+[A-Za-z0-9\-\._~\+\/]+=*")
+
+def redact(value: str) -> str:
+    if not isinstance(value, str):
+        return value
+    value = TOKEN_RE.sub("bot***:***", value)
+    value = BEARER_RE.sub("Bearer ***", value)
+    return value
+
+
+
 class TimestampRotatingFileHandler(RotatingFileHandler):
     def doRollover(self):
         if self.stream:
@@ -32,12 +46,20 @@ class JsonFormatter(logging.Formatter):
             "timestamp": datetime.utcnow().isoformat(),
             "level": record.levelname,
             "logger": record.name,
-            "message": record.getMessage(),
+            "message": redact(record.getMessage()),
             "request_id": request_id_ctx.get(),
         }
 
         if hasattr(record, "extra_data"):
-            log.update(record.extra_data)
+            safe_extra = {}
+
+            for k, v in record.extra_data.items():
+                if isinstance(v, str):
+                    safe_extra[k] = redact(v)
+                else:
+                    safe_extra[k] = v
+
+            log.update(safe_extra)
 
         if record.exc_info:
             log["exception"] = self.formatException(record.exc_info)
@@ -82,5 +104,13 @@ def setup_logging(config):
         "uvicorn.protocols.websockets",
         "uvicorn.protocols.websockets.websockets_impl",
         "asyncio",
+
+        # ADD THESE 👇
+        "httpx",
+        "httpcore",
+        "multipart",
+        "python_multipart",
+        "starlette",
     ):
         logging.getLogger(noisy_logger).setLevel(logging.WARNING)
+        logging.getLogger(noisy_logger).propagate = False

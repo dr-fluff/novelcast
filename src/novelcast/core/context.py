@@ -160,7 +160,7 @@ class AppContext:
             session_factory=self.SessionLocal,
             stories_dir=stories_dir,
         )
-
+        
     # ─────────────────────────────
     # ENGINE CONFIG (writers)
     # ─────────────────────────────
@@ -288,6 +288,7 @@ class AppContext:
             settings=self.settings,
             notifier=self.emit,
         )
+        
 
     # ─────────────────────────────
     # VALIDATION

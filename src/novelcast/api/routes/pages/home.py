@@ -1,8 +1,8 @@
 # novelcast/api/routes/pages/home.py
-from fastapi import Depends, Request
+from fastapi import Depends, Request, APIRouter
+from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 
-from . import router
 from novelcast.api.deps import get_current_user, get_progress, get_settings, get_stories, get_templates
 from novelcast.services import ProgressService, SettingsService, StoryService
 from .helpers import (
@@ -12,6 +12,9 @@ from .helpers import (
     story_card,
     story_filter_options,
 )
+from .preferences import device_preference_key
+
+router = APIRouter()
 
 
 @router.get("/")
@@ -23,13 +26,33 @@ def home(
     current_user: dict | None = Depends(get_current_user),
     templates: Jinja2Templates = Depends(get_templates),
 ):
-    query = request.query_params.get("q", "").strip().lower()
-    sort = request.query_params.get("sort", "title")
-    genre = request.query_params.get("genre", "").strip()
-    tag = request.query_params.get("tag", "").strip()
-    series = request.query_params.get("series", "").strip()
-    language = request.query_params.get("language", "").strip()
-    status = request.query_params.get("status", "").strip()
+    preference_key = None
+    device_id = request.cookies.get("novelcast_device_id")
+    if current_user and device_id:
+        preference_key = device_preference_key(device_id, "library.index")
+
+    if request.query_params.get("clear_library_preferences") == "1":
+        if current_user and preference_key:
+            settings.delete_user_preference(current_user["id"], preference_key)
+        return RedirectResponse("/", status_code=303)
+
+    saved_preferences = {}
+    has_query_state = any(
+        key in request.query_params
+        for key in ("q", "sort", "genre", "tag", "series", "language", "status")
+    )
+    if current_user and preference_key and not has_query_state:
+        saved = settings.get_user_preference(current_user["id"], preference_key, {})
+        if isinstance(saved, dict):
+            saved_preferences = saved
+
+    query = request.query_params.get("q", saved_preferences.get("q", "")).strip().lower()
+    sort = request.query_params.get("sort", saved_preferences.get("sort", "title"))
+    genre = request.query_params.get("genre", saved_preferences.get("genre", "")).strip()
+    tag = request.query_params.get("tag", saved_preferences.get("tag", "")).strip()
+    series = request.query_params.get("series", saved_preferences.get("series", "")).strip()
+    language = request.query_params.get("language", saved_preferences.get("language", "")).strip()
+    status = request.query_params.get("status", saved_preferences.get("status", "")).strip()
 
     # Parse ignore_prefixes from settings
     raw_prefixes = settings.get_server_setting("library.ignore_prefixes", default="the,a,an")

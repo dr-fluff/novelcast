@@ -23,7 +23,7 @@ async def _tracked(job_id: str, label: str, fn, *args):
         await asyncio.get_event_loop().run_in_executor(None, lambda: fn(*args))
 
 
-@router.post("/sync/all")
+@router.post("/all")
 async def sync_all(
     library_sync: LibrarySyncService = Depends(get_library_sync_service),
 ):
@@ -32,7 +32,7 @@ async def sync_all(
     return {"status": "started", "job_id": job_id}
 
 
-@router.post("/sync/story/{story_id}")
+@router.post("/story/{story_id}")
 async def sync_story(
     story_id: int,
     library_sync: LibrarySyncService = Depends(get_library_sync_service),
@@ -42,7 +42,7 @@ async def sync_story(
     if not story:
         raise HTTPException(status_code=404, detail="Story not found")
     job_id = f"sync-{story_id}-{uuid.uuid4().hex[:6]}"
-    asyncio.create_task(_tracked(job_id, f"Checking '{story.title}' for updates", library_sync.check_updates, [story_id]))
+    asyncio.create_task(_tracked(job_id, f"Checking '{story['title']}' for updates", library_sync.check_updates, [story_id]))
     return {"status": "started", "job_id": job_id}
 
 
@@ -64,7 +64,6 @@ async def update_selected(
     asyncio.create_task(_tracked(job_id, f"Updating {len(selection.story_ids)} stories", library_sync.update_all, selection.story_ids))
     return {"status": "started", "job_id": job_id}
 
-
 @router.post("/update/story/{story_id}")
 async def update_story(
     story_id: int,
@@ -75,5 +74,5 @@ async def update_story(
     if not story:
         raise HTTPException(status_code=404, detail="Story not found")
     job_id = f"update-{story_id}-{uuid.uuid4().hex[:6]}"
-    asyncio.create_task(_tracked(job_id, f"Updating '{story.title}'", library_sync.update_all, [story_id]))
+    asyncio.create_task(_tracked(job_id, f"Updating '{story['title']}'", library_sync.update_all, [story_id]))
     return {"status": "started", "job_id": job_id}

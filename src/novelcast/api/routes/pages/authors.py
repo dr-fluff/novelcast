@@ -1,10 +1,12 @@
 from fastapi import Depends, HTTPException, Request
 from fastapi.templating import Jinja2Templates
 
-from . import router
 from novelcast.api.deps import get_stories, get_templates
 from novelcast.services import StoryService
 
+from fastapi import APIRouter
+
+router = APIRouter()
 
 @router.get("/authors")
 def authors(

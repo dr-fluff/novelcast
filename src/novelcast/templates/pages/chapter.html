@@ -10,12 +10,13 @@
 {% block content %}
 
 <div class="reader-container" 
-     data-story-id="{{ story_id }}" 
-     data-chapter-id="{{ chapter_id }}"
-     data-next-chapter-id="{{ next_chapter_id }}"
-     data-prev-chapter-id="{{ prev_chapter_id }}"
-     data-first-unread-id="{{ first_unread_chapter_id | default('') }}"
-     data-chapter-title="{{ chapter | e }}">
+    data-story-id="{{ story_id }}" 
+    data-chapter-id="{{ chapter_id }}"
+    data-next-chapter-id="{{ next_chapter_id }}"
+    data-prev-chapter-id="{{ prev_chapter_id }}"
+    data-first-unread-id="{{ first_unread_chapter_id | default('') }}"
+    data-chapter-title="{{ chapter | e }}"
+    data-hide-author-notes="{{ hide_author_notes | lower }}">
 
     <!-- READER HEADER -->
     <div class="reader-header">
@@ -127,23 +128,6 @@
         </button>
     </div>
 </div>
-
-{% if hide_author_notes %}
-<style>
-    .author-note-portlet,
-        .author-note-portlet * {
-        display: none !important;
-        }
-
-        .portlet.solid.author-note-portlet {
-        display: none !important;
-        }
-
-        .portlet-body.author-note {
-        display: none !important;
-        }
-</style>
-{% endif %}
 {% endblock %}
 
 {% block scripts %}

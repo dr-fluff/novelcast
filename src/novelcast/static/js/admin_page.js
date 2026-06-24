@@ -1,6 +1,6 @@
 
 window.syncStory = function syncStory() {
-    fetch('/api/update/all', { method: 'POST' })
+    fetch('/api/sync/update/all', { method: 'POST' })
 }
 
 // novelcast/static/js/admin_page.js
@@ -66,7 +66,7 @@ window.checkUpdates = async function checkUpdates() {
 
 window.syncStory = async function syncStory() {
   try {
-    await fetch("/api/update/all", { method: "POST" });
+    await fetch("/api/sync/update/all", { method: "POST" });
   } catch (err) {
     console.error("Sync failed:", err);
   }

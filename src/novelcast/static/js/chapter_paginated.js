@@ -85,6 +85,7 @@ class PaginatedEReader {
     this.state.nextChapterId = c.dataset.nextChapterId;
     this.state.prevChapterId = c.dataset.prevChapterId;
     this.state.chapterTitle  = c.dataset.chapterTitle || '';
+    this.state.hideAuthorNotes = c.dataset.hideAuthorNotes === 'true';
   }
 
   cacheElements() {
@@ -168,7 +169,8 @@ class PaginatedEReader {
     this.iframeWin = iframe.contentWindow;
 
     const { w, h } = this.getPageSize();
-    const cleanContent = this.stripAuthorNotes(this.state.originalContent);
+    const cleanContent = this.state.originalContent;
+
     const titleEscaped = this.state.chapterTitle
       .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
@@ -317,6 +319,8 @@ class PaginatedEReader {
     const fontSans  = `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
     const fontStack = this.settings.fontFamily === 'sans' ? fontSans : fontSerif;
 
+    
+
     return `
       * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -410,21 +414,13 @@ class PaginatedEReader {
         margin:    1rem 0 !important;
       }
 
-      /* Hide author notes */
-      .author-note,
+      ${this.state.hideAuthorNotes ? `
       .author-note-portlet,
-      .portlet-body.author-note,
-      .portlet.solid.author-note-portlet { display: none !important; }
+      .author-note-portlet *,
+      .portlet.solid.author-note-portlet,
+      .portlet-body.author-note { display: none !important; }
+    ` : ''}
     `;
-  }
-
-  stripAuthorNotes(html) {
-    const temp = document.createElement('div');
-    temp.innerHTML = html;
-    temp.querySelectorAll(
-      '.author-note-portlet, .portlet.solid.author-note-portlet, .author-note, .portlet-body.author-note'
-    ).forEach(el => el.remove());
-    return temp.innerHTML;
   }
 
   // ======================

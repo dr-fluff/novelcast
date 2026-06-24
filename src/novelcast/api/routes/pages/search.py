@@ -3,12 +3,15 @@
 from fastapi import Depends, Request
 from fastapi.templating import Jinja2Templates
 
-from . import router
 from novelcast.api.deps import get_current_user, get_templates
 from novelcast.services.search_service import SearchService
 from novelcast.services.scrapers import scrape_all, scrape_details
 
 search_service = SearchService()
+
+from fastapi import APIRouter
+
+router = APIRouter()
 
 
 @router.get("/search")

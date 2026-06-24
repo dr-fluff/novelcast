@@ -1,9 +1,9 @@
 <!-- novelcast/templates/macros/grid_toolbar.html -->
-{% macro render_grid_toolbar(action, query, sort, sort_options, filter_options=None, status="", genre="", tag="", series="", language="") %}
+{% macro render_grid_toolbar(action, query, sort, sort_options, filter_options=None, status="", genre="", tag="", series="", language="", persist_key="") %}
 
-{% set has_filters = status or genre or tag or series or language %}
+{% set has_filters = query or status or genre or tag or series or language or (persist_key and sort and sort != "title") %}
 
-<form class="grid-toolbar" action="{{ action }}" method="get">
+<form class="grid-toolbar" action="{{ action }}" method="get" {% if persist_key %}data-persist-key="{{ persist_key }}"{% endif %}>
     <div class="grid-toolbar-search">
         <input
             type="search"
@@ -17,7 +17,7 @@
     <div class="grid-toolbar-actions">
 
         {% if has_filters %}
-            <a class="btn-secondary grid-toolbar-clear" href="{{ action }}">Clear</a>
+            <a class="btn-secondary grid-toolbar-clear" href="{{ action }}{% if persist_key %}?clear_library_preferences=1{% endif %}">Clear</a>
             <div class="grid-toolbar-divider"></div>
         {% endif %}
 

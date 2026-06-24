@@ -255,6 +255,22 @@ class SettingsService:
             "chapter_paragraph_spacing": row.get("chapter_paragraph_spacing", 100),
         }
 
+    def get_user_preference(self, user_id: int, key: str, default=None):
+        row = self.repo.get_user_settings(user_id) or {}
+        return row.get(key, default)
+
+    def set_user_preference(self, user_id: int, key: str, value) -> None:
+        self.repo.set_user_setting(
+            user_id=user_id,
+            name=key,
+            value=value,
+            category="preference",
+            type_="json",
+        )
+
+    def delete_user_preference(self, user_id: int, key: str) -> None:
+        self.repo.delete_user_setting(user_id, key)
+
     def save_user_settings(
         self,
         user_id: int,

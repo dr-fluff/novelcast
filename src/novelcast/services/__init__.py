@@ -15,3 +15,4 @@ from .user_service import UserService
 from .rss_service import RssService
 from .health_check_service import HealthCheckService
 from .chapter_filter_service import ChapterFilterService
+from .telegram_service import TelegramService

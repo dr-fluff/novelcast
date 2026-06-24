@@ -4,11 +4,13 @@ from fastapi import Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 
-from . import router
 from novelcast.api.deps import get_current_user, get_settings, get_templates, get_users
 from novelcast.services import SettingsService, UserService
 from .helpers import parse_settings_form
 
+from fastapi import APIRouter
+
+router = APIRouter()
 
 @router.get("/settings")
 def settings(

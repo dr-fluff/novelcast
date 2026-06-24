@@ -14,7 +14,9 @@
 
 <section class="story-page"
     data-story-id="{{ story['id'] }}"
-    data-first-unread-id="{{ first_unread_chapter_id | default('') }}">
+    data-first-unread-id="{{ first_unread_chapter_id | default('') }}"
+    data-chapter-sort="{{ story_preferences.chapter_sort | default('asc') }}"
+    data-file-sort="{{ story_preferences.file_sort | default('asc') }}">
 
     {# ── Hero ─────────────────────────────────────────────────────────── #}
     <div class="story-hero">
@@ -169,6 +171,9 @@
                 <span class="collapsible-badge">{{ story_files | length if story_files else story["file_count"] or 0 }}</span>
             </div>
             <div class="collapsible-header-right">
+                <button class="btn-header-action" onclick="event.stopPropagation(); cycleFileSort()" id="fileSortBtn" title="Sort files">
+                    <i class="fa-solid fa-arrow-up-wide-short" id="fileSortIcon"></i>
+                </button>
                 <button class="btn-header-action" id="fullPathBtn" onclick="event.stopPropagation(); toggleFullPath()">Full Path</button>
                 <i class="fa-solid fa-chevron-down collapsible-chevron collapsed" id="filesChevron"></i>
             </div>
@@ -208,7 +213,7 @@
                                             this,
                                             {{ (file.path | default(file.relative_path)) | tojson }},
                                             {{ (file.type | default(ext)) | tojson }}
-                                        )"
+                                        )">
                                         <i class="fa-solid fa-ellipsis-vertical"></i>
                                     </button>
                                 </div>

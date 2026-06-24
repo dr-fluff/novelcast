@@ -62,7 +62,7 @@ class StoryService:
         data = self.repo.get_by_id(story_id)
         if not data:
             return None
-        logger.info(data)
+        
         # resolve cover URL for templates
         data["cover_url"] = self._cover_url(data.get("cover_path"))
         return data
@@ -110,6 +110,8 @@ class StoryService:
         story = self.get_story(story_id)
         if not story:
             return False
+        
+        title = story.get("title") or "Unknown"
 
         local_path = story.get("local_path")
         if local_path:
@@ -132,6 +134,11 @@ class StoryService:
                 cover_file.unlink()
 
         self.repo.delete_with_relations(story_id)
+        
+        telegram = getattr(self, "telegram", None)
+        if telegram:
+            telegram.notify_story_deleted(title)
+            a
         return True
 
     def update_story_metadata(

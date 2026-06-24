@@ -1,9 +1,13 @@
+# novelcast/api/routes/static.py
+
 from pathlib import Path
 
 from fastapi import HTTPException
 from fastapi.responses import FileResponse
 
-from . import router
+from fastapi import APIRouter
+
+router = APIRouter()
 
 
 @router.get("/covers")
