@@ -15,6 +15,7 @@ from novelcast.db.models.tag import Tag
 from novelcast.db.models.genre import Genre
 from novelcast.db.models.series import Series
 
+
 __all__ = [
     "Author",
     "AuthorLink",

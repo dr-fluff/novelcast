@@ -70,12 +70,12 @@ def home(
         series=series,
         language=language,
         status=status,
-        ignore_prefixes=ignore_prefixes,   # ← new
+        ignore_prefixes=ignore_prefixes,
     )
     sorted_stories = sort_stories(
         filtered_stories,
         sort,
-        ignore_prefixes=ignore_prefixes,   # ← new
+        ignore_prefixes=ignore_prefixes,
     )
     cards = [story_card(s) for s in sorted_stories]
 

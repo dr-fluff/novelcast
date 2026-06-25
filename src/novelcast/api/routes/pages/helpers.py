@@ -192,6 +192,7 @@ def story_card(story: dict) -> dict:
         "author": story.get("author"),
         "thumbnail_letter": title[0].upper() if title else "?",
         "last_chapter": story.get("downloaded_chapters", 0),
+        "last_chapter_name":story.get("chapter"),
         "has_unread": story.get("has_unread", False),
         "genres": story.get("genres_list") or [],
         "tags": story.get("tags_list") or [],

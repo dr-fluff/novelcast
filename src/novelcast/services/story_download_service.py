@@ -196,6 +196,7 @@ class StoryDownloadService:
             # ── Telegram ──────────────────────────────
             telegram = getattr(self, "telegram", None)
             if telegram:
+                logger.info("telegram msg notify_story_updated")
                 try:
                     telegram.notify_story_updated(
                         final_title,

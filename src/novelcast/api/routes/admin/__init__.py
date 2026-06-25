@@ -8,8 +8,11 @@ from novelcast.api.deps import get_current_user, get_users, get_chapter_filter, 
 from novelcast.services import HealthCheckService, LibrarySyncService, UserService
 from novelcast.services.chapter_filter_service import ChapterFilterService
 from novelcast.api.routes.utils import require_admin
+from .telegram import router as telegram_router 
 
 router = APIRouter()
+
+router.include_router(telegram_router, prefix="/telegram")
 
 
 # ── Users ─────────────────────────────────────────────────────────────────

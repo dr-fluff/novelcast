@@ -1,16 +1,20 @@
 # novelcast/db/repositories/stories_repository.py
 
 from datetime import datetime, timezone
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.dialects.sqlite import insert
 
 from novelcast.db.repositories.base import BaseRepository
-from novelcast.db.models.story import Story
-from novelcast.db.models.chapter import Chapter, ChapterFile
-from novelcast.db.models.tag import Tag
-from novelcast.db.models.genre import Genre
-from novelcast.db.models.series import Series
-from novelcast.db.models.settings import StorySetting
+from novelcast.db.models import (
+    Story,
+    Chapter,
+    ChapterFile,
+    Tag,
+    Genre,
+    Series,
+    StorySetting,
+)
+
 from novelcast.utils.files import human_readable_size
 
 
@@ -21,7 +25,31 @@ class StoriesRepository(BaseRepository):
     def get_all(self) -> list[dict]:
         with self.session_no_commit() as db:
             stories = db.scalars(select(Story).order_by(Story.created_at.desc())).all()
-            return [_to_dict(s) for s in stories]
+            dicts = [_to_dict(s) for s in stories]
+
+            # One query: latest chapter title per story
+            subq = (
+                select(
+                    Chapter.story_id,
+                    func.max(Chapter.chapter_number).label("max_num"),
+                )
+                .group_by(Chapter.story_id)
+                .subquery()
+            )
+            rows = db.execute(
+                select(Chapter.story_id, Chapter.title)
+                .join(
+                    subq,
+                    (Chapter.story_id == subq.c.story_id)
+                    & (Chapter.chapter_number == subq.c.max_num),
+                )
+            ).all()
+            latest_title = {row.story_id: row.title for row in rows}
+
+            for d in dicts:
+                d["chapter"] = latest_title.get(d["id"])
+
+            return dicts
 
     def get_by_id(self, story_id: int) -> dict | None:
         with self.session_no_commit() as db:

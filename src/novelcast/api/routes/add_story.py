@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from typing import Optional
 
-from novelcast.api.deps import get_download_service, get_stories_service
+from novelcast.api.deps import get_download, get_stories_service
 from novelcast.api.ws.notifications import manager
 from novelcast.services import StoryService, StoryDownloadService
 
@@ -52,11 +52,12 @@ class MetadataPreview(BaseModel):
     chapters: list[Chapter] | None
     story_site_id: str | None
 
+router = APIRouter(tags=["stories"])
 
 @router.post("/preview")
 async def preview_story_metadata(
     request: AddStoryRequest,
-    download: StoryDownloadService = Depends(get_download_service),
+    download: StoryDownloadService = Depends(get_download),
 ) -> MetadataPreview:
     try:
         result = download.orchestrator.check_updates(request.url)
@@ -89,7 +90,7 @@ async def preview_story_metadata(
 async def add_story_with_metadata(
     request: Request,
     body: AddStoryRequest,
-    download: StoryDownloadService = Depends(get_download_service),
+    download: StoryDownloadService = Depends(get_download),
     stories: StoryService = Depends(get_stories_service),
 ):
     title_hint = body.title or body.url

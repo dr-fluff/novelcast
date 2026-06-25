@@ -7,7 +7,7 @@ from novelcast.api.deps import get_stories
 from novelcast.services import StoryService
 from .utils import require_admin
 
-router = APIRouter(prefix="/stories", tags=["stories"])
+router = APIRouter(tags=["stories"])
 
 
 # ── schemas ────────────────────────────────────────────────────────────────

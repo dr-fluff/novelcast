@@ -23,14 +23,26 @@
   font-weight: 600;
 }
 
+
 .card-info {
   padding: 1rem 1rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
 }
 
 .card-info h3 {
   margin: 0 0 0.5rem;
   font-size: 1.05rem;
   line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.card-meta:first-of-type {
+  margin-top: auto;     /* pushes all meta to the bottom */
 }
 
 .card-meta {

@@ -37,10 +37,8 @@ class TelegramService:
         if self._disabled:
             return False
         cfg = self._tg()
-
         return (
-            not self._disabled
-            and cfg.get("enabled") is True
+            str(cfg.get("enabled", "")).strip().lower() in ("1", "true", "yes")
             and bool(self._token())
             and bool(self._chat_id())
         )
@@ -221,6 +219,7 @@ class TelegramService:
             await self.send_message("Commands: /status /stories /download <url>")
 
     async def send_message(self, text: str):
+        logger.info("Telegram message: %s", text)
         if not self._enabled():
             logger.debug(
                 "Skipping telegram send because service is disabled"

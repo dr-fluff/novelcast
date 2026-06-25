@@ -270,6 +270,7 @@
                 genres: getTagValues("addStoryGenresWrap"),
                 tags: getTagValues("addStoryTagsWrap"),
                 auto_update: $("addStoryAutoUpdate")?.checked || false,
+                hide__author_notes: $("metaHideAuthorNotes")?.checked || true,
                 selected_chapters: selectedChapters.length > 0 ? selectedChapters : null,  // ← NEW
             };
 

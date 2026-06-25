@@ -1,6 +1,7 @@
 # novelcast/core/context.py
 import logging
 from queue import Queue
+import asyncio
 
 from novelcast.db.init_db import init_db
 from novelcast.db.session import SessionLocal
@@ -91,9 +92,8 @@ class AppContext:
     # EVENTS
     # ─────────────────────────────
     def emit(self, event_type: str, payload: dict):
-        if not self.ws_manager:
-            return
-        self.event_queue.put((event_type, payload))
+        self.notifier.broadcast(event_type, payload)
+
 
     # ─────────────────────────────
     # DATABASE

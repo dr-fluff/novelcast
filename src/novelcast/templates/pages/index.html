@@ -44,10 +44,13 @@
                     <div class="card-letter">{{ s.thumbnail_letter }}</div>
                     {% if not s.has_unread %}<div class="card-badge"><i class="fa-solid fa-check"></i></div>{% endif %}
                 </div>
+
                 <div class="card-info">
                     <h3>{{ s.display_title }}</h3>
-                    <p class="card-meta">{% if s.author %}{{ s.author }} · {% endif %}</p>
-                    <p class="card-meta">{{ s.last_chapter }} chapters</p>    
+                    <p class="card-meta">{% if s.author %}{{ s.author }}{% endif %}</p>
+                    <p class="card-meta">{{ s.last_chapter }} Chapters</p>
+                    <p class="card-meta">{{ s.last_chapter_name }}</p>
+                    </div>
                 </div>
             </a>
         {% endfor %}

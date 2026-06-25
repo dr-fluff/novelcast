@@ -427,6 +427,7 @@ const UnifiedPanel = (() => {
                     genres: collectTagList("addStoryGenresWrap", panelId),
                     tags: collectTagList("addStoryTagsWrap", panelId),
                     auto_update: $(`addStoryAutoUpdate-${panelId}`)?.checked || false,
+                    hide__author_notes: $("metaHideAuthorNotes-")?.checked || true,
                     selected_chapters: state.selectedChapters.length > 0
                         ? state.selectedChapters
                         : null,

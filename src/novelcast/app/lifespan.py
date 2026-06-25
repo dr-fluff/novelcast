@@ -9,8 +9,16 @@ from novelcast.core.context import AppContext
 from novelcast.api.ws.notifications import manager as ws_manager
 from novelcast.core.defaults import DEFAULT_CHAPTER_PATTERNS
 
-from novelcast.db.repositories import PasswordResetRepository
-from novelcast.services import PasswordResetService, TelegramService
+from novelcast.db.repositories import (
+    PasswordResetRepository,
+    )
+
+from novelcast.services import (
+    PasswordResetService, 
+    TelegramService, 
+    NotifierService
+    )
+
 from novelcast.services.workers import auto_sync_worker
 
 logger = logging.getLogger(__name__)
@@ -43,6 +51,8 @@ async def lifespan(app: FastAPI):
         # websockets
         ctx.ws_manager = ws_manager
         ctx.story_orchestrator.notifier = ws_manager
+        ctx.notifier = NotifierService(ws_manager=ws_manager)
+        ctx.ws_manager = ws_manager
 
         # ─────────────────────────────
         # TELEGRAM (LIFESPAN OWNED)
