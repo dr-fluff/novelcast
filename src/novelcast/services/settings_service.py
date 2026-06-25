@@ -234,6 +234,7 @@ class SettingsService:
             "chapter_line_spacing": 100,
             "chapter_font_weight": 0,
             "chapter_paragraph_spacing": 100,
+            "chapter_content_padding": 3,
         }
 
         if not row:
@@ -253,6 +254,7 @@ class SettingsService:
             "chapter_line_spacing": row.get("chapter_line_spacing", 100),
             "chapter_font_weight": row.get("chapter_font_weight", 0),
             "chapter_paragraph_spacing": row.get("chapter_paragraph_spacing", 100),
+            "chapter_content_padding": row.get("chapter_content_padding", 3),
         }
 
     def get_user_preference(self, user_id: int, key: str, default=None):
@@ -285,6 +287,7 @@ class SettingsService:
         chapter_line_spacing: int = None,
         chapter_font_weight: int = None,
         chapter_paragraph_spacing: int = None,
+        chapter_content_padding: int = None, 
     ):
         """Sanitized write to avoid corrupted DB values from forms."""
 
@@ -334,6 +337,12 @@ class SettingsService:
                 chapter_paragraph_spacing = max(50, min(int(chapter_paragraph_spacing), 200))
             except Exception:
                 chapter_paragraph_spacing = 100
+        
+        if chapter_content_padding is not None:
+            try:
+                chapter_content_padding = max(3, min(int(chapter_content_padding), 20))
+            except Exception:
+                chapter_content_padding = 3
 
         return self.repo.save_user_settings(
             user_id,
@@ -347,6 +356,7 @@ class SettingsService:
             chapter_line_spacing=chapter_line_spacing,
             chapter_font_weight=chapter_font_weight,
             chapter_paragraph_spacing=chapter_paragraph_spacing,
+            chapter_content_padding=chapter_content_padding, 
         )
 
     # NEW: Convenience method for chapter reader JS
@@ -360,4 +370,5 @@ class SettingsService:
             "lineSpacing": settings.get("chapter_line_spacing", 100),
             "fontWeight": settings.get("chapter_font_weight", 0),
             "paragraphSpacing": settings.get("chapter_paragraph_spacing", 100),
+            "contentPadding": settings.get("chapter_content_padding", 3), 
         }

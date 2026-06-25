@@ -113,10 +113,15 @@ class StoryDownloadService:
             # ── Telegram ──────────────────────────────────
             telegram = getattr(self, "telegram", None)
             if telegram:
-                telegram.notify_story_added(
-                    parsed.get("title") or raw.get("title") or "Unknown",
-                    parsed.get("author") or raw.get("author"),
-                )
+                try:
+                    telegram.notify_story_added(
+                        parsed.get("title") or raw.get("title") or "Unknown",
+                        parsed.get("author") or raw.get("author"),
+                    )
+                except Exception:
+                    logger.exception(
+                        "Failed to send telegram notification"
+                    )
 
             # Verify all chapter files landed on disk
             check = self.pipeline.integrity_check(story_id)
@@ -187,14 +192,20 @@ class StoryDownloadService:
                 "title": final_title,
                 "new_chapters": len(new_chapters),
             })
+            
             # ── Telegram ──────────────────────────────
             telegram = getattr(self, "telegram", None)
             if telegram:
-                telegram.notify_story_updated(
-                    final_title,
-                    parsed.get("author"),
-                    len(new_chapters),
-                )
+                try:
+                    telegram.notify_story_updated(
+                        final_title,
+                        parsed.get("author"),
+                        len(new_chapters),
+                    )
+                except Exception:
+                    logger.exception(
+                        "Failed to send telegram notification"
+                    )
 
         self._emit("update_finished", {
             "story_id": story_id,

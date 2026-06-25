@@ -17,6 +17,7 @@ class PaginatedEReader {
       currentPage: 0,
       totalPages: 0,
       originalContent: null,
+      contentPadding: 3,
     };
 
     this.iframe = null;
@@ -111,6 +112,8 @@ class PaginatedEReader {
       prevBtn:                $('prevChapter'),
       backBtn:                document.querySelector('.back-btn'),
       pageCounter:            this.createPageCounter(),
+      marginSlider:           $('marginSlider'),
+      marginSliderValue:      $('marginSliderValue'),
     };
   }
 
@@ -217,28 +220,36 @@ class PaginatedEReader {
     requestAnimationFrame(() =>
       requestAnimationFrame(async () => {
         this.calculatePages();
-        const startPage = await this.resolveStartPage();
-        this.render(startPage);
+        this.render(0);  // show content immediately
         this.iframeWin.addEventListener('keydown', e => this.handleKey(e));
+        const startPage = await this.resolveStartPage();
+        if (startPage > 0) this.render(startPage);  // jump once progress loads
       })
     );
     
   }, { once: true });
   }
 
-  resolveStartPage() {
+  async resolveStartPage() {
     const params = new URLSearchParams(window.location.search);
     if (params.get('lastPage') === '1') return this.state.totalPages - 1;
 
-    const pageParam  = params.get('page');
+    const pageParam   = params.get('page');
     const anchorParam = params.get('anchor');
 
-    if (anchorParam !== null) {
-      return this.findPageForAnchor(parseInt(anchorParam, 10));
-    }
-    if (pageParam !== null) {
-      return Math.min(parseInt(pageParam, 10), this.state.totalPages - 1);
-    }
+    if (anchorParam !== null) return this.findPageForAnchor(parseInt(anchorParam, 10));
+    if (pageParam   !== null) return Math.min(parseInt(pageParam, 10), this.state.totalPages - 1);
+
+    // ← was always falling through to 0; now fetches saved progress
+    try {
+      const r = await fetch(`/api/chapter-progress?chapter_id=${this.state.chapterId}`);
+      if (r.ok) {
+        const data = await r.json();
+        if (data.anchor != null) return this.findPageForAnchor(data.anchor);
+        if (data.page)           return Math.min(data.page, this.state.totalPages - 1);
+      }
+    } catch (e) { /* fall through to 0 */ }
+
     return 0;
   }
 
@@ -350,7 +361,7 @@ class PaginatedEReader {
         line-height: ${lineHeight};
         font-weight: ${fontWeight};
         color:       ${c.text};
-        padding:     2rem 3rem;
+        padding: 2rem ${this.settings.contentPadding}rem;
         /* Let content be as tall as columns allow */
         height:      ${h}px;
       }
@@ -539,6 +550,11 @@ class PaginatedEReader {
       if (this.el.paragraphSpacingValue)
         this.el.paragraphSpacingValue.textContent = this.settings.paragraphSpacing + '%';
     }
+    if (this.el.marginSlider) {
+      this.el.marginSlider.value = this.settings.contentPadding;
+      if (this.el.marginSliderValue)
+        this.el.marginSliderValue.textContent = this.settings.contentPadding + 'rem';
+    }
   }
 
   // ======================
@@ -568,6 +584,16 @@ class PaginatedEReader {
       this.resizeTimer = setTimeout(() => {
         this.repaginate(this.state.currentPage);
       }, 250);
+    });
+    
+    this.el.marginSlider?.addEventListener('input', e => {
+      this.settings.contentPadding = Number(e.target.value);
+      if (this.el.marginSliderValue)
+        this.el.marginSliderValue.textContent = e.target.value + 'rem';
+      this.updateSettingsUI();
+      this.repaginate(this.state.currentPage);
+      clearTimeout(this.marginSaveTimer);
+      this.marginSaveTimer = setTimeout(() => this.saveUserSettings(), 300);
     });
 
     // Settings panel open/close

@@ -138,7 +138,7 @@ class StoryService:
         telegram = getattr(self, "telegram", None)
         if telegram:
             telegram.notify_story_deleted(title)
-            a
+            
         return True
 
     def update_story_metadata(

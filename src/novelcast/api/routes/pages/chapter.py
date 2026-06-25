@@ -1,3 +1,4 @@
+# novelcast/api/router/chapter.py
 from fastapi import Depends, HTTPException, Request
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import JSONResponse
@@ -102,6 +103,7 @@ async def get_chapter_settings(
                 "lineSpacing": 100,
                 "fontWeight": 0,
                 "paragraphSpacing": 100,
+                "contentPadding": 3,
             }
         }
 
@@ -134,6 +136,11 @@ async def update_chapter_settings(
             ps = data["paragraphSpacing"]
             if not (50 <= ps <= 200):
                 raise ValueError("paragraphSpacing must be between 50 and 200")
+        
+        if "contentPadding" in data:
+            cp = data["contentPadding"]
+            if not (3 <= cp <= 20):
+                raise ValueError("contentPadding must be between 3 and 20")
 
         # Save via SettingsService
         # Pass None for display settings so we only update chapter settings
@@ -150,6 +157,7 @@ async def update_chapter_settings(
             chapter_line_spacing=data.get("lineSpacing"),
             chapter_font_weight=data.get("fontWeight"),
             chapter_paragraph_spacing=data.get("paragraphSpacing"),
+            chapter_content_padding=data.get("contentPadding"),
         )
 
         # Return the settings that were saved
@@ -194,7 +202,11 @@ async def save_chapter_progress(
     progress.set_chapter_page(current_user["id"], chapter_id, page, anchor)
 
     if page >= total_pages - 1:
-        progress.set_progress(current_user["id"], story_id, chapter_id, page)
+        # Only advance story progress, never move it backwards
+        current = progress.get_progress(current_user["id"], story_id)
+        current_last = (current or {}).get("last_chapter_id") or 0
+        if chapter_id >= current_last:
+            progress.set_progress(current_user["id"], story_id, chapter_id, page)
 
     return {"ok": True}
 
@@ -206,7 +218,9 @@ async def get_chapter_progress(
     progress: ProgressService = Depends(get_progress),
 ):
     if not current_user:
-        return {"page": 0}
+        return {"page": 0, "anchor": None}
 
-    page = progress.get_chapter_page(current_user["id"], chapter_id)
-    return {"page": page or 0}
+    result = progress.get_chapter_page(current_user["id"], chapter_id)
+    if isinstance(result, dict):
+        return {"page": result.get("page", 0), "anchor": result.get("anchor")}
+    return {"page": result or 0, "anchor": None}

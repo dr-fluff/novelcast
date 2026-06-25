@@ -129,6 +129,7 @@ class SettingsRepository(BaseRepository):
         chapter_line_spacing: int = None,
         chapter_font_weight: int = None,
         chapter_paragraph_spacing: int = None,
+        chapter_content_padding: int = None, 
     ) -> None:
         """Save user settings including chapter reading preferences as key-value pairs."""
         
@@ -154,6 +155,8 @@ class SettingsRepository(BaseRepository):
             settings["chapter_font_weight"] = (chapter_font_weight, "reading", "int")
         if chapter_paragraph_spacing is not None:
             settings["chapter_paragraph_spacing"] = (chapter_paragraph_spacing, "reading", "int")
+        if chapter_content_padding is not None:
+            settings["chapter_content_padding"] = (chapter_content_padding, "reading", "int")
 
         # Upsert each setting as a row in UserSetting table
         with self.session() as db:

@@ -59,7 +59,7 @@ class ProgressRepository(BaseRepository):
             
             
 
-    def get_chapter_page(self, user_id: int, chapter_id: int) -> int:
+    def get_chapter_page(self, user_id: int, chapter_id: int) -> dict | None:
         with self.session_no_commit() as db:
             row = db.scalars(
                 select(ChapterProgress).where(
@@ -67,7 +67,9 @@ class ProgressRepository(BaseRepository):
                     ChapterProgress.chapter_id == chapter_id,
                 )
             ).first()
-            return row.page if row else 0
+            if not row:
+                return None
+            return {"page": row.page, "anchor": row.anchor}
 
     def set_chapter_page(self, user_id: int, chapter_id: int, page: int, anchor: int) -> None:
         with self.session() as db:
