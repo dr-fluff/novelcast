@@ -140,23 +140,29 @@ class TelegramService:
             )
     
     async def _poll_loop(self):
-        async with httpx.AsyncClient(timeout=30) as client:
+        async with httpx.AsyncClient(
+            timeout=httpx.Timeout(
+                connect=10.0,
+                read=40.0,
+                write=10.0,
+                pool=10.0,
+            )
+        ) as client:
             while True:
                 try:
                     await self._poll_once(client)
-                    self._consecutive_failures = 0  # reset on success
+                    self._consecutive_failures = 0
 
                 except asyncio.CancelledError:
                     logger.info("Telegram polling cancelled")
                     break
 
                 except Exception as e:
-                    self._consecutive_failures += 1
-                    logger.warning(
-                        "Telegram poll error (%d/%d): %s",
+                    self._consecutive_failures += 1                    
+                    logger.exception(
+                        "Telegram poll error (%d/%d)",
                         self._consecutive_failures,
                         self._max_failures,
-                        e,
                     )
 
                     # 🔴 Hard stop if too many failures
@@ -269,7 +275,14 @@ class TelegramService:
             return False, "Missing token or chat_id"
 
         try:
-            async with httpx.AsyncClient(timeout=10) as client:
+            async with httpx.AsyncClient(
+                timeout=httpx.Timeout(
+                    connect=10.0,
+                    read=40.0,
+                    write=10.0,
+                    pool=10.0,
+                )
+            ) as client:
                 r = await client.post(
                     self._url("sendMessage"),
                     json={

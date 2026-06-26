@@ -92,6 +92,8 @@ class AppContext:
     # EVENTS
     # ─────────────────────────────
     def emit(self, event_type: str, payload: dict):
+        if not self.notifier:
+            return
         self.notifier.broadcast(event_type, payload)
 
 

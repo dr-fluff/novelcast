@@ -4,7 +4,6 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from novelcast.core.config import AppConfig
-from novelcast.core.logging import setup_logging
 
 from novelcast.api.errors import register_error_handlers
 from novelcast.api import (
@@ -16,6 +15,7 @@ from novelcast.api import (
 from novelcast.app.lifespan import lifespan
 from novelcast.core.templates import AppTemplates
 from novelcast.api.routes import router as api_router
+from novelcast.core.logging import setup_logging, LogConfig
 
 
 
@@ -25,7 +25,7 @@ STATIC_DIR = BASE_DIR / "static"
 
 
 def create_app(config: AppConfig) -> FastAPI:
-    setup_logging(config)
+    setup_logging(LogConfig.from_app_config(config))
     
     app = FastAPI(
         title="NovelCast",

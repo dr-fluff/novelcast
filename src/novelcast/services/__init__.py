@@ -16,3 +16,4 @@ from .rss_service import RssService
 from .health_check_service import HealthCheckService
 from .chapter_filter_service import ChapterFilterService
 from .telegram_service import TelegramService
+from .logging_service import LoggingService

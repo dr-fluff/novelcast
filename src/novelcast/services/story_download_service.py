@@ -452,7 +452,10 @@ class StoryDownloadService:
 
     def _emit(self, event_type: str, payload: dict):
         if self.notifier:
-            self.notifier(event_type, payload)
+            try:
+                self.notifier(event_type, payload)
+            except Exception:
+                logger.exception("Notifier failed for %s", event_type)
     
     def temp_dir(self):
         self.temp_dir_path = "temp"

@@ -48,6 +48,7 @@ SETTINGS = {
             "label": "Creator ID",
         },
     },
+    
     "fanficfare": {
         "config_path": {
             "type": "string",
@@ -234,19 +235,53 @@ SETTINGS = {
     "logging": {
         "level": {
             "type": "select",
-            "description": "Default log level for the application",
+            "description": "Log verbosity level",
             "default": "info",
             "options": ["debug", "info", "warning", "error"],
             "label": "Log level",
         },
         "file": {
             "type": "string",
-            "description": "Default log file for the application",
+            "description": "Log file path (relative to app root, leave empty for console only)",
             "default": "log/novelcast.log",
             "label": "Log file",
         },
+        "max_bytes": {
+            "type": "number",
+            "description": "Maximum log file size before rotation (bytes)",
+            "default": 10485760,   # 10 MB
+            "min": 1048576,        # 1 MB
+            "max": 104857600,      # 100 MB
+            "label": "Max file size (bytes)",
+        },
+        "tail_buffer_size": {
+            "type": "number",
+            "description": "Number of recent log lines kept in memory for the live log viewer",
+            "default": 500,
+            "min": 50,
+            "max": 5000,
+            "label": "Live tail buffer (lines)",
+        },
+        "noisy_loggers": {
+            "type": "string",
+            "description": "JSON array of logger names to suppress to WARNING level",
+            "default": (
+                '["websockets","websockets.server","websockets.protocol",'
+                '"websockets.client","uvicorn","uvicorn.access",'
+                '"uvicorn.protocols","uvicorn.protocols.websockets",'
+                '"uvicorn.protocols.websockets.websockets_impl",'
+                '"asyncio","httpx","httpcore","multipart","python_multipart","starlette"]'
+            ),
+            "label": "Suppressed loggers (JSON)",
+        },
+        "max_amount_of_files": {
+            "type": "int",
+            "description": "How many log files are going to be saved",
+            "default": 20,
+            "label": "Amount of saved log files",
+        },
     },
-
+    
     "library": {
         "data_path": {
             "type": "string",
