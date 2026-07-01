@@ -1,7 +1,10 @@
 # tests/test_search_service.py
 
+import asyncio
 import pytest
 from novelcast.services.search_service import SearchService, ParsedQuery, SITE_REGISTRY
+from novelcast.services.scrapers import scrape_all
+from novelcast.services.scrapers.base import ScrapedResult
 
 service = SearchService()
 
@@ -15,6 +18,13 @@ def parse(raw: str) -> ParsedQuery:
 
 def urls(raw: str) -> list[str]:
     return [r.url for r in service.build_search_urls(parse(raw))]
+
+
+def test_parse_query_extracts_patreon_creator_from_vanity_url():
+    q = service.parse_query("https://www.patreon.com/c/MarvinKnight/home?vanity=MarvinKnight")
+    assert q.target == "patreon"
+    assert q.patreon_creator == "MarvinKnight"
+    assert q.resolved_url == "https://www.patreon.com/MarvinKnight"
 
 def kinds(raw: str) -> list[str]:
     return [r.kind for r in service.build_search_urls(parse(raw))]
@@ -250,3 +260,36 @@ class TestBuildSearchUrls:
     def test_search_urls_encode_spaces(self):
         results = service.build_search_urls(parse("rr:He Who Fights"))
         assert "+" in results[0].url or "%20" in results[0].url
+
+
+def test_scrape_all_uses_patreon_creator_scraper(monkeypatch):
+    async def fake_scrape_patreon_creator(client, creator_name):
+        return [
+            ScrapedResult(
+                site="patreon",
+                kind="fiction",
+                title="Creator post",
+                author=creator_name,
+                cover_url=None,
+                description=None,
+                url=f"https://www.patreon.com/{creator_name}",
+            )
+        ]
+
+    monkeypatch.setattr(
+        "novelcast.services.scrapers.patreon.scrape_patreon_creator",
+        fake_scrape_patreon_creator,
+    )
+
+    results = asyncio.run(scrape_all([
+        {
+            "site": "patreon",
+            "kind": "author_profile",
+            "url": "https://www.patreon.com/test_creator",
+            "patreon_creator": "test_creator",
+        }
+    ]))
+
+    assert len(results) == 1
+    assert results[0].title == "Creator post"
+    assert results[0].author == "test_creator"

@@ -80,14 +80,16 @@ class PatreonEngine:
         """
         try:
             # Read credentials from INI
-            email, password = self._read_config()
+            email, password, client_id = self._read_config()
             if not email or not password:
                 raise ValueError("Email and password required in config")
+            if not client_id:
+                raise ValueError("client_id required in config - register a Patreon app at https://www.patreon.com/portal/registration/register-clients")
             
             self._emit_progress("Authenticating with Patreon", progress_callback, 5)
             
             # Authenticate
-            access_token = self._authenticate(email, password)
+            access_token = self._authenticate(email, password, client_id)
             
             self._emit_progress("Fetching user info", progress_callback, 10)
             
@@ -137,8 +139,8 @@ class PatreonEngine:
     def check_updates(self, url: str) -> dict:
         """Check for new posts - optional, matches FanFicFare interface"""
         try:
-            email, password = self._read_config()
-            access_token = self._authenticate(email, password)
+            email, password, client_id = self._read_config()
+            access_token = self._authenticate(email, password, client_id)
             creator_name, campaign_id = self._find_campaign(access_token, url)
             
             posts = self._fetch_all_posts(access_token, campaign_id)
@@ -168,7 +170,7 @@ class PatreonEngine:
     # CONFIG & AUTH
     # -------------------------
     def _read_config(self) -> tuple:
-        """Read email and password from patreon.ini"""
+        """Read email, password, and client_id from patreon.ini"""
         config_path = "config/patreon.ini"
         
         if not os.path.exists(config_path):
@@ -179,24 +181,44 @@ class PatreonEngine:
         
         email = config.get("defaults", "email", fallback="").strip()
         password = config.get("defaults", "password", fallback="").strip()
+        client_id = config.get("defaults", "client_id", fallback="").strip()
         
         logger.info("Loaded Patreon config from %s", config_path)
         
-        return email, password
+        return email, password, client_id
     
-    def _authenticate(self, email: str, password: str) -> str:
+    def _authenticate(self, email: str, password: str, client_id: str) -> str:
         """Authenticate with Patreon and return access token"""
         try:
+            logger.info("Attempting Patreon OAuth with client_id=%s", client_id[:16] + "...")
+            
             response = requests.post(
                 "https://www.patreon.com/api/oauth2/token",
                 data={
                     "grant_type": "password",
                     "username": email,
                     "password": password,
-                    "client_id": "7347-6ba3b1f-secret",
+                    "client_id": client_id,
                     "scope": "identity campaigns pledges-to-me",
                 }
             )
+            
+            if response.status_code != 200:
+                # Log the error response for debugging
+                try:
+                    error_body = response.json()
+                    logger.error("Patreon OAuth error: %s", error_body)
+                    
+                    # Provide helpful error message for unsupported grant type
+                    if error_body.get("error") == "unsupported_grant_type":
+                        raise RuntimeError(
+                            "Patreon OAuth error: 'password' grant type is not supported. "
+                            "Your Patreon OAuth app may not have password grant enabled. "
+                            "Check your app settings at https://www.patreon.com/portal/registration/register-clients"
+                        )
+                except ValueError:
+                    logger.error("Patreon OAuth error: %s", response.text[:500])
+            
             response.raise_for_status()
             
             token_data = response.json()
@@ -208,6 +230,9 @@ class PatreonEngine:
             logger.info("Successfully authenticated with Patreon")
             return access_token
         
+        except RuntimeError:
+            # Re-raise our custom error messages
+            raise
         except requests.RequestException as e:
             logger.error("Patreon authentication failed: %s", e)
             raise RuntimeError(f"Failed to authenticate: {e}")

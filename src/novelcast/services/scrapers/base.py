@@ -9,7 +9,8 @@ class ScrapedResult:
     site: str
     kind: str                  # "fiction" | "author"
     title: str
-    author: Optional[str]
-    cover_url: Optional[str]
-    description: Optional[str]
-    url: str
+    author: Optional[str] = None
+    cover_url: Optional[str] = None
+    description: Optional[str] = None
+    url: str = ""
+    patreon_url: Optional[str] = None

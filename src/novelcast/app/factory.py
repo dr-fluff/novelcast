@@ -25,7 +25,7 @@ STATIC_DIR = BASE_DIR / "static"
 
 
 def create_app(config: AppConfig) -> FastAPI:
-    setup_logging(LogConfig.from_app_config(config))
+    setup_logging(LogConfig.console_only())
     
     app = FastAPI(
         title="NovelCast",

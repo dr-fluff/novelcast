@@ -62,6 +62,29 @@ async def save_settings(
     )
 
     if current_user.get("is_root"):
+        # Validate Patreon settings before saving if they're being updated
+        patreon_updated = False
+        for section, fields in server_updates.items():
+            if section == "patreon":
+                patreon_updated = True
+                # Temporarily apply updates for validation
+                for key, value in fields.items():
+                    settings.set_server_setting(f"{section}.{key}", value)
+        
+        if patreon_updated:
+            # Validate Patreon settings
+            ctx = request.app.state.ctx
+            patreon_config_service = ctx.engines_config.get("patreon", {}).get("writer")
+            if patreon_config_service and hasattr(patreon_config_service, 'validate_settings'):
+                is_valid, error_msg = patreon_config_service.validate_settings()
+                if not is_valid:
+                    active_tab = form.get("_active_tab", "")
+                    redirect_url = f"/settings?error={quote(error_msg, safe='')}"
+                    if active_tab:
+                        redirect_url = f"{redirect_url}#{quote(active_tab, safe='')}"
+                    return RedirectResponse(redirect_url, status_code=303)
+        
+        # Save all settings
         for section, fields in server_updates.items():
             for key, value in fields.items():
                 settings.set_server_setting(f"{section}.{key}", value)

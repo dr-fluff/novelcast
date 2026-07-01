@@ -6,6 +6,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+
 class NotifierService:
     def __init__(self, ws_manager=None, loop=None):
         self.ws_manager = ws_manager

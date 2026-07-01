@@ -43,7 +43,7 @@ _DEFAULT_NOISY = [
 @dataclass
 class LogConfig:
     level:            str       = "INFO"
-    file_path:        str       = "log/novelcast.log"   # matches defaults.py "file" default
+    file_path:        str       = "logs/novelcast.log"   # matches defaults.py "file" default
     max_bytes:        int       = 10 * 1024 * 1024
     noisy_loggers:    list[str] = field(default_factory=lambda: list(_DEFAULT_NOISY))
     tail_buffer_size: int       = 500
@@ -82,7 +82,13 @@ class LogConfig:
         """Fallback for early boot before DB is ready."""
         cfg = cls()
         cfg.level     = getattr(app_config, "log_level", "INFO").upper()
-        cfg.file_path = getattr(app_config, "log_file", "log/novelcast.log") or "log/novelcast.log"
+        cfg.file_path = getattr(app_config, "log_file", "logs/novelcast.log") or "logs/novelcast.log"
+        return cfg
+    
+    @classmethod
+    def console_only(cls) -> "LogConfig":
+        cfg = cls()
+        cfg.file_path = ""
         return cfg
 
 

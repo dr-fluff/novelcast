@@ -5,7 +5,13 @@ from __future__ import annotations
 import asyncio
 import logging
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, Request, APIRouter
+
+from fastapi.responses import RedirectResponse
+from fastapi.templating import Jinja2Templates
+
+from novelcast.api.deps import get_current_user, get_settings, get_templates, get_logs
+from novelcast.services import LoggingService
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -36,3 +42,14 @@ async def log_tail_ws(websocket: WebSocket):
         pass
     except Exception:
         logger.exception("log_tail_ws error")
+    
+    
+@router.get("/logs")
+def logs(
+    request: Request,
+    settings: SettingsService = Depends(get_settings),
+    loggers: LoggingService = Depends(get_logs),
+    current_user: dict | None = Depends(get_current_user),
+    templates: Jinja2Templates = Depends(get_templates),
+):
+    return templates.TemplateResponse("pages/index.html", {})

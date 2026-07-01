@@ -30,18 +30,25 @@ async def scrape_all(search_urls):
             if not scraper:
                 continue
 
-            match sr.kind:
-                case "fiction_search":
-                    tasks.append(scraper.scrape_fiction_search(client, sr.url))
+            if sr.site == "patreon":
+                creator = getattr(sr, "patreon_creator", None) or getattr(sr, "label", None)
+                if creator:
+                    tasks.append(patreon.scrape_patreon_creator(client, creator))
+                else:
+                    tasks.append(patreon.scrape_patreon_creator(client, sr.url.split("/")[-1]))
+            else:
+                match sr.kind:
+                    case "fiction_search":
+                        tasks.append(scraper.scrape_fiction_search(client, sr.url))
 
-                case "author_search":
-                    tasks.append(scraper.scrape_author_search(client, sr.url))
+                    case "author_search":
+                        tasks.append(scraper.scrape_author_search(client, sr.url))
 
-                case "fiction_detail":
-                    tasks.append(scraper.scrape_fiction_detail(client, sr.url))
+                    case "fiction_detail":
+                        tasks.append(scraper.scrape_fiction_detail(client, sr.url))
 
-                case "author_profile":
-                    tasks.append(scraper.scrape_author_detail(client, sr.url))
+                    case "author_profile":
+                        tasks.append(scraper.scrape_author_detail(client, sr.url))
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
 

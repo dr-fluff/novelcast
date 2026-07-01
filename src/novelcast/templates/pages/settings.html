@@ -129,7 +129,28 @@
                   </div>
                 </div>
               </div>
-              {% endif %}
+        {% endif %}
+
+        {% if section_name == "patreon" %}
+              <div class="section-card">
+                <div class="field-card">
+                  <div class="field-card__label-col">
+                    <span class="field-label">Credentials test</span>
+                    <span class="field-hint">Test your Patreon OAuth credentials to ensure they are valid.</span>
+                  </div>
+                  <div class="field-card__input-col">
+                    <button
+                      type="button"
+                      class="btn-secondary"
+                      hx-post="/api/admin/patreon/test"
+                      hx-target="#patreon-test-result"
+                      hx-swap="innerHTML"
+                    >Test Credentials</button>
+                    <div id="patreon-test-result" class="mt-2 text-sm"></div>
+                  </div>
+                </div>
+              </div>
+        {% endif %}
 
       {% endfor %}
 

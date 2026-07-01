@@ -15,6 +15,7 @@ from novelcast.services import (
     HealthCheckService,
     ChapterFilterService,
     TelegramService,
+    LoggingService,
 )
 
 # ─────────────────────────────
@@ -97,3 +98,6 @@ def get_library_sync_service(request: Request) -> LibrarySyncService:
 
 def get_stories_service(request: Request) -> StoryService:
     return request.app.state.ctx.stories
+
+def get_logs(request: Request) -> LoggingService:
+    return request.app.state.ctx.logs

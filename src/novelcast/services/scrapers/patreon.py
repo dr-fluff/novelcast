@@ -3,6 +3,7 @@
 Patreon scraper - extract available posts/stories from a creator's page
 """
 
+import re
 import httpx
 from bs4 import BeautifulSoup
 from typing import List, Optional
@@ -34,35 +35,28 @@ async def scrape_patreon_creator(client: httpx.AsyncClient, creator_name: str) -
     
     soup = BeautifulSoup(resp.text, 'html.parser')
     
-    # Extract creator info from page title or metadata
     creator_title = soup.select_one('title')
     creator_display = creator_name
     
     if creator_title:
-        title_text = creator_title.get_text()
-        # Extract creator display name from title (usually "Name | Patreon")
-        if "|" in title_text:
-            creator_display = title_text.split("|")[0].strip()
+        title_text = creator_title.get_text(" ", strip=True)
+        if title_text:
+            creator_display = re.sub(r"\s*\|\s*Patreon.*$", "", title_text).strip() or creator_name
     
     results = []
     
-    # Method 1: Look for post links in the page
-    # Patreon posts are usually in <a> tags with href like /posts/12345678
     post_links = soup.select('a[href*="/posts/"]')
-    
-    for link in post_links[:20]:  # Limit to first 20 to avoid excessive results
+    for link in post_links[:20]:
         href = link.get('href', '').strip()
         if not href or '/posts/' not in href:
             continue
         
-        # Extract post title
         title_el = link.select_one('h3, .post-title, [class*="title"]')
         title = title_el.get_text(strip=True) if title_el else link.get_text(strip=True)
         
         if not title or len(title.strip()) < 2:
             continue
         
-        # Build full URL
         if href.startswith('http'):
             post_url = href
         elif href.startswith('/'):
@@ -70,8 +64,7 @@ async def scrape_patreon_creator(client: httpx.AsyncClient, creator_name: str) -
         else:
             post_url = f"https://www.patreon.com/{href}"
         
-        # Create result
-        result = ScrapedResult(
+        results.append(ScrapedResult(
             site="patreon",
             kind="fiction_search",
             url=post_url,
@@ -79,22 +72,21 @@ async def scrape_patreon_creator(client: httpx.AsyncClient, creator_name: str) -
             author=creator_display,
             description=f"Patreon post by {creator_display}",
             patreon_url=url,
-        )
-        results.append(result)
+        ))
     
-    # If no posts found, return creator profile as a single result
-    # (user can browse directly on Patreon)
     if not results:
-        creator_result = ScrapedResult(
+        # Fallback: create a creator result from the page metadata, so the UI
+        # still shows something useful instead of an empty state for Patreon.
+        fallback_title = f"Patreon: {creator_display}" if creator_display else f"Patreon creator {creator_name}"
+        results.append(ScrapedResult(
             site="patreon",
             kind="author_profile",
             url=url,
-            title=f"Patreon: {creator_display}",
+            title=fallback_title,
             author=creator_display,
-            description=f"Visit {creator_display}'s Patreon to view stories",
+            description=f"Open {creator_display}'s Patreon page to browse available posts and rewards",
             patreon_url=url,
-        )
-        results.append(creator_result)
+        ))
     
     return results
 

@@ -1,6 +1,7 @@
 import re
 from dataclasses import dataclass
 from typing import Optional
+from urllib.parse import parse_qs, urlparse
 
 
 # ---------------------------------------------------------------------------
@@ -24,6 +25,7 @@ class SearchResult:
     url: str
     label: Optional[str] = None
     patreon_url: Optional[str] = None
+    patreon_creator: Optional[str] = None
 
 # ---------------------------------------------------------------------------
 # Site registry (kept minimal now, adapters handle logic later)
@@ -45,6 +47,27 @@ ALIAS_MAP = {
 }
 
 
+def _extract_patreon_creator(raw: str) -> Optional[str]:
+    parsed = urlparse(raw)
+    hostname = (parsed.hostname or "").lower()
+    if hostname not in {"patreon.com", "www.patreon.com"}:
+        return None
+
+    query = parse_qs(parsed.query)
+    vanity = (query.get("vanity") or [None])[0]
+    if vanity:
+        return vanity.strip()
+
+    parts = [segment for segment in parsed.path.split("/") if segment]
+    if not parts:
+        return None
+
+    if parts[0].lower() == "c" and len(parts) > 1:
+        return parts[1]
+
+    return parts[0]
+
+
 # ---------------------------------------------------------------------------
 # Parser
 # ---------------------------------------------------------------------------
@@ -55,16 +78,28 @@ class SearchService:
         raw = raw.strip()
 
         # -------------------------
-        # 1. PATREON URL
+        # 1. PATREON URL / PREFIX
         # -------------------------
         # Matches: https://www.patreon.com/username or https://patreon.com/username
-        m = re.match(r"https?://(?:www\.)?patreon\.com/([a-zA-Z0-9_-]+)", raw)
-        if m:
-            creator = m.group(1)
+        creator = _extract_patreon_creator(raw)
+        if creator:
             return ParsedQuery(
                 target="patreon",
                 identifier=creator,
                 lookup_type="patreon_url",
+                site="patreon",
+                patreon_creator=creator,
+                resolved_url=f"https://www.patreon.com/{creator}",
+            )
+
+        m = re.match(r"^patreon\s*:\s*(.+)$", raw, re.I)
+        if m:
+            creator = m.group(1).strip()
+            return ParsedQuery(
+                target="patreon",
+                identifier=creator,
+                lookup_type="text",
+                site="patreon",
                 patreon_creator=creator,
                 resolved_url=f"https://www.patreon.com/{creator}",
             )
@@ -152,22 +187,16 @@ class SearchService:
         # PATREON: Search for author's works on supported sites
         # ─────────────────────────────────────────────────────────────────
         if q.target == "patreon":
-            creator = q.patreon_creator
-            
-            # Try finding the creator on RoyalRoad (by name)
-            results.append({
-                "site": "royalroad",
-                "kind": "author_search",
-                "url": SITE_REGISTRY["royalroad"]["author_search"].format(q=creator.replace(" ", "+")),
-            })
-            
-            # Also try title search in case the creator wrote under different name
-            results.append({
-                "site": "royalroad",
-                "kind": "fiction_search",
-                "url": SITE_REGISTRY["royalroad"]["fiction_search"].format(q=creator.replace(" ", "+")),
-            })
-            
+            creator = q.patreon_creator or q.identifier
+            patreon_url = f"https://www.patreon.com/{creator}"
+            results.append(SearchResult(
+                site="patreon",
+                kind="author_profile",
+                url=patreon_url,
+                label=creator,
+                patreon_url=patreon_url,
+                patreon_creator=creator,
+            ))
             return results
 
         sites = (
@@ -186,18 +215,18 @@ class SearchService:
             if q.target == "author":
 
                 if q.lookup_type == "id":
-                    results.append({
-                        "site": site,
-                        "kind": "author_profile",
-                        "url": cfg["author_url"].format(id=q.identifier),
-                    })
+                    results.append(SearchResult(
+                        site=site,
+                        kind="author_profile",
+                        url=cfg["author_url"].format(id=q.identifier),
+                    ))
 
                 else:
-                    results.append({
-                        "site": site,
-                        "kind": "author_search",
-                        "url": cfg["author_search"].format(q=qtext),
-                    })
+                    results.append(SearchResult(
+                        site=site,
+                        kind="author_search",
+                        url=cfg["author_search"].format(q=qtext),
+                    ))
 
             # -------------------------
             # FICTION
@@ -205,32 +234,32 @@ class SearchService:
             elif q.target == "fiction":
 
                 if q.lookup_type == "id":
-                    results.append({
-                        "site": site,
-                        "kind": "fiction_detail",
-                        "url": cfg["fiction_url"].format(id=q.identifier),
-                    })
+                    results.append(SearchResult(
+                        site=site,
+                        kind="fiction_detail",
+                        url=cfg["fiction_url"].format(id=q.identifier),
+                    ))
 
                 else:
-                    results.append({
-                        "site": site,
-                        "kind": "fiction_search",
-                        "url": cfg["fiction_search"].format(q=qtext),
-                    })
+                    results.append(SearchResult(
+                        site=site,
+                        kind="fiction_search",
+                        url=cfg["fiction_search"].format(q=qtext),
+                    ))
 
             # -------------------------
             # AUTO MODE (BOTH FICTION & AUTHOR)
             # -------------------------
             else:
-                results.append({
-                    "site": site,
-                    "kind": "fiction_search",
-                    "url": cfg["fiction_search"].format(q=qtext),
-                })
-                results.append({
-                    "site": site,
-                    "kind": "author_search",
-                    "url": cfg["author_search"].format(q=qtext),
-                })
+                results.append(SearchResult(
+                    site=site,
+                    kind="fiction_search",
+                    url=cfg["fiction_search"].format(q=qtext),
+                ))
+                results.append(SearchResult(
+                    site=site,
+                    kind="author_search",
+                    url=cfg["author_search"].format(q=qtext),
+                ))
 
         return results

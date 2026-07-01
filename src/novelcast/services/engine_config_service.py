@@ -4,6 +4,7 @@ from pathlib import Path
 import hashlib
 import logging
 from collections import OrderedDict
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -248,3 +249,76 @@ class PatreonConfigService(BaseEngineConfigService):
         # Currently just uses settings as-is
         # Can be extended for future features
         return builder
+    
+    def validate_settings(self, test_oauth: bool = False) -> tuple[bool, str]:
+        """
+        Validate Patreon settings are present and correctly formatted.
+        Returns (is_valid, error_message)
+        """
+        settings = self._get_settings()
+        
+        # Check required fields
+        email = settings.get("email", "").strip()
+        password = settings.get("password", "").strip()
+        client_id = settings.get("client_id", "").strip()
+        
+        if not email:
+            return False, "Email is required"
+        
+        if not password:
+            return False, "Password is required"
+        
+        if not client_id:
+            return False, "Client ID is required - register a Patreon app at https://www.patreon.com/portal/registration/register-clients"
+        
+        # Basic format validation
+        if "@" not in email:
+            return False, "Email must be a valid email address"
+        
+        if len(client_id) < 10:
+            return False, "Client ID appears to be invalid (too short)"
+        
+        # Optional: test OAuth endpoint
+        if test_oauth:
+            try:
+                response = requests.post(
+                    "https://www.patreon.com/api/oauth2/token",
+                    data={
+                        "grant_type": "password",
+                        "username": email,
+                        "password": password,
+                        "client_id": client_id,
+                        "scope": "identity campaigns pledges-to-me",
+                    },
+                    timeout=5
+                )
+                
+                if response.status_code != 200:
+                    try:
+                        error_body = response.json()
+                        error_type = error_body.get("error", "unknown_error")
+                        
+                        if error_type == "unsupported_grant_type":
+                            return False, (
+                                "Patreon OAuth error: 'password' grant type not supported. "
+                                "Enable password grant in your app settings at "
+                                "https://www.patreon.com/portal/registration/register-clients"
+                            )
+                        elif error_type == "invalid_client":
+                            return False, "Invalid Client ID or app not found"
+                        elif error_type == "invalid_grant":
+                            return False, "Invalid email or password"
+                        else:
+                            return False, f"OAuth error: {error_type}"
+                    except:
+                        return False, f"OAuth error: HTTP {response.status_code}"
+                
+                logger.info("Patreon OAuth validation passed")
+                return True, ""
+            except requests.Timeout:
+                return False, "OAuth endpoint timeout - check your internet connection"
+            except requests.RequestException as e:
+                return False, f"OAuth connection error: {str(e)[:100]}"
+        
+        logger.info("Patreon settings validation passed (OAuth test skipped)")
+        return True, ""

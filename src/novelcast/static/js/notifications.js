@@ -263,12 +263,7 @@ function buildNotification(payload) {
 }
 
 function getWebSocketHost() {
-    const hostname = window.location.hostname;
-    const port = window.location.port;
-    if ((hostname === "localhost" || hostname === "127.0.0.1") && port === "3000") {
-        return `${hostname}:8001`;
-    }
-    return window.location.host;
+    return window.NOVELCAST_API_HOST || window.location.host;
 }
 
 function createWebSocketUrl() {

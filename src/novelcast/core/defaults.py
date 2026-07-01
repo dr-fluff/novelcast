@@ -23,6 +23,12 @@ SETTINGS = {
             "default": "",
             "label": "Password",
         },
+        "client_id": {
+            "type": "string",
+            "description": "OAuth client ID",
+            "default": "",
+            "label": "Client ID",
+        },
         "access_token": {
             "type": "secret",
             "description": "OAuth access token",
@@ -243,7 +249,7 @@ SETTINGS = {
         "file": {
             "type": "string",
             "description": "Log file path (relative to app root, leave empty for console only)",
-            "default": "log/novelcast.log",
+            "default": "logs/novelcast.log",
             "label": "Log file",
         },
         "max_bytes": {
