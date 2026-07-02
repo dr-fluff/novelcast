@@ -5,6 +5,12 @@ import string
 
 SETTINGS = {
     "patreon": {
+        "enabled": {
+            "type": "bool",
+            "description": "Enable Patreon integration",
+            "default": False,
+            "label": "Enable Patreon",
+        },
         "config_path": {
             "type": "string",
             "description": "Path to Patreon config file",
@@ -52,6 +58,21 @@ SETTINGS = {
             "description": "Your Patreon creator ID",
             "default": "",
             "label": "Creator ID",
+        },
+    },
+    
+    "scrapers": {
+        "royalroad_enabled": {
+            "type": "bool",
+            "description": "Enable searching/scraping RoyalRoad",
+            "default": True,
+            "label": "Enable RoyalRoad",
+        },
+        "scribblehub_enabled": {
+            "type": "bool",
+            "description": "Enable searching/scraping ScribbleHub",
+            "default": True,
+            "label": "Enable ScribbleHub",
         },
     },
     

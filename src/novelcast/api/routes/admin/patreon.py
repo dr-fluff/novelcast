@@ -33,6 +33,7 @@ async def test_patreon(request: Request):
         icon = "fa-circle-xmark"
         color = "text-red-500"
         msg = error_msg or "Unknown error"
+        ctx.engines_config.set("patreon.writer.enabled", False)  # Disable Patreon integration on failure
     
     return (
         f"<div class='{color} flex items-center gap-2'>"

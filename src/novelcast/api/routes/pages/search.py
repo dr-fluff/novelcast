@@ -1,15 +1,12 @@
 # novelcast/api/routes/pages/search.py
 
-from fastapi import Depends, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.templating import Jinja2Templates
 
-from novelcast.api.deps import get_current_user, get_templates
+from novelcast.api.deps import get_current_user, get_templates, get_settings
 from novelcast.services.search_service import SearchService
 from novelcast.services.scrapers import scrape_all, scrape_details
-
-search_service = SearchService()
-
-from fastapi import APIRouter
+from novelcast.services.settings_service import SettingsService
 
 router = APIRouter()
 
@@ -31,6 +28,7 @@ async def search_results(
     request: Request,
     q: str = "",
     templates: Jinja2Templates = Depends(get_templates),
+    settings_service: SettingsService = Depends(get_settings),
 ):
     q = q.strip()
 
@@ -43,14 +41,16 @@ async def search_results(
             "error": None,
         })
 
+    search_service = SearchService(settings_service=settings_service)
+
     try:
         parsed = search_service.parse_query(q)
         search_urls = search_service.build_search_urls(parsed)
 
         if parsed.target in ("fiction", "author") and parsed.lookup_type in ("id", "url"):
-            results = await scrape_details(search_urls)
+            results = await scrape_details(search_urls, settings_service=settings_service)
         else:
-            results = await scrape_all(search_urls)
+            results = await scrape_all(search_urls, settings_service=settings_service)
 
         error = None
     except ValueError as e:
