@@ -28,7 +28,6 @@ from novelcast.services import (
     StoryService,
     UserService,
     FanFicFareConfigService,
-    PatreonConfigService,
     StoryDownloadService,
     LibrarySyncService,
     RssService,
@@ -169,14 +168,12 @@ class AppContext:
     def _init_engine_config(self):
         logger.info("Initializing engine config...")
 
+        # CHANGED: Patreon dropped — it's DB-only now, no ini to write.
+        # Only FanFicFare still needs a generated config file.
         self.engines_config = {
             "fanficfare": {
                 "prefix": "fanficfare.",
                 "writer": FanFicFareConfigService(self.settings),
-            },
-            "patreon": {
-                "prefix": "patreon.",
-                "writer": PatreonConfigService(self.settings),
             },
         }
 
@@ -210,7 +207,7 @@ class AppContext:
 
         self.patreon_engine = PatreonEngine(
             self.settings_repo,
-            self.engines_config["patreon"]["writer"],
+            self.settings,
         )
 
         self.engine_selector = EngineSelector([

@@ -2,7 +2,7 @@
 
 from .auth_service import AuthService
 from .chapters_service import ChaptersService
-from .engine_config_service import FanFicFareConfigService, PatreonConfigService
+from .engine_config_service import FanFicFareConfigService
 from .file_service import FileService
 from .notification_service import NotifierService
 from .password_reset_service import PasswordResetService

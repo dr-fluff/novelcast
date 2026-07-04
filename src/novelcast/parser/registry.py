@@ -13,6 +13,8 @@ class ParserRegistry:
         self._parsers[name] = parser
 
     def get(self, name: str) -> BaseParser:
+        if name is None:
+            raise ValueError("Parser name cannot be None")
         try:
             return self._parsers[name]
         except KeyError:

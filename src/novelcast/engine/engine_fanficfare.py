@@ -28,16 +28,10 @@ class FanFicFareEngine(StoryEngine):
         self.settings_repo = settings_repo
         self.config_service = config_service
 
-    # -------------------------
-    # ROUTING
-    # -------------------------
     def can_handle(self, url: str) -> bool:
         hostname = urlparse(url).hostname
         return hostname in FFF_SUPPORTED_SITES if hostname else False
 
-    # -------------------------
-    # PUBLIC API
-    # -------------------------
     def fetch(self, url: str, progress_callback=None, output_dir="/temp") -> dict:
         config_path = self.config_service.write_config()
 
@@ -118,9 +112,6 @@ class FanFicFareEngine(StoryEngine):
 
         return chapters
 
-    # -------------------------
-    # CORE RUNNER
-    # -------------------------
     def _run_fanficfare(self, url: str, config_path: str, progress_callback=None, extra_flags=None) -> dict:
         cmd = [
             sys.executable,
@@ -166,9 +157,6 @@ class FanFicFareEngine(StoryEngine):
 
         return raw
 
-    # -------------------------
-    # JSON PARSER (robust)
-    # -------------------------
     def _parse_json_stdout(self, stdout: str) -> dict:
         decoder = json.JSONDecoder()
         start = stdout.find("{")
@@ -187,9 +175,6 @@ class FanFicFareEngine(StoryEngine):
         logger.error("RAW STDOUT SAMPLE:\n%s", stdout[:2000])
         raise ValueError("No valid JSON object found in FanFicFare output")
 
-    # -------------------------
-    # CHAPTER NORMALIZATION (FIX YOUR BUG)
-    # -------------------------
     def _normalize_chapters(self, raw: dict) -> list[int]:
         chapters = raw.get("chapters") or raw.get("zchapters") or []
 
@@ -211,9 +196,6 @@ class FanFicFareEngine(StoryEngine):
 
         return normalized
 
-    # -------------------------
-    # METADATA EXTRACTION SAFE
-    # -------------------------
     def _extract_metadata(self, raw: dict) -> dict:
         if not isinstance(raw, dict):
             return {}
@@ -255,9 +237,6 @@ class FanFicFareEngine(StoryEngine):
         import re
         return re.sub(r"<.*?>", "", text)
 
-    # -------------------------
-    # EPUB PATH
-    # -------------------------
     def _extract_epub_path(self, raw: dict) -> str:
         for key in ("output_filename", "outfile", "filename"):
             if raw.get(key):
@@ -266,9 +245,6 @@ class FanFicFareEngine(StoryEngine):
         logger.error("No epub path in raw keys=%s", list(raw.keys()))
         raise RuntimeError("Missing epub output path")
 
-    # -------------------------
-    # OPTIONAL PROGRESS HOOK
-    # -------------------------
     def _emit_progress(self, text, progress_callback, value=5):
         if not progress_callback:
             return value

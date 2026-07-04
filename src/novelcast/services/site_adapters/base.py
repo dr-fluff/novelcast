@@ -1,3 +1,4 @@
+# novelcast/services/site_adapters/base.py
 from __future__ import annotations
 
 from typing import Optional, Protocol, runtime_checkable

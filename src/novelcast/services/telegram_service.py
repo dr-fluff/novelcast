@@ -270,18 +270,20 @@ class TelegramService:
 
     # ── notifications ─────────────────────────────────────────────────────
 
-    def notify_story_added(self, title: str, author: str | None):
+    def notify_story_added(self, title: str, author: str, link: str | None):
         self._fire_and_forget(
             self.send_message(
                 f"📖 *New story added*\n{title}" + (f" by _{author}_" if author else "")
+                + (f"\n{link}" if link else "")
             )
         )
 
-    def notify_story_updated(self, title: str, author: str | None, new_chapters: int):
+    def notify_story_updated(self, title: str, author: str, link: str | None, new_chapters: int):
         self._fire_and_forget(
             self.send_message(
                 f"🔄 *Story updated*\n{title}"
                 + (f" by _{author}_" if author else "")
+                + (f"\n{link}" if link else "")
                 + f"\n+{new_chapters} new chapter" + ("s" if new_chapters != 1 else "")
             )
         )

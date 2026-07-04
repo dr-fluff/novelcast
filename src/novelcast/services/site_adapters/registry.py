@@ -1,3 +1,5 @@
+# novelcast/services/site_adapters/registry.py
+
 from typing import Optional
 
 from novelcast.core.defaults import SETTINGS

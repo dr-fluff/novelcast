@@ -1,59 +1,53 @@
 # novelcast/parser/patreon_parser.py
 
+import re
+import html
+import logging
 from novelcast.parser.base import BaseParser, Story
-from typing import Optional
+
+from novelcast.parser.base import BaseParser, Story
+
+logger = logging.getLogger(__name__)
 
 
 class PatreonParser(BaseParser):
-    """
-    Parser for Patreon engine output.
-    
-    Takes the raw dict from PatreonEngine.fetch() and converts to Story format.
-    Unlike EpubParser, chapters already have full content from the engine.
-    """
-    
+
     def parse(self, data: dict) -> Story:
-        """
-        Convert Patreon engine output to Story format.
-        
-        Input (from PatreonEngine.fetch()):
-        {
-            "title": str,
-            "author": str,
-            "url": str,
-            "chapters": list[int],
-            "format": "chapters",
-            "raw": {
-                "chapters": list[dict with number, title, content],
-                "post_count": int,
-                ...
-            }
-        }
-        
-        Output (Story format):
-        {
-            "title": str,
-            "author": str,
-            "chapters": list[Chapter]
-        }
-        """
-        
-        # Get chapters from raw data (they already have content from engine)
         raw = data.get("raw", {})
         raw_chapters = raw.get("chapters", [])
-        
-        # Convert to Story format
-        chapters = [
-            {
-                "number": ch.get("number"),
-                "title": ch.get("title", f"Chapter {ch.get('number')}"),
-                "content": ch.get("content", ""),
-            }
-            for ch in raw_chapters
-        ]
-        
+
+        chapters = []
+        number = 0
+
+        for ch in raw_chapters:
+            number += 1
+
+            title = ch.get("title") or f"Chapter {number}"
+            content = ch.get("content", "")
+
+            html_content = self._to_html(content)
+
+            chapters.append({
+                "number": ch.get("number") or number,
+                "title": title,
+                "content": html_content,
+            })
+
         return {
             "title": data.get("title", "Unknown"),
             "author": data.get("author"),
             "chapters": chapters,
         }
+
+    def _to_html(self, content: str) -> str:
+        content = content.strip()
+
+        # already HTML → preserve
+        if "<p" in content or "<div" in content:
+            return re.sub(r">\s+<", "><", content)
+
+        # fallback: line-based text
+        paragraphs = [p.strip() for p in content.split("\n") if p.strip()]
+
+        return "\n".join(f"<p>{p}</p>" for p in paragraphs)
+    

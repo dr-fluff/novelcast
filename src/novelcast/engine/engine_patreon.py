@@ -2,462 +2,430 @@
 import logging
 import os
 import re
-import configparser
-import requests
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs
 from pathlib import Path
 from typing import Optional, Dict, List, Any
 from html.parser import HTMLParser
+
+import requests
 import PyPDF2
 
 logger = logging.getLogger(__name__)
 
+_USER_AGENT = "Patreon/126.9.0.15 (Android; Android 14; Scale/2.10)"
 
-class HTMLTextExtractor(HTMLParser):
-    """Extract clean text from HTML"""
-    def __init__(self):
-        super().__init__()
-        self.text_parts = []
-        self.in_script = False
-    
-    def handle_starttag(self, tag, attrs):
-        if tag in ("script", "style"):
-            self.in_script = True
-    
-    def handle_endtag(self, tag):
-        if tag in ("script", "style"):
-            self.in_script = False
-    
-    def handle_data(self, data):
-        if not self.in_script:
-            self.text_parts.append(data)
-    
-    def get_text(self):
-        return "".join(self.text_parts).strip()
-
+_POST_FIELDS = (
+    "&fields[post]=content,content_json_string,current_user_can_view,"
+    "is_paid,min_cents_pledged_to_view,published_at,title,post_type,"
+    "patreon_url,url"
+    "&fields[campaign]=name,vanity,url"
+    "&fields[media]=id,download_url,file_name"
+)
 
 class PatreonEngine:
-    """Download stories from Patreon creator posts - matches FanFicFare architecture"""
-    
-    API_URL = "https://www.patreon.com/api/v2"
-    
+
+    ROOT = "https://www.patreon.com"
+
     CHAPTER_PATTERNS = [
         r"^[Cc]hapter\s+(\d+)(?:\s*:\s*(.+))?$",
         r"^[Cc]hapter\s+(\d+)\s*[-–—]\s*(.+)$",
         r"^(\d+)[.\)]\s+(.+)$",
         r"^[Pp]art\s+(\d+)(?:\s*:\s*(.+))?$",
     ]
-    
-    def __init__(self, settings_repo, config_service):
+
+    def __init__(self, settings_repo, settings_service):
         self.settings_repo = settings_repo
-        self.config_service = config_service
+        self.settings_service = settings_service
         self.session = requests.Session()
-    
-    # -------------------------
-    # ROUTING
-    # -------------------------
+
     def can_handle(self, url: str) -> bool:
         hostname = urlparse(url).hostname
         return hostname in {"patreon.com", "www.patreon.com"} if hostname else False
-    
-    # -------------------------
-    # PUBLIC API (matches FanFicFare)
-    # -------------------------
-    def fetch(self, url: str, progress_callback=None, output_dir="/temp") -> dict:
-        """
-        Fetch posts from Patreon creator and extract chapters.
-        
-        Returns dict matching FanFicFareEngine format:
-        {
-            "title": str,
-            "author": str,
-            "url": str,
-            "chapters": list[int],  # Chapter numbers only (for EPUB path case)
-            "file_path": str | None,  # Path to EPUB if generated
-            "format": str,  # "epub" or "chapters"
-            "raw": dict  # Full chapter data with content
-        }
-        """
-        try:
-            # Read credentials from INI
-            email, password, client_id = self._read_config()
-            if not email or not password:
-                raise ValueError("Email and password required in config")
-            if not client_id:
-                raise ValueError("client_id required in config - register a Patreon app at https://www.patreon.com/portal/registration/register-clients")
-            
-            self._emit_progress("Authenticating with Patreon", progress_callback, 5)
-            
-            # Authenticate
-            access_token = self._authenticate(email, password, client_id)
-            
-            self._emit_progress("Fetching user info", progress_callback, 10)
-            
-            # Get creator info
-            creator_name, campaign_id = self._find_campaign(access_token, url)
-            
-            self._emit_progress(f"Fetching posts from {creator_name}", progress_callback, 20)
-            
-            # Fetch all posts
-            posts = self._fetch_all_posts(access_token, campaign_id)
-            
-            self._emit_progress(f"Processing {len(posts)} posts", progress_callback, 40)
-            
-            # Extract chapters
-            chapters = self._extract_chapters_from_posts(
-                access_token,
-                posts,
-                output_dir,
-                progress_callback
+
+    def _cookie(self) -> str:
+        cookie = self.settings_service.get_secret("patreon.session_cookie")
+        if not cookie:
+            raise ValueError(
+                "No Patreon session cookie configured — copy 'session_id' "
+                "from your logged-in browser session into settings."
             )
-            
+        return cookie
+
+    def _headers(self) -> dict:
+        return {
+            "User-Agent": _USER_AGENT,
+            "Cookie": f"session_id={self._cookie()}",
+        }
+
+    def validate_settings(self, test_oauth: bool = False) -> tuple[bool, Optional[str]]:
+        try:
+            self._cookie()
+        except ValueError as e:
+            return False, str(e)
+
+        if test_oauth:
+            try:
+                resp = self.session.get(
+                    f"{self.ROOT}/home",
+                    headers=self._headers(),
+                    timeout=10.0,
+                    allow_redirects=True,
+                )
+                if "/login" in resp.url:
+                    return False, "Session cookie is expired or invalid — log into patreon.com again and re-copy 'session_id'."
+                resp.raise_for_status()
+            except requests.RequestException as e:
+                return False, f"Connection error: {e}"
+
+        return True, None
+
+    def fetch(
+        self,
+        url: str,
+        progress_callback=None,
+        output_dir="/temp",
+        story_match: Optional[str] = None,
+        include_locked: bool = False,
+    ) -> dict:
+        logger.info("Starting Patreon fetch for URL: %s", url)
+        logger.debug(
+            "Options: story_match=%r include_locked=%s output_dir=%s",
+            story_match,
+            include_locked,
+            output_dir,
+        )
+        try:
+            self._emit_progress("Resolving creator", progress_callback, 5)
+            campaign_id, creator_name = self._resolve_campaign(url)
+
+            self._emit_progress(f"Fetching posts from {creator_name}", progress_callback, 20)
+            posts = self._fetch_all_posts(campaign_id)
+
+            viewable = [p for p in posts if p.get("current_user_can_view", True)]
+            locked_count = len(posts) - len(viewable)
+
+            if story_match:
+                viewable = self._filter_posts_for_story(viewable, story_match)
+                if not viewable:
+                    raise ValueError(f"No accessible posts matched story pattern: {story_match!r}")
+
+            self._emit_progress(f"Processing {len(viewable)} posts", progress_callback, 40)
+            chapters = self._extract_chapters_from_posts(viewable, output_dir, progress_callback)
+
             self._emit_progress("Organizing chapters", progress_callback, 80)
             chapters = self._normalize_chapters(chapters)
-            
+
             self._emit_progress("Done!", progress_callback, 100)
-            
-            # Return in FanFicFare format
+
             return {
                 "title": creator_name,
                 "author": creator_name,
                 "url": url,
-                "chapters": [ch["number"] for ch in chapters],  # Just numbers
-                "file_path": None,  # Patreon doesn't generate EPUB automatically
-                "format": "chapters",  # Chapters with content in raw
+                "chapters": [ch["number"] for ch in chapters],
+                "file_path": None,
+                "format": "patreon",
                 "raw": {
                     "campaign_id": campaign_id,
-                    "chapters": chapters,  # Full chapter data with content
+                    "chapters": chapters,
                     "post_count": len(posts),
+                    "viewable_count": len(viewable),
+                    "locked_count": locked_count,
                     "chapter_count": len(chapters),
                 }
             }
-        
+
         except Exception as e:
             logger.error("Patreon fetch failed: %s", e)
             raise RuntimeError(f"Failed to fetch from Patreon: {e}")
-    
-    def check_updates(self, url: str) -> dict:
-        """Check for new posts - optional, matches FanFicFare interface"""
-        try:
-            email, password, client_id = self._read_config()
-            access_token = self._authenticate(email, password, client_id)
-            creator_name, campaign_id = self._find_campaign(access_token, url)
-            
-            posts = self._fetch_all_posts(access_token, campaign_id)
-            
-            return {
-                "title": creator_name,
-                "author": creator_name,
-                "url": url,
-                "raw": {
-                    "campaign_id": campaign_id,
-                    "post_count": len(posts),
-                    "latest_posts": [
-                        {
-                            "title": p.get("attributes", {}).get("title"),
-                            "published_at": p.get("attributes", {}).get("published_at"),
-                        }
-                        for p in posts[:5]
-                    ]
-                }
+
+    def check_access(self, url: str) -> dict:
+        campaign_id, creator_name = self._resolve_campaign(url)
+        posts = self._fetch_all_posts(campaign_id, max_posts=25)
+
+        viewable = sum(1 for p in posts if p.get("current_user_can_view", True))
+
+        return {
+            "creator": creator_name,
+            "campaign_id": campaign_id,
+            "checked": len(posts),
+            "viewable": viewable,
+            "has_access": viewable > 0,
+            "fully_subscribed": viewable == len(posts) if posts else False,
+        }
+
+    def check_updates(self, url: str, story_match: Optional[str] = None) -> dict:
+        campaign_id, creator_name = self._resolve_campaign(url)
+        posts = self._fetch_all_posts(campaign_id, max_posts=5)
+        posts = [p for p in posts if p.get("current_user_can_view", True)]
+
+        if story_match:
+            posts = self._filter_posts_for_story(posts, story_match)
+
+        return {
+            "title": creator_name,
+            "author": creator_name,
+            "url": url,
+            "raw": {
+                "campaign_id": campaign_id,
+                "latest_posts": [
+                    {"title": p.get("title"), "published_at": p.get("published_at")}
+                    for p in posts
+                ]
             }
+        }
+
+    def _extract_creator_from_url(self, url: str) -> Optional[str]:
+        parsed = urlparse(url)
+        hostname = (parsed.hostname or "").lower()
+        if hostname not in {"patreon.com", "www.patreon.com"}:
+            return None
+
+        query = parse_qs(parsed.query)
+        vanity = (query.get("vanity") or [None])[0]
+        if vanity:
+            return vanity.strip()
+
+        parts = [p for p in parsed.path.split("/") if p]
+        if not parts:
+            return None
+        if parts[0].lower() in ("c", "cw") and len(parts) > 1:
+            return parts[1]
+        return parts[0]
+
+    def _resolve_campaign(self, url: str) -> tuple[str, str]:
         
-        except Exception as e:
-            logger.error("Update check failed: %s", e)
-            raise RuntimeError(f"Failed to check updates: {e}")
-    
-    # -------------------------
-    # CONFIG & AUTH
-    # -------------------------
-    def _read_config(self) -> tuple:
-        """Read email, password, and client_id from patreon.ini"""
-        config_path = "config/patreon.ini"
-        
-        if not os.path.exists(config_path):
-            raise FileNotFoundError(f"Config file not found: {config_path}")
-        
-        config = configparser.ConfigParser()
-        config.read(config_path)
-        
-        email = config.get("defaults", "email", fallback="").strip()
-        password = config.get("defaults", "password", fallback="").strip()
-        client_id = config.get("defaults", "client_id", fallback="").strip()
-        
-        logger.info("Loaded Patreon config from %s", config_path)
-        
-        return email, password, client_id
-    
-    def _authenticate(self, email: str, password: str, client_id: str) -> str:
-        """Authenticate with Patreon and return access token"""
+        logger.info("Resolving creator from URL: %s", url)
+
+        creator = self._extract_creator_from_url(url)
+        logger.debug("Extracted creator: %s", creator)
+        if not creator:
+            raise ValueError(f"Could not parse a Patreon creator from URL: {url}")
+
         try:
-            logger.info("Attempting Patreon OAuth with client_id=%s", client_id[:16] + "...")
-            
-            response = requests.post(
-                "https://www.patreon.com/api/oauth2/token",
-                data={
-                    "grant_type": "password",
-                    "username": email,
-                    "password": password,
-                    "client_id": client_id,
-                    "scope": "identity campaigns pledges-to-me",
-                }
+            resp = self.session.get(
+                f"{self.ROOT}/{creator}",
+                headers=self._headers(),
+                timeout=15.0,
+                allow_redirects=True,
             )
-            
-            if response.status_code != 200:
-                # Log the error response for debugging
-                try:
-                    error_body = response.json()
-                    logger.error("Patreon OAuth error: %s", error_body)
-                    
-                    # Provide helpful error message for unsupported grant type
-                    if error_body.get("error") == "unsupported_grant_type":
-                        raise RuntimeError(
-                            "Patreon OAuth error: 'password' grant type is not supported. "
-                            "Your Patreon OAuth app may not have password grant enabled. "
-                            "Check your app settings at https://www.patreon.com/portal/registration/register-clients"
-                        )
-                except ValueError:
-                    logger.error("Patreon OAuth error: %s", response.text[:500])
-            
-            response.raise_for_status()
-            
-            token_data = response.json()
-            access_token = token_data.get("access_token")
-            
-            if not access_token:
-                raise ValueError("No access token in response")
-            
-            logger.info("Successfully authenticated with Patreon")
-            return access_token
-        
-        except RuntimeError:
-            # Re-raise our custom error messages
-            raise
+            resp.raise_for_status()
         except requests.RequestException as e:
-            logger.error("Patreon authentication failed: %s", e)
-            raise RuntimeError(f"Failed to authenticate: {e}")
-    
-    # -------------------------
-    # API CALLS
-    # -------------------------
-    def _find_campaign(self, access_token: str, url: str) -> tuple:
-        """Find campaign from user's memberships"""
-        headers = {"Authorization": f"Bearer {access_token}"}
-        
-        try:
-            response = requests.get(
-                f"{self.API_URL}/identity?include=memberships.campaign",
-                headers=headers
+            raise RuntimeError(f"Failed to load creator page for '{creator}': {e}")
+
+        campaign_id = self._extract_campaign_id(resp.text)
+        if not campaign_id:
+            raise RuntimeError(
+                f"Could not find a campaign ID on {creator}'s page. Patreon "
+                f"may have changed their page structure, or the cookie is invalid."
             )
-            response.raise_for_status()
-            data = response.json()
-            
-            included = data.get("included", [])
-            for item in included:
-                if item.get("type") == "campaign":
-                    campaign_id = item.get("id")
-                    campaign_name = item.get("attributes", {}).get("name", "")
-                    
-                    if campaign_id:
-                        logger.info("Found campaign: %s", campaign_name)
-                        return campaign_name, campaign_id
-            
-            raise ValueError("No campaigns found in memberships")
-        
-        except requests.RequestException as e:
-            logger.error("Failed to find campaign: %s", e)
-            raise RuntimeError(f"Failed to find campaign: {e}")
-    
-    def _fetch_all_posts(self, access_token: str, campaign_id: str) -> List[Dict]:
-        """Fetch all posts from campaign with pagination"""
-        headers = {"Authorization": f"Bearer {access_token}"}
+
+        return campaign_id, creator
+
+    def _extract_campaign_id(self, page: str) -> Optional[str]:
+        """Best-effort extraction across the page-structure variants Patreon
+        has used. Fragile by nature — this is undocumented, scraped state,
+        and Patreon can change it without notice."""
+        patterns = [
+            r'"campaign":\{"data":\{"id":"(\d+)"',
+            r'\\"campaign\\":\{\\"data\\":\{\\"id\\":\\"(\d+)\\"',
+        ]
+        for pattern in patterns:
+            match = re.search(pattern, page)
+            if match:
+                return match.group(1)
+        return None
+
+    def _build_posts_url(self, campaign_id: str, cursor: Optional[str] = None) -> str:
+        url = (
+            f"{self.ROOT}/api/posts"
+            "?include=campaign,attachments,attachments_media"
+            f"{_POST_FIELDS}"
+            f"&filter[campaign_id]={campaign_id}"
+            "&filter[contains_exclusive_posts]=true"
+            "&filter[is_draft]=false"
+            "&sort=-published_at"
+            "&json-api-version=1.0"
+        )
+        if cursor:
+            url += f"&page[cursor]={cursor}"
+        return url
+
+    def _fetch_all_posts(self, campaign_id: str, max_posts: Optional[int] = None) -> List[Dict]:
         posts = []
-        cursor = None
-        
-        while True:
-            params = {
-                "include": "attachments",
-                "fields[post]": "title,content,published_at,post_type",
-                "sort": "-published_at",
-                "page[count]": 100,
-            }
-            if cursor:
-                params["page[cursor]"] = cursor
-            
+        url = self._build_posts_url(campaign_id)
+
+        while url:
             try:
-                response = requests.get(
-                    f"{self.API_URL}/campaigns/{campaign_id}/posts",
-                    headers=headers,
-                    params=params
-                )
-                response.raise_for_status()
-                data = response.json()
-                
-                posts.extend(data.get("data", []))
-                
-                cursor = data.get("meta", {}).get("pagination", {}).get("cursors", {}).get("next")
-                if not cursor:
-                    break
-            
+                resp = self.session.get(url, headers=self._headers(), timeout=15.0)
+                resp.raise_for_status()
+                data = resp.json()
             except requests.RequestException as e:
-                logger.error("Failed to fetch posts: %s", e)
                 raise RuntimeError(f"Failed to fetch posts: {e}")
-        
+
+            included = self._transform_included(data.get("included", []))
+
+            for raw_post in data.get("data", []):
+                posts.append(self._flatten_post(raw_post, included))
+                if max_posts and len(posts) >= max_posts:
+                    return posts
+
+            url = data.get("links", {}).get("next")
+
         logger.info("Fetched %d posts", len(posts))
         return posts
-    
-    def _download_file(self, url: str, output_path: str) -> bool:
-        """Download a file"""
+
+    def _transform_included(self, included: List[Dict]) -> Dict[str, Dict]:
+        result: Dict[str, Dict] = {}
+        for item in included:
+            result.setdefault(item["type"], {})[item["id"]] = item.get("attributes", {})
+        return result
+
+    def _flatten_post(self, raw_post: Dict, included: Dict[str, Dict]) -> Dict:
+        attrs = dict(raw_post.get("attributes", {}))
+        attrs["id"] = raw_post.get("id")
+
+        relationships = raw_post.get("relationships", {})
+        attrs["attachments"] = self._resolve_relationship(relationships, included, "attachments")
+        attrs["attachments_media"] = self._resolve_relationship(relationships, included, "attachments_media")
+
+        return attrs
+
+    def _resolve_relationship(self, relationships: Dict, included: Dict[str, Dict], key: str) -> List[Dict]:
+        rel = relationships.get(key)
+        if not rel or not rel.get("data"):
+            return []
+        out = []
+        for ref in rel["data"]:
+            attrs = included.get(ref["type"], {}).get(ref["id"])
+            if attrs:
+                out.append(attrs)
+        return out
+
+    def _filter_posts_for_story(self, posts: List[Dict], story_match: str) -> List[Dict]:
         try:
-            response = requests.get(url, follow_redirects=True, timeout=30)
-            response.raise_for_status()
-            
+            pattern = re.compile(story_match, re.I)
+        except re.error as e:
+            raise ValueError(f"Invalid story_match regex {story_match!r}: {e}")
+        return [p for p in posts if pattern.search(p.get("title", ""))]
+
+    def _download_file(self, url: str, output_path: str) -> bool:
+        try:
+            resp = self.session.get(url, headers=self._headers(), timeout=30, allow_redirects=True)
+            resp.raise_for_status()
             os.makedirs(os.path.dirname(output_path), exist_ok=True)
-            
             with open(output_path, "wb") as f:
-                f.write(response.content)
-            
-            logger.info("Downloaded file to %s", output_path)
+                f.write(resp.content)
             return True
         except Exception as e:
             logger.error("Failed to download file: %s", e)
             return False
-    
-    # -------------------------
-    # CHAPTER EXTRACTION
-    # -------------------------
-    def _extract_chapters_from_posts(
-        self,
-        access_token: str,
-        posts: List[Dict],
-        output_dir: str,
-        progress_callback=None
-    ) -> List[Dict]:
-        """Extract chapters from posts and attachments"""
-        
+
+    def _extract_chapters_from_posts(self, posts: List[Dict], output_dir: str, progress_callback=None) -> List[Dict]:
         chapters = []
-        
+
         for post_idx, post in enumerate(posts):
             try:
                 post_id = post.get("id")
-                attrs = post.get("attributes", {})
-                post_title = attrs.get("title", "Untitled")
-                post_content = attrs.get("content", "")
-                post_type = attrs.get("post_type", "text_post")
-                
+                post_title = post.get("title", "Untitled")
                 progress = 40 + (post_idx / len(posts)) * 40
                 self._emit_progress(f"Processing: {post_title}", progress_callback, int(progress))
-                
-                # Parse text content
-                if post_type == "text_post" and post_content:
-                    extracted = self._parse_text_post(post_content, post_title)
-                    chapters.extend(extracted)
-                
-                # Parse attachments
-                relationships = post.get("relationships", {})
-                attachments = relationships.get("attachments", {}).get("data", [])
-                
-                for attachment in attachments:
-                    attachment_id = attachment.get("id")
-                    headers = {"Authorization": f"Bearer {access_token}"}
-                    
-                    try:
-                        response = requests.get(
-                            f"{self.API_URL}/attachments/{attachment_id}",
-                            headers=headers
-                        )
-                        response.raise_for_status()
-                        attachment_data = response.json().get("data", {})
-                        
-                        download_url = attachment_data.get("attributes", {}).get("download_url")
-                        filename = attachment_data.get("attributes", {}).get("filename", "attachment")
-                        
-                        if download_url:
-                            file_path = os.path.join(output_dir, f"{post_id}_{filename}")
-                            success = self._download_file(download_url, file_path)
-                            
-                            if success and filename.lower().endswith(".pdf"):
-                                pdf_chapters = self._parse_pdf_file(file_path)
-                                chapters.extend(pdf_chapters)
-                    
-                    except Exception as e:
-                        logger.warning("Failed to process attachment: %s", e)
-                        continue
-            
+
+                text_content = self._extract_post_text(post)
+                if text_content:
+                    chapters.extend(self._parse_text_post(text_content, post_title))
+
+                for attachment in post.get("attachments_media", []):
+                    download_url = attachment.get("download_url")
+                    filename = attachment.get("file_name", "attachment")
+                    if download_url and filename.lower().endswith(".pdf"):
+                        file_path = os.path.join(output_dir, f"{post_id}_{filename}")
+                        if self._download_file(download_url, file_path):
+                            chapters.extend(self._parse_pdf_file(file_path))
+
             except Exception as e:
                 logger.error("Failed to process post %s: %s", post.get("id"), e)
                 continue
-        
+
         return chapters
-    
+
+    def _extract_post_text(self, post: Dict) -> str:
+        """
+        KEEP RAW HTML — DO NOT STRIP IT
+        """
+
+        if post.get("content"):
+            return post["content"]
+
+        cjs = post.get("content_json_string")
+        if cjs:
+            try:
+                import json
+                doc = json.loads(cjs)
+                return self._tiptap_to_html(doc)  # NOT text
+            except Exception as e:
+                logger.warning("Failed to parse content_json_string: %s", e)
+
+        return ""
+
+    def _tiptap_to_html(self, node) -> str:
+        if isinstance(node, dict):
+            if node.get("type") == "text":
+                return node.get("text", "")
+
+            inner = "".join(self._tiptap_to_html(c) for c in node.get("content", []) or [])
+
+            if node.get("type") == "paragraph":
+                return f"<p>{inner}</p>"
+            if node.get("type") == "heading":
+                return f"<h3>{inner}</h3>"
+
+            return inner
+
+        if isinstance(node, list):
+            return "".join(self._tiptap_to_html(n) for n in node)
+
+        return ""
+
     def _parse_text_post(self, content: str, post_title: str) -> List[Dict]:
-        """Parse text post for chapters"""
-        
-        # Clean HTML
-        if "<" in content and ">" in content:
-            extractor = HTMLTextExtractor()
-            extractor.feed(content)
-            content = extractor.get_text()
-        
+
         content = content.strip()
         if not content:
             return []
-        
+
         lines = content.split("\n")
         chapter_matches = self._find_chapter_headers(lines)
-        
+
         if chapter_matches:
-            # Multi-chapter post
             return self._split_by_headers(lines, chapter_matches)
         else:
-            # Single chapter
             chapter_num = self._extract_chapter_number_from_title(post_title)
-            return [{
-                "number": chapter_num,
-                "title": post_title,
-                "content": content,
-            }]
-    
+            return [{"number": chapter_num, "title": post_title, "content": content}]
+
     def _parse_pdf_file(self, file_path: str) -> List[Dict]:
-        """Parse PDF for chapters"""
-        
         if not os.path.exists(file_path):
-            logger.error("PDF not found: %s", file_path)
             return []
-        
         try:
             with open(file_path, "rb") as f:
                 pdf = PyPDF2.PdfReader(f)
-                
                 full_text = ""
                 for page in pdf.pages:
                     full_text += page.extract_text() + "\n"
-                
+
                 lines = full_text.split("\n")
                 chapter_matches = self._find_chapter_headers(lines)
-                
                 if chapter_matches:
                     return self._split_by_headers(lines, chapter_matches)
-                else:
-                    return [{
-                        "number": 1,
-                        "title": Path(file_path).stem,
-                        "content": full_text.strip(),
-                    }]
-        
+                return [{"number": 1, "title": Path(file_path).stem, "content": full_text.strip()}]
         except Exception as e:
             logger.error("Failed to parse PDF %s: %s", file_path, e)
             return []
-    
+
     def _find_chapter_headers(self, lines: List[str]) -> List[tuple]:
-        """Find chapter headers in lines"""
         matches = []
-        
         for idx, line in enumerate(lines):
             line = line.strip()
             if not line or len(line) > 200:
                 continue
-            
             for pattern in self.CHAPTER_PATTERNS:
                 match = re.match(pattern, line)
                 if match:
@@ -465,48 +433,28 @@ class PatreonEngine:
                     title = match.group(2).strip() if match.lastindex >= 2 else None
                     matches.append((idx, chapter_num, title))
                     break
-        
         return matches
-    
+
     def _split_by_headers(self, lines: List[str], matches: List[tuple]) -> List[Dict]:
-        """Split content by chapter headers"""
         chapters = []
-        
         for i, (idx, chapter_num, title) in enumerate(matches):
             start = idx + 1
             end = matches[i + 1][0] if i + 1 < len(matches) else len(lines)
-            
             content = "\n".join(lines[start:end]).strip()
-            
             if content:
-                chapters.append({
-                    "number": chapter_num,
-                    "title": title or f"Chapter {chapter_num}",
-                    "content": content,
-                })
-        
+                chapters.append({"number": chapter_num, "title": title or f"Chapter {chapter_num}", "content": content})
         return chapters
-    
+
     def _extract_chapter_number_from_title(self, title: str) -> int:
-        """Extract chapter number from title"""
         match = re.search(r"\b(\d+)\b", title)
         return int(match.group(1)) if match else 1
-    
+
     def _normalize_chapters(self, chapters: List[Dict]) -> List[Dict]:
-        """Sort and deduplicate chapters"""
-        
         chapters.sort(key=lambda x: x.get("number", 0))
-        
-        # Renumber sequentially if there are gaps
         for idx, ch in enumerate(chapters, 1):
             ch["number"] = idx
-        
         return chapters
-    
-    # -------------------------
-    # HELPERS
-    # -------------------------
+
     def _emit_progress(self, message: str, callback=None, value: int = 0):
-        """Emit progress"""
         if callback:
             callback(message, value)

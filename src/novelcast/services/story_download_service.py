@@ -115,8 +115,9 @@ class StoryDownloadService:
             if telegram:
                 try:
                     telegram.notify_story_added(
-                        parsed.get("title") or raw.get("title") or "Unknown",
-                        parsed.get("author") or raw.get("author"),
+                        title=parsed.get("title") or raw.get("title") or "Unknown",
+                        author=parsed.get("author") or raw.get("author"),
+                        link=parsed.get("source_url") or raw.get("url") or normalized_url,
                     )
                 except Exception:
                     logger.exception(
@@ -199,9 +200,10 @@ class StoryDownloadService:
                 logger.info("telegram msg notify_story_updated")
                 try:
                     telegram.notify_story_updated(
-                        final_title,
-                        parsed.get("author"),
-                        len(new_chapters),
+                        title=final_title,
+                        author=parsed.get("author"),
+                        link=source_url,
+                        new_chapters=len(new_chapters),
                     )
                 except Exception:
                     logger.exception(
