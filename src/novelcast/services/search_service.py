@@ -18,6 +18,8 @@ class ParsedQuery:
     site: Optional[str] = None
     resolved_url: Optional[str] = None
     patreon_creator: Optional[str] = None
+    patreon_route: Optional[str] = None 
+    resolved_urls: Optional[list[str]] = None
 
 
 @dataclass
@@ -63,7 +65,7 @@ class SearchService:
                     lookup_type="patreon_url",
                     site="patreon",
                     patreon_creator=creator,
-                    resolved_url=f"https://www.patreon.com/{creator}",
+                    resolved_urls=self.build_patreon_urls(creator)
                 )
 
             m = re.match(r"^patreon\s*:\s*(.+)$", raw, re.I)
@@ -75,7 +77,7 @@ class SearchService:
                     lookup_type="text",
                     site="patreon",
                     patreon_creator=creator,
-                    resolved_url=f"https://www.patreon.com/{creator}",
+                    resolved_urls=self.build_patreon_urls(creator),
                 )
 
         # -------------------------
@@ -160,15 +162,23 @@ class SearchService:
             if not self._patreon_enabled():
                 return results
             creator = q.patreon_creator or q.identifier
-            patreon_url = f"https://www.patreon.com/{creator}"
-            results.append(SearchResult(
-                site="patreon",
-                kind="author_profile",
-                url=patreon_url,
-                label=creator,
-                patreon_url=patreon_url,
-                patreon_creator=creator,
-            ))
+
+            urls = [
+                f"https://www.patreon.com/c/{creator}",
+                f"https://www.patreon.com/cw/{creator}",
+            ]
+
+            results.extend(
+                SearchResult(
+                    site="patreon",
+                    kind="author_profile",
+                    url=url,
+                    label=creator,
+                    patreon_creator=creator,
+                    patreon_url=url,
+                )
+                for url in urls
+            )
             return results
 
         enabled = set(self._enabled_sites())
@@ -222,3 +232,9 @@ class SearchService:
                 ))
 
         return results
+
+    def build_patreon_urls(self, creator: str):
+        return [
+            f"https://www.patreon.com/c/{creator}",
+            f"https://www.patreon.com/cw/{creator}",
+        ]

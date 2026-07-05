@@ -1,5 +1,6 @@
 # novelcast/api/routes/add_story.py
 
+import hashlib
 import logging
 import uuid
 import asyncio
@@ -10,10 +11,10 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from typing import Optional
 
-from novelcast.api.deps import get_download, get_stories_service
+from novelcast.api.deps import get_download, get_stories_service, get_patreon_engine
 from novelcast.api.ws.notifications import manager
 from novelcast.services import StoryService, StoryDownloadService
-from novelcast.services.scrapers.patreon import scrape_patreon_creator
+from novelcast.engine.engine_patreon import PatreonEngine
 
 router = APIRouter(tags=["stories"])
 logger = logging.getLogger(__name__)
@@ -23,6 +24,7 @@ class Chapter(BaseModel):
     number: int
     title: Optional[str] = None
     selected: bool
+    locked: bool = False
 
 
 class AddStoryRequest(BaseModel):
@@ -38,6 +40,9 @@ class AddStoryRequest(BaseModel):
     tags: list[str] | None = None
     auto_update: bool = False
     selected_chapters: list[int] | None = None
+    chapter_regex: str | None = None
+    content_source: str | None = None      # "file" or "text" — Patreon only
+    filename_pattern: str | None = None    # regex with (?P<number>) (?P<title>) — Patreon only
 
 
 class MetadataPreview(BaseModel):
@@ -54,8 +59,6 @@ class MetadataPreview(BaseModel):
     chapter_count: int | None
     chapters: list[Chapter] | None
     story_site_id: str | None
-
-router = APIRouter(tags=["stories"])
 
 
 def _is_patreon_url(url: str) -> bool:
@@ -79,28 +82,74 @@ def _extract_patreon_creator(url: str) -> str:
     return "Patreon Creator"
 
 
-async def _patreon_preview_metadata(url: str) -> MetadataPreview | None:
+def patreon_key(creator: str) -> str:
+    return f"patreon:{creator}"
+
+
+def normalize_patreon_creator(url: str) -> tuple[str, str]:
+    parts = url.split("patreon.com/")[-1].split("/")
+    if parts[0] == "c":
+        return parts[1], "c"
+    if parts[0] == "cw":
+        return parts[1], "cw"
+    raise ValueError("Not a Patreon creator URL")
+
+
+def canonical_patreon_url(url: str) -> str:
+    creator = _extract_patreon_creator(url)
+    return f"https://www.patreon.com/c/{creator}/posts"
+
+
+def patreon_story_key_url(url: str, chapter_regex: str | None) -> str:
+    """Makes source_url unique per (creator, regex) so multiple stories can
+    point at the same creator with different chapter filters (rule 6).
+    Relies on URL fragments being ignored by Patreon URL parsing — confirm
+    normalize_story_url() doesn't strip fragments before relying on this."""
+    base = canonical_patreon_url(url)
+    if not chapter_regex:
+        return base
+    digest = hashlib.md5(chapter_regex.encode("utf-8")).hexdigest()[:10]
+    return f"{base}#cast={digest}"
+
+
+async def _patreon_preview_metadata(
+    url: str,
+    engine: PatreonEngine,
+    chapter_regex: str | None = None,
+) -> MetadataPreview | None:
     if not _is_patreon_url(url):
         return None
 
     creator = _extract_patreon_creator(url)
-    chapters = []
 
     try:
-        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
-            scraped = await scrape_patreon_creator(client, creator)
+        result = await asyncio.get_event_loop().run_in_executor(
+            None,
+            lambda: engine.list_posts_with_access(url, story_match=chapter_regex),
+        )
+        creator = result.get("creator", creator)
+        raw_posts = result.get("posts", [])
     except Exception as exc:
-        logger.warning("Failed to scrape Patreon creator page for preview: %s", exc)
-        scraped = []
+        logger.warning("Failed to fetch Patreon posts for preview: %s", exc)
+        raw_posts = []
 
-    if scraped:
-        for index, item in enumerate(scraped, start=1):
-            title = item.title or f"Post {index}"
-            chapters.append(Chapter(number=index, title=title, selected=True))
+    chapters = [
+        Chapter(
+            number=p["number"],
+            title=p["title"],
+            selected=not p["locked"],
+            locked=p["locked"],
+        )
+        for p in raw_posts
+    ]
 
-    description = f"Patreon creator page - visit {creator}'s Patreon to access all posts and rewards (posts are dynamically loaded and cannot be automatically downloaded)"
-    if scraped and len(scraped) > 1:
-        description = f"{len(scraped)} Patreon post(s) available from {creator}"
+    locked_count = sum(1 for c in chapters if c.locked)
+    if chapters:
+        description = f"{len(chapters)} post(s) from {creator}"
+        if locked_count:
+            description += f" ({locked_count} locked — requires Patreon access)"
+    else:
+        description = f"Patreon creator page - visit {creator}'s Patreon to access all posts and rewards"
 
     return MetadataPreview(
         url=url,
@@ -123,9 +172,12 @@ async def _patreon_preview_metadata(url: str) -> MetadataPreview | None:
 async def preview_story_metadata(
     request: AddStoryRequest,
     download: StoryDownloadService = Depends(get_download),
+    patreon_engine: PatreonEngine = Depends(get_patreon_engine),
 ) -> MetadataPreview:
     if _is_patreon_url(request.url):
-        patreon_preview = await _patreon_preview_metadata(request.url)
+        patreon_preview = await _patreon_preview_metadata(
+            request.url, patreon_engine, chapter_regex=request.chapter_regex
+        )
         if patreon_preview is not None:
             return patreon_preview
 
@@ -176,32 +228,34 @@ async def _download_story(
     download: StoryDownloadService,
     stories: StoryService,
 ):
-    # Handle Patreon URLs specially
+    download_url = body.url
+
     if _is_patreon_url(body.url):
         creator = _extract_patreon_creator(body.url)
-        posts_url = f"https://www.patreon.com/c/{creator}/posts"
-        
-        # Check if story already exists
-        existing = download.stories_repo.get_by_url(posts_url)
+        download_url = patreon_story_key_url(body.url, body.chapter_regex)  # CHANGED
+
+        existing = download.stories_repo.get_by_url(download_url)
         if existing:
             async with manager.job(job_id, f"Patreon: {creator}") as job:
-                await job.update(f"{creator}'s Patreon page already added", progress=100)
+                await job.update(f"{creator}'s Patreon page (this filter) already added", progress=100)
             return
-        
-        # Use the normal download flow for Patreon URLs to leverage the API
-        # Fall through to regular download below
-        pass
-    
+
     async with manager.job(job_id, f"Adding '{title_hint}'") as job:
         await job.update("Downloading chapters…")
+
         story_id = await asyncio.get_event_loop().run_in_executor(
             None,
             lambda: download.add_story(
-                body.url,
+                download_url,  # CHANGED — was body.url
                 selected_chapters=body.selected_chapters,
+                story_match=body.chapter_regex if _is_patreon_url(body.url) else None,
+                content_source=body.content_source if _is_patreon_url(body.url) else None,
+                filename_pattern=body.filename_pattern if _is_patreon_url(body.url) else None,
             ),
         )
+
         await job.update("Saving metadata…", progress=90)
+
         stories.update_story_metadata(
             story_id=story_id,
             title=body.title,

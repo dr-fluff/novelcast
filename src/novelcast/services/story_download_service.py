@@ -1,5 +1,6 @@
 # novelcast/services/story_download_service.py
 
+import inspect
 import json
 import logging
 import re
@@ -11,6 +12,8 @@ from novelcast.utils.url_normalizer import normalize_story_url
 
 logger = logging.getLogger(__name__)
 
+_PATREON_SETTING_KEYS = ("chapter_regex", "content_source", "filename_pattern")
+
 
 class StoryDownloadService:
     def __init__(self, orchestrator, pipeline, parser, stories_repo, notifier=None):
@@ -20,30 +23,48 @@ class StoryDownloadService:
         self.stories_repo  = stories_repo
         self.notifier      = notifier
 
-    def _download_raw(self, url: str, progress_callback=None) -> dict:
-        return self.orchestrator.download(url, progress_callback=progress_callback)
+    def _download_raw(self, url: str, progress_callback=None, story_match: str | None = None) -> dict:
+        return self.orchestrator.download(url, progress_callback=progress_callback, story_match=story_match)
 
-    def _parse_raw(self, raw: dict) -> dict:
-        parsed = self.parser.parse(raw)
+    def _parse_raw(self, raw: dict, settings: dict | None = None) -> dict:
+        if settings and "settings" in inspect.signature(self.parser.parse).parameters:
+            parsed = self.parser.parse(raw, settings=settings)
+        else:
+            parsed = self.parser.parse(raw)
         parsed["source_url"] = raw.get("url") or raw.get("source_url")
         parsed["source_file_path"] = raw.get("file_path")
         return parsed
 
+    def _load_patreon_settings(self, story_id: int) -> dict:
+        settings = {}
+        for key in _PATREON_SETTING_KEYS:
+            value = self.stories_repo.get_story_setting(story_id, f"patreon.{key}")
+            if value is not None:
+                settings[key] = value
+        return settings
+
+    def _save_patreon_settings(
+        self,
+        story_id: int,
+        chapter_regex: str | None = None,
+        content_source: str | None = None,
+        filename_pattern: str | None = None,
+    ) -> None:
+        if chapter_regex:
+            self.stories_repo.set_story_setting(story_id, "patreon.chapter_regex", chapter_regex)
+        if content_source:
+            self.stories_repo.set_story_setting(story_id, "patreon.content_source", content_source)
+        if filename_pattern:
+            self.stories_repo.set_story_setting(story_id, "patreon.filename_pattern", filename_pattern)
+
     def _filter_chapters(self, parsed: dict, selected_chapters: list[int]) -> dict:
-        """Filter parsed chapters to only include selected chapter numbers."""
         if not selected_chapters:
             return parsed
-        
+
         selected_set = set(selected_chapters)
         original_chapters = parsed.get("chapters", [])
-        
         filtered = [ch for ch in original_chapters if ch.get("number") in selected_set]
-        logger.debug(
-            "Filtered chapters from %d to %d",
-            len(original_chapters),
-            len(filtered),
-        )
-        
+        logger.debug("Filtered chapters from %d to %d", len(original_chapters), len(filtered))
         parsed["chapters"] = filtered
         return parsed
 
@@ -57,10 +78,19 @@ class StoryDownloadService:
 
         return [ch["number"] for ch in parsed.get("chapters", [])]
 
-    def add_story(self, url: str, selected_chapters: list[int] | None = None):
+    def add_story(
+        self,
+        url: str,
+        selected_chapters: list[int] | None = None,
+        story_match: str | None = None,
+        content_source: str | None = None,
+        filename_pattern: str | None = None,
+    ):
         logger.debug("Story download requested of URL: %s", url)
         if selected_chapters:
             logger.debug("Filtering to selected chapters: %s", selected_chapters)
+        if story_match:
+            logger.debug("Filtering by regex: %s", story_match)
 
         normalized_url = normalize_story_url(url)
         download_id    = str(uuid.uuid4())
@@ -84,7 +114,7 @@ class StoryDownloadService:
                     "indeterminate": progress_value is None,
                 })
 
-            raw        = self._download_raw(normalized_url, progress_callback=progress)
+            raw = self._download_raw(normalized_url, progress_callback=progress, story_match=story_match)
             source_url = raw.get("url") or normalized_url
 
             story_id = self.stories_repo.create(
@@ -93,7 +123,24 @@ class StoryDownloadService:
                 source_url,
             )
 
-            parsed = self._parse_raw(raw)
+            # Persist Patreon-specific per-story settings now that story_id exists.
+            request_settings = {}
+            if story_match:
+                request_settings["chapter_regex"] = story_match
+            if content_source:
+                request_settings["content_source"] = content_source
+            if filename_pattern:
+                request_settings["filename_pattern"] = filename_pattern
+
+            if request_settings:
+                self._save_patreon_settings(
+                    story_id,
+                    chapter_regex=request_settings.get("chapter_regex"),
+                    content_source=request_settings.get("content_source"),
+                    filename_pattern=request_settings.get("filename_pattern"),
+                )
+
+            parsed = self._parse_raw(raw, settings=request_settings)
 
             if selected_chapters:
                 parsed = self._filter_chapters(parsed, selected_chapters)
@@ -109,8 +156,7 @@ class StoryDownloadService:
 
             self.pipeline.persist(story_id, parsed)
             self._refresh_metadata_from_json(story_id)
-            
-            # ── Telegram ──────────────────────────────────
+
             telegram = getattr(self, "telegram", None)
             if telegram:
                 try:
@@ -120,11 +166,8 @@ class StoryDownloadService:
                         link=parsed.get("source_url") or raw.get("url") or normalized_url,
                     )
                 except Exception:
-                    logger.exception(
-                        "Failed to send telegram notification"
-                    )
+                    logger.exception("Failed to send telegram notification")
 
-            # Verify all chapter files landed on disk
             check = self.pipeline.integrity_check(story_id)
             if not check["ok"]:
                 self._handle_integrity_failure(story_id, normalized_url, check, download_id)
@@ -159,8 +202,10 @@ class StoryDownloadService:
             "source_url": source_url,
         })
 
-        raw = self._download_raw(source_url)
-        parsed = self._parse_raw(raw)
+        settings = self._load_patreon_settings(story_id)  # NEW
+
+        raw = self._download_raw(source_url, story_match=settings.get("chapter_regex"))  # CHANGED
+        parsed = self._parse_raw(raw, settings=settings)  # CHANGED
         self._update_story_metadata(story_id, raw, parsed)
 
         existing_numbers = self.pipeline.chapters_repo.get_chapter_numbers(story_id)
@@ -174,8 +219,6 @@ class StoryDownloadService:
 
         self._refresh_metadata_from_json(story_id)
 
-        # Always integrity-check after update — catches missing files even
-        # when no new chapters were downloaded (no EPUB → no parser run).
         check = self.pipeline.integrity_check(story_id)
         if not check["ok"]:
             self._handle_integrity_failure(story_id, source_url, check, download_id=None)
@@ -193,8 +236,7 @@ class StoryDownloadService:
                 "title": final_title,
                 "new_chapters": len(new_chapters),
             })
-            
-            # ── Telegram ──────────────────────────────
+
             telegram = getattr(self, "telegram", None)
             if telegram:
                 logger.info("telegram msg notify_story_updated")
@@ -206,9 +248,7 @@ class StoryDownloadService:
                         new_chapters=len(new_chapters),
                     )
                 except Exception:
-                    logger.exception(
-                        "Failed to send telegram notification"
-                    )
+                    logger.exception("Failed to send telegram notification")
 
         self._emit("update_finished", {
             "story_id": story_id,
@@ -223,13 +263,6 @@ class StoryDownloadService:
         }
 
     def _handle_integrity_failure(self, story_id: int, source_url: str, check: dict, download_id: str | None) -> None:
-        """
-        Called when integrity_check reports missing files after persist/update.
-
-        - Logs the outcome.
-        - Emits events so the frontend can show a warning.
-        - If needs_redownload=True, triggers a fresh download.
-        """
         restored   = check.get("restored", [])
         not_in_epub = check.get("not_in_epub", [])
         needs_redownload = check.get("needs_redownload", False)
@@ -264,8 +297,9 @@ class StoryDownloadService:
                 "message":    "Missing chapter files detected. Re-downloading from source.",
             })
             try:
-                raw    = self._download_raw(source_url)
-                parsed = self._parse_raw(raw)
+                settings = self._load_patreon_settings(story_id)  # NEW
+                raw    = self._download_raw(source_url, story_match=settings.get("chapter_regex"))  # CHANGED
+                parsed = self._parse_raw(raw, settings=settings)  # CHANGED
                 self._update_story_metadata(story_id, raw, parsed)
                 self.pipeline.persist(story_id, parsed)
                 self._refresh_metadata_from_json(story_id)
@@ -282,7 +316,8 @@ class StoryDownloadService:
         if not story_id or not source_url:
             return {"story_id": story_id, "pending_chapters": 0, "chapter_numbers": [], "skipped": True}
 
-        raw = self.orchestrator.check_updates(source_url)
+        settings = self._load_patreon_settings(story_id)  # NEW
+        raw = self.orchestrator.check_updates(source_url, story_match=settings.get("chapter_regex"))  # CHANGED
         online_numbers = self._online_chapter_numbers(raw)
         local_numbers = self.pipeline.chapters_repo.get_chapter_numbers(story_id)
         pending = sorted(number for number in online_numbers if number not in local_numbers)
@@ -376,7 +411,6 @@ class StoryDownloadService:
 
         title = raw.get("title")
         author = raw.get("author")
-
         subtitle = raw.get("subtitle") or raw.get("subtitleText")
 
         description = raw.get("description") or raw.get("summary")
@@ -392,11 +426,9 @@ class StoryDownloadService:
         series = self._normalize_metadata_list(
             raw.get("series") or raw.get("series_name") or raw.get("series_info")
         )
-
         genres = self._normalize_metadata_list(
             raw.get("genre") or raw.get("genres")
         )
-
         tags = self._normalize_metadata_list(
             raw.get("subject_tags") or raw.get("tags") or raw.get("subjects")
         )
@@ -413,7 +445,6 @@ class StoryDownloadService:
             "tags": tags,
         }
 
-        # only hard-fail if completely useless
         if not title and not author and not description:
             return None
 
@@ -422,7 +453,6 @@ class StoryDownloadService:
     def _parse_publish_year(self, value):
         if value is None:
             return None
-
         if isinstance(value, int):
             return value
 
@@ -430,7 +460,6 @@ class StoryDownloadService:
         if not raw_value:
             return None
 
-        import re
         match = re.search(r"(\d{4})", raw_value)
         if match:
             try:
@@ -458,6 +487,6 @@ class StoryDownloadService:
                 self.notifier(event_type, payload)
             except Exception:
                 logger.exception("Notifier failed for %s", event_type)
-    
+
     def temp_dir(self):
         self.temp_dir_path = "temp"

@@ -1,14 +1,14 @@
 # novelcast/engine/engine_patreon.py
+import json
 import logging
 import os
 import re
+import tempfile
 from urllib.parse import urlparse, parse_qs
 from pathlib import Path
 from typing import Optional, Dict, List, Any
-from html.parser import HTMLParser
 
 import requests
-import PyPDF2
 
 logger = logging.getLogger(__name__)
 
@@ -22,16 +22,13 @@ _POST_FIELDS = (
     "&fields[media]=id,download_url,file_name"
 )
 
+_VIDEO_EXTENSIONS = {".mp4", ".mov", ".avi", ".mkv", ".webm", ".wmv", ".flv", ".m4v"}
+_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"}
+
+
 class PatreonEngine:
 
     ROOT = "https://www.patreon.com"
-
-    CHAPTER_PATTERNS = [
-        r"^[Cc]hapter\s+(\d+)(?:\s*:\s*(.+))?$",
-        r"^[Cc]hapter\s+(\d+)\s*[-–—]\s*(.+)$",
-        r"^(\d+)[.\)]\s+(.+)$",
-        r"^[Pp]art\s+(\d+)(?:\s*:\s*(.+))?$",
-    ]
 
     def __init__(self, settings_repo, settings_service):
         self.settings_repo = settings_repo
@@ -83,17 +80,16 @@ class PatreonEngine:
         self,
         url: str,
         progress_callback=None,
-        output_dir="/temp",
+        output_dir: Optional[str] = None,
         story_match: Optional[str] = None,
         include_locked: bool = False,
     ) -> dict:
         logger.info("Starting Patreon fetch for URL: %s", url)
-        logger.debug(
-            "Options: story_match=%r include_locked=%s output_dir=%s",
-            story_match,
-            include_locked,
-            output_dir,
-        )
+
+        if output_dir is None:
+            output_dir = os.path.join(tempfile.gettempdir(), "novelcast_patreon")
+        os.makedirs(output_dir, exist_ok=True)
+
         try:
             self._emit_progress("Resolving creator", progress_callback, 5)
             campaign_id, creator_name = self._resolve_campaign(url)
@@ -109,11 +105,10 @@ class PatreonEngine:
                 if not viewable:
                     raise ValueError(f"No accessible posts matched story pattern: {story_match!r}")
 
-            self._emit_progress(f"Processing {len(viewable)} posts", progress_callback, 40)
-            chapters = self._extract_chapters_from_posts(viewable, output_dir, progress_callback)
+            viewable = list(reversed(viewable))  # oldest first — chronological order
 
-            self._emit_progress("Organizing chapters", progress_callback, 80)
-            chapters = self._normalize_chapters(chapters)
+            self._emit_progress(f"Downloading {len(viewable)} posts", progress_callback, 40)
+            post_records = self._collect_post_data(viewable, output_dir, progress_callback)
 
             self._emit_progress("Done!", progress_callback, 100)
 
@@ -121,16 +116,14 @@ class PatreonEngine:
                 "title": creator_name,
                 "author": creator_name,
                 "url": url,
-                "chapters": [ch["number"] for ch in chapters],
                 "file_path": None,
                 "format": "patreon",
                 "raw": {
                     "campaign_id": campaign_id,
-                    "chapters": chapters,
+                    "post_records": post_records,
                     "post_count": len(posts),
                     "viewable_count": len(viewable),
                     "locked_count": locked_count,
-                    "chapter_count": len(chapters),
                 }
             }
 
@@ -193,7 +186,6 @@ class PatreonEngine:
         return parts[0]
 
     def _resolve_campaign(self, url: str) -> tuple[str, str]:
-        
         logger.info("Resolving creator from URL: %s", url)
 
         creator = self._extract_creator_from_url(url)
@@ -222,9 +214,6 @@ class PatreonEngine:
         return campaign_id, creator
 
     def _extract_campaign_id(self, page: str) -> Optional[str]:
-        """Best-effort extraction across the page-structure variants Patreon
-        has used. Fragile by nature — this is undocumented, scraped state,
-        and Patreon can change it without notice."""
         patterns = [
             r'"campaign":\{"data":\{"id":"(\d+)"',
             r'\\"campaign\\":\{\\"data\\":\{\\"id\\":\\"(\d+)\\"',
@@ -305,7 +294,8 @@ class PatreonEngine:
         try:
             pattern = re.compile(story_match, re.I)
         except re.error as e:
-            raise ValueError(f"Invalid story_match regex {story_match!r}: {e}")
+            logger.info("story_match %r isn't valid regex, falling back to literal match: %s", story_match, e)
+            pattern = re.compile(re.escape(story_match), re.I)
         return [p for p in posts if pattern.search(p.get("title", ""))]
 
     def _download_file(self, url: str, output_path: str) -> bool:
@@ -320,140 +310,157 @@ class PatreonEngine:
             logger.error("Failed to download file: %s", e)
             return False
 
-    def _extract_chapters_from_posts(self, posts: List[Dict], output_dir: str, progress_callback=None) -> List[Dict]:
-        chapters = []
+    def _dedupe_attachments(self, attachments: List[Dict]) -> List[Dict]:
+        """If a PDF and an EPUB share the same base filename, drop the PDF —
+        EPUB is preferred for better structure/formatting."""
+        by_stem: Dict[str, List[tuple]] = {}
+        for a in attachments:
+            filename = a.get("file_name") or ""
+            ext = Path(filename).suffix.lower()
+            stem = Path(filename).stem.strip().lower()
+            by_stem.setdefault(stem, []).append((ext, a))
+
+        result = []
+        for stem, items in by_stem.items():
+            exts = {ext for ext, _ in items}
+            if ".pdf" in exts and ".epub" in exts:
+                result.extend(a for ext, a in items if ext != ".pdf")
+            else:
+                result.extend(a for _, a in items)
+        return result
+
+    def _get_raw_post_content(self, post: Dict) -> tuple[str, str]:
+        """Returns (raw_content, format). No interpretation — parser handles it."""
+        if post.get("content"):
+            return post["content"], "html"
+        cjs = post.get("content_json_string")
+        if cjs:
+            return cjs, "tiptap_json"
+        return "", "html"
+
+    def _extract_inline_image_urls(self, tiptap_json_str: str) -> List[str]:
+        try:
+            doc = json.loads(tiptap_json_str)
+        except Exception:
+            return []
+        urls: List[str] = []
+
+        def walk(node):
+            if isinstance(node, dict):
+                if node.get("type") == "image":
+                    src = (node.get("attrs") or {}).get("src")
+                    if src:
+                        urls.append(src)
+                for child in node.get("content", []) or []:
+                    walk(child)
+            elif isinstance(node, list):
+                for n in node:
+                    walk(n)
+
+        walk(doc)
+        return urls
+
+    def _collect_post_data(self, posts: List[Dict], output_dir: str, progress_callback=None) -> List[Dict]:
+        """Download everything from each post — text, PDFs, EPUBs, images —
+        without interpreting any of it. Videos are skipped entirely. All
+        interpretation (chapter splitting, format conversion) is the parser's
+        job; only the engine holds the session/cookie needed to download."""
+        post_records = []
 
         for post_idx, post in enumerate(posts):
             try:
                 post_id = post.get("id")
                 post_title = post.get("title", "Untitled")
                 progress = 40 + (post_idx / len(posts)) * 40
-                self._emit_progress(f"Processing: {post_title}", progress_callback, int(progress))
+                self._emit_progress(f"Downloading: {post_title}", progress_callback, int(progress))
 
-                text_content = self._extract_post_text(post)
-                if text_content:
-                    chapters.extend(self._parse_text_post(text_content, post_title))
+                raw_content, content_format = self._get_raw_post_content(post)
 
-                for attachment in post.get("attachments_media", []):
+                inline_images: Dict[str, str] = {}
+                if content_format == "tiptap_json" and raw_content:
+                    for idx, img_url in enumerate(self._extract_inline_image_urls(raw_content)):
+                        ext = Path(urlparse(img_url).path).suffix or ".jpg"
+                        file_path = os.path.join(output_dir, f"{post_id}_inline_{idx}{ext}")
+                        if self._download_file(img_url, file_path):
+                            inline_images[img_url] = file_path
+
+                all_attachments = list(post.get("attachments_media", [])) + list(post.get("attachments", []))
+                candidates = self._dedupe_attachments(all_attachments)
+
+                files = []
+                for attachment in candidates:
                     download_url = attachment.get("download_url")
-                    filename = attachment.get("file_name", "attachment")
-                    if download_url and filename.lower().endswith(".pdf"):
-                        file_path = os.path.join(output_dir, f"{post_id}_{filename}")
-                        if self._download_file(download_url, file_path):
-                            chapters.extend(self._parse_pdf_file(file_path))
+                    filename = attachment.get("file_name") or "attachment"
+                    if not download_url:
+                        continue
+
+                    ext = Path(filename).suffix.lower()
+                    if ext in _VIDEO_EXTENSIONS:
+                        continue
+
+                    if ext == ".pdf":
+                        file_type = "pdf"
+                    elif ext == ".epub":
+                        file_type = "epub"
+                    elif ext in _IMAGE_EXTENSIONS:
+                        file_type = "image"
+                    else:
+                        logger.info("Skipping unsupported attachment type %r on post %s", filename, post_id)
+                        continue
+
+                    file_path = os.path.join(output_dir, f"{post_id}_{filename}")
+                    if self._download_file(download_url, file_path):
+                        files.append({"type": file_type, "path": file_path, "filename": filename})
+
+                post_records.append({
+                    "post_id": post_id,
+                    "title": post_title,
+                    "raw_content": raw_content,
+                    "content_format": content_format,
+                    "inline_images": inline_images,
+                    "files": files,
+                })
 
             except Exception as e:
-                logger.error("Failed to process post %s: %s", post.get("id"), e)
+                logger.error("Failed to download post %s: %s", post.get("id"), e)
                 continue
 
-        return chapters
+        return post_records
 
-    def _extract_post_text(self, post: Dict) -> str:
-        """
-        KEEP RAW HTML — DO NOT STRIP IT
-        """
+    def list_posts_with_access(
+        self,
+        url: str,
+        story_match: Optional[str] = None,
+        max_posts: Optional[int] = None,
+    ) -> dict:
+        """Fetch a creator's posts with per-post lock status, optionally filtered
+        by a title regex. Used by the Add Story preview.
 
-        if post.get("content"):
-            return post["content"]
+        KNOWN LIMITATION: returns one row per post. A post with multiple PDF/EPUB
+        attachments will actually produce multiple chapters at download time —
+        this preview does not yet reflect that."""
+        campaign_id, creator_name = self._resolve_campaign(url)
+        posts = self._fetch_all_posts(campaign_id, max_posts=max_posts)
 
-        cjs = post.get("content_json_string")
-        if cjs:
-            try:
-                import json
-                doc = json.loads(cjs)
-                return self._tiptap_to_html(doc)  # NOT text
-            except Exception as e:
-                logger.warning("Failed to parse content_json_string: %s", e)
+        if story_match:
+            posts = self._filter_posts_for_story(posts, story_match)
 
-        return ""
+        posts = list(reversed(posts))
 
-    def _tiptap_to_html(self, node) -> str:
-        if isinstance(node, dict):
-            if node.get("type") == "text":
-                return node.get("text", "")
+        result_posts = []
+        for idx, p in enumerate(posts, start=1):
+            result_posts.append({
+                "number": idx,
+                "title": p.get("title") or f"Post {idx}",
+                "locked": not p.get("current_user_can_view", False),
+                "published_at": p.get("published_at"),
+            })
 
-            inner = "".join(self._tiptap_to_html(c) for c in node.get("content", []) or [])
-
-            if node.get("type") == "paragraph":
-                return f"<p>{inner}</p>"
-            if node.get("type") == "heading":
-                return f"<h3>{inner}</h3>"
-
-            return inner
-
-        if isinstance(node, list):
-            return "".join(self._tiptap_to_html(n) for n in node)
-
-        return ""
-
-    def _parse_text_post(self, content: str, post_title: str) -> List[Dict]:
-
-        content = content.strip()
-        if not content:
-            return []
-
-        lines = content.split("\n")
-        chapter_matches = self._find_chapter_headers(lines)
-
-        if chapter_matches:
-            return self._split_by_headers(lines, chapter_matches)
-        else:
-            chapter_num = self._extract_chapter_number_from_title(post_title)
-            return [{"number": chapter_num, "title": post_title, "content": content}]
-
-    def _parse_pdf_file(self, file_path: str) -> List[Dict]:
-        if not os.path.exists(file_path):
-            return []
-        try:
-            with open(file_path, "rb") as f:
-                pdf = PyPDF2.PdfReader(f)
-                full_text = ""
-                for page in pdf.pages:
-                    full_text += page.extract_text() + "\n"
-
-                lines = full_text.split("\n")
-                chapter_matches = self._find_chapter_headers(lines)
-                if chapter_matches:
-                    return self._split_by_headers(lines, chapter_matches)
-                return [{"number": 1, "title": Path(file_path).stem, "content": full_text.strip()}]
-        except Exception as e:
-            logger.error("Failed to parse PDF %s: %s", file_path, e)
-            return []
-
-    def _find_chapter_headers(self, lines: List[str]) -> List[tuple]:
-        matches = []
-        for idx, line in enumerate(lines):
-            line = line.strip()
-            if not line or len(line) > 200:
-                continue
-            for pattern in self.CHAPTER_PATTERNS:
-                match = re.match(pattern, line)
-                if match:
-                    chapter_num = int(match.group(1))
-                    title = match.group(2).strip() if match.lastindex >= 2 else None
-                    matches.append((idx, chapter_num, title))
-                    break
-        return matches
-
-    def _split_by_headers(self, lines: List[str], matches: List[tuple]) -> List[Dict]:
-        chapters = []
-        for i, (idx, chapter_num, title) in enumerate(matches):
-            start = idx + 1
-            end = matches[i + 1][0] if i + 1 < len(matches) else len(lines)
-            content = "\n".join(lines[start:end]).strip()
-            if content:
-                chapters.append({"number": chapter_num, "title": title or f"Chapter {chapter_num}", "content": content})
-        return chapters
-
-    def _extract_chapter_number_from_title(self, title: str) -> int:
-        match = re.search(r"\b(\d+)\b", title)
-        return int(match.group(1)) if match else 1
-
-    def _normalize_chapters(self, chapters: List[Dict]) -> List[Dict]:
-        chapters.sort(key=lambda x: x.get("number", 0))
-        for idx, ch in enumerate(chapters, 1):
-            ch["number"] = idx
-        return chapters
+        return {
+            "creator": creator_name,
+            "campaign_id": campaign_id,
+            "posts": result_posts,
+        }
 
     def _emit_progress(self, message: str, callback=None, value: int = 0):
         if callback:

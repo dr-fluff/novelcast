@@ -1,5 +1,7 @@
 from fastapi import Request
 
+from novelcast.engine import PatreonEngine
+
 from novelcast.services import (
     AuthService,
     UserService,
@@ -101,3 +103,7 @@ def get_stories_service(request: Request) -> StoryService:
 
 def get_logs(request: Request) -> LoggingService:
     return request.app.state.ctx.logs
+
+def get_patreon_engine(request: Request) -> PatreonEngine:
+    return request.app.state.ctx.patreon_engine
+

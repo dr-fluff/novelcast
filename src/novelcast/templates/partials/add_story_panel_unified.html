@@ -35,6 +35,24 @@
                     <input type="url" id="addStoryUrl-addStoryPanel" placeholder="https://www.royalroad.com/fiction/12345/story-title" class="form-input" />
                 </div>
                 <p class="form-hint">Supported: RoyalRoad, ScribbleHub, FanFiction, and more</p>
+
+                <div class="form-group">
+                    <label for="addStoryChapterRegex-addStoryPanel">Chapter title filter (optional)</label>
+                    <input type="text" id="addStoryChapterRegex-addStoryPanel" placeholder="e.g. ^Chapter \d+" class="form-input" />
+                </div>
+                <p class="form-hint">Regex against post/chapter titles — only matching chapters will be shown and downloaded. Leave blank for all. Currently applies to Patreon sources.</p>
+                <div class="form-group">
+                    <label for="addStoryContentSource-addStoryPanel">Chapter content source</label>
+                    <select id="addStoryContentSource-addStoryPanel" class="form-input">
+                        <option value="file">Prefer attached PDF/EPUB files (default)</option>
+                        <option value="text">Use post text only</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="addStoryFilenamePattern-addStoryPanel">Chapter filename pattern (optional, regex)</label>
+                    <input type="text" id="addStoryFilenamePattern-addStoryPanel" placeholder="e.g. Chapter (?P<number>\d+)[:_]?\s*(?P<title>.+)" class="form-input" />
+                </div>
+                <p class="form-hint">Needs named groups (?P&lt;number&gt;) and (?P&lt;title&gt;) to extract chapter number/title from attachment filenames. Leave blank to guess automatically.</p>
             </div>
         </div>
 

@@ -229,6 +229,8 @@ const UnifiedPanel = (() => {
         open(panelId) {
             setState(panelId, { panelType: "add_story", selectedChapters: [] });
             setStatus(panelId, "", "");
+
+            setVal("addStoryChapterRegex", panelId, "");
             
             // Reset all fields
             setVal("addStoryUrl", panelId, "");
@@ -238,6 +240,9 @@ const UnifiedPanel = (() => {
             setVal("addStoryDescription", panelId, "");
             setVal("addStoryPublishYear", panelId, "");
             setVal("addStoryLanguage", panelId, "");
+            setVal("addStoryFilenamePattern", panelId, "");  
+            const contentSourceEl = $(`addStoryContentSource-${panelId}`);
+            if (contentSourceEl) contentSourceEl.value = "file"; 
             renderTagList("addStoryGenresWrap", panelId, []);
             renderTagList("addStoryTagsWrap", panelId, []);
             renderTagList("addStorySeriesWrap", panelId, []);
@@ -267,6 +272,9 @@ const UnifiedPanel = (() => {
                 setStatus(panelId, "URL is required", "error");
                 return;
             }
+            
+            const chapterRegex = getVal("addStoryChapterRegex", panelId) || null;
+            const filenamePattern = getVal("addStoryFilenamePattern", panelId) || null;
 
             setState(panelId, { isLoading: true });
             setStatus(panelId, "Previewing…", "");
@@ -275,7 +283,8 @@ const UnifiedPanel = (() => {
                 const result = await fetchJSON("/api/stories/preview", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ url }),
+                    body: JSON.stringify({ url, chapter_regex: chapterRegex }),
+                    filename_pattern: filenamePattern,
                 });
 
                 if (!result.ok) {
@@ -330,17 +339,18 @@ const UnifiedPanel = (() => {
             list.innerHTML = chapters
                 .map(
                     (ch, idx) => `
-                <div class="chapter-item">
+                <div class="chapter-item${ch.locked ? " chapter-locked" : ""}">
                     <input 
                         type="checkbox" 
                         id="ch-${idx}-${panelId}"
                         data-chapter-number="${ch.number}"
-                        checked
+                        ${ch.locked ? "disabled" : "checked"}
                         onchange="UnifiedPanel.updateChapterSelection('${panelId}')"
                     />
                     <label for="ch-${idx}-${panelId}">
                         <span class="chapter-number">Chapter ${ch.number}</span>
                         <span class="chapter-title">${ch.title || "(no title)"}</span>
+                        ${ch.locked ? '<i class="fa-solid fa-lock chapter-lock-icon" title="Requires Patreon access"></i>' : ""}
                     </label>
                 </div>
             `
@@ -371,11 +381,11 @@ const UnifiedPanel = (() => {
         selectAllChapters(panelId) {
             const list = $(`chaptersList-${panelId}`);
             if (!list) return;
-            list.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+            list.querySelectorAll('input[type="checkbox"]:not(:disabled)').forEach((cb) => {
                 cb.checked = true;
             });
             this.updateChapterSelection(panelId);
-        },
+        },  
 
         deselectAllChapters(panelId) {
             const list = $(`chaptersList-${panelId}`);
@@ -426,6 +436,9 @@ const UnifiedPanel = (() => {
                     series: collectTagList("addStorySeriesWrap", panelId),
                     genres: collectTagList("addStoryGenresWrap", panelId),
                     tags: collectTagList("addStoryTagsWrap", panelId),
+                    chapter_regex: getVal("addStoryChapterRegex", panelId) || null,
+                    content_source: $(`addStoryContentSource-${panelId}`)?.value || null,
+                    filename_pattern: getVal("addStoryFilenamePattern", panelId) || null,
                     auto_update: $(`addStoryAutoUpdate-${panelId}`)?.checked || false,
                     hide__author_notes: $("metaHideAuthorNotes-")?.checked || true,
                     selected_chapters: state.selectedChapters.length > 0

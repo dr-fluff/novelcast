@@ -18,6 +18,14 @@
     pointer-events: auto;
 }
 
+.chapter-item.chapter-locked {
+    opacity: 0.5;
+}
+.chapter-lock-icon {
+    margin-left: 0.5rem;
+    color: var(--text-muted, #999);
+}
+
 /* ── Modal (centered) ─────────────────────────────────────────────────── */
 
 .unified-panel {
