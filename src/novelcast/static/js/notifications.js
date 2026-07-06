@@ -234,15 +234,33 @@ function buildNotification(payload) {
                     id: `sync-${payload.story_id}`,
                 },
             };
+        case "sync_story_no_changes":
+            return {
+                message: `No updates for "${payload.title}".`,
+                type: "info",
+                timeout: 4000,
+                options: {
+                    id: `sync-${payload.story_id}`,
+                },
+            };
+        case "sync_story_failed":
+            return {
+                message: `Failed to check "${payload.title}".`,
+                type: "error",
+                timeout: 6000,
+                options: {
+                    id: `sync-${payload.story_id}`,
+                },
+            };
         case "sync_finished":
             return {
                 message: payload.new_chapters
-                    ? `Sync finished: ${payload.new_chapters} new chapter${payload.new_chapters === 1 ? "" : "s"}.`
-                    : `Sync complete: no new chapters.`,
+                    ? `Sync complete: ${payload.stories_updated} of ${payload.stories_checked} stories had updates (${payload.new_chapters} new chapters).`
+                    : `Sync complete: checked ${payload.stories_checked} stories, no new chapters.`,
                 type: payload.new_chapters ? "success" : "info",
-                timeout: 5000,
+                timeout: 6000,
                 options: {
-                    id: `sync-${payload.story_id}`,
+                    id: "sync-summary",
                 },
             };
         case "story_updated":

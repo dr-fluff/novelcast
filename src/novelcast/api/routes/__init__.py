@@ -5,6 +5,8 @@ from novelcast.auth.routes import router as auth_router
 from .pages import router as pages_router
 from .admin import router as admin_router
 
+from novelcast.api.ws.notifications import router as notifications_router
+
 from . import static, users, files, stories, download, sync, password_reset, add_story
 
 router = APIRouter()
@@ -14,8 +16,11 @@ router.include_router(auth_router)
 router.include_router(pages_router)
 router.include_router(password_reset.router)
 
+
 # ── Static assets ─────────────────────────────────────────────────────────
 router.include_router(static.router)
+router.include_router(notifications_router)
+
 
 # ── JSON APIs (all under /api) ────────────────────────────────────────────
 api_router = APIRouter(prefix="/api")

@@ -541,19 +541,6 @@
 
 .btn-primary-meta:hover { background: #0f172a; }
 
-/* ── Tab helper (JS hook) ─────────────────────────────────────────────── */
-
-/* switchTab() is defined in the existing metadata_panel.js —
-   add this small helper if not already present there:
-
-   window.switchTab = function(btn, panelId) {
-       document.querySelectorAll('.meta-tab').forEach(t => t.classList.remove('active'));
-       document.querySelectorAll('.meta-tab-panel').forEach(p => p.classList.add('hidden'));
-       btn.classList.add('active');
-       document.getElementById(panelId).classList.remove('hidden');
-   };
-*/
-
 /* ── Mobile ───────────────────────────────────────────────────────────── */
 
 @media (max-width: 540px) {

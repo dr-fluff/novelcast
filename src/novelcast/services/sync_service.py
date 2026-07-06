@@ -84,23 +84,37 @@ class LibrarySyncService:
             updated = 0
             new_chapters = 0
 
-            self._emit("update_run_started", {"stories": len(stories), "story_ids": story_ids})
+            self._emit("sync_run_started", {"stories": len(stories), "story_ids": story_ids})
 
             for story in stories:
                 if not story.get("source_url"):
                     continue
 
                 checked += 1
+                title = story.get("title") or f"Story {story.get('id')}"
+                self._emit("sync_story_started", {"story_id": story.get("id"), "title": title})
+
                 try:
                     result = self.download.update_story(story)
                 except Exception:
                     logger.exception("Failed to update story %s", story.get("id"))
+                    self._emit("sync_story_failed", {"story_id": story.get("id"), "title": title})
                     continue
 
                 count = int(result.get("new_chapters", 0) or 0)
                 if count:
                     updated += 1
                     new_chapters += count
+                    self._emit("sync_story_updated", {
+                        "story_id": story.get("id"),
+                        "title": title,
+                        "new_chapters": count,
+                    })
+                else:
+                    self._emit("sync_story_no_changes", {
+                        "story_id": story.get("id"),
+                        "title": title,
+                    })
 
             payload = {
                 "status": "finished",
@@ -109,8 +123,8 @@ class LibrarySyncService:
                 "new_chapters": new_chapters,
             }
             if updated == 0:
-                self._emit("update_no_changes", payload)
-            self._emit("update_finished", payload)
+                self._emit("sync_no_changes", payload)
+            self._emit("sync_finished", payload)
             return payload
         finally:
             self._lock.release()

@@ -115,6 +115,8 @@ const UnifiedPanel = (() => {
         }
     }
 
+    
+    
     // ─────────────────────────────────────────────────────────────────
     // TAG HELPERS
     // ─────────────────────────────────────────────────────────────────
@@ -332,6 +334,19 @@ const UnifiedPanel = (() => {
             }
         },
 
+        handleCoverFileSelect(panelId, inputEl) {
+            handlers.metadata?.handleCoverFileSelect(panelId, inputEl);
+        },
+        toggleCoverUrlInput(panelId) {
+            handlers.metadata?.toggleCoverUrlInput(panelId);
+        },
+        fetchCoverFromUrl(panelId) {
+            handlers.metadata?.fetchCoverFromUrl(panelId);
+        },
+        removeCover(panelId) {
+            handlers.metadata?.removeCover(panelId);
+        },
+
         displayChapters(panelId, chapters) {
             const list = $(`chaptersList-${panelId}`);
             if (!list) return;
@@ -520,6 +535,8 @@ const UnifiedPanel = (() => {
                     if (autoUpdateEl)
                         autoUpdateEl.checked = Boolean(st.auto_update);
                     
+                    this.renderCoverPreview(panelId, st.cover_path);
+
                     renderTagList(
                         "metaSeriesWrap",
                         panelId,
@@ -609,6 +626,95 @@ const UnifiedPanel = (() => {
                 if (saveBtn) saveBtn.disabled = false;
             }
         },
+        
+        renderCoverPreview(panelId, coverPath) {
+            const preview = $(`coverPreview-${panelId}`);
+            const removeBtn = $(`coverRemoveBtn-${panelId}`);
+            if (!preview) return;
+
+            if (coverPath) {
+                preview.innerHTML = `<img src="/covers?path=${encodeURIComponent(coverPath)}" alt="Cover" />`;
+                if (removeBtn) removeBtn.style.display = "";
+            } else {
+                preview.innerHTML = `<i class="fa-solid fa-image"></i><p>No cover image</p>`;
+                if (removeBtn) removeBtn.style.display = "none";
+            }
+        },
+
+        async handleCoverFileSelect(panelId, inputEl) {
+            const file = inputEl.files?.[0];
+            if (!file || !this.storyId) return;
+
+            // instant local preview while the upload is in flight
+            const preview = $(`coverPreview-${panelId}`);
+            const localUrl = URL.createObjectURL(file);
+            if (preview) preview.innerHTML = `<img src="${localUrl}" alt="Cover" />`;
+
+            const statusEl = $(`coverStatus-${panelId}`);
+            if (statusEl) { statusEl.textContent = "Uploading…"; statusEl.className = "unified-panel-status"; }
+
+            try {
+                const formData = new FormData();
+                formData.append("file", file);
+
+                const res = await fetch(`/api/stories/${this.storyId}/cover`, { method: "POST", body: formData });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail || "Upload failed");
+
+                if (preview) preview.innerHTML = `<img src="${data.cover_url}" alt="Cover" />`;
+                const removeBtn = $(`coverRemoveBtn-${panelId}`);
+                if (removeBtn) removeBtn.style.display = "";
+                if (statusEl) { statusEl.textContent = "Cover updated"; statusEl.className = "unified-panel-status success"; }
+            } catch (e) {
+                if (statusEl) { statusEl.textContent = e.message; statusEl.className = "unified-panel-status error"; }
+            } finally {
+                inputEl.value = "";
+            }
+        },
+
+        toggleCoverUrlInput(panelId) {
+            const row = $(`coverUrlRow-${panelId}`);
+            if (row) row.style.display = row.style.display === "none" ? "" : "none";
+        },
+
+        async fetchCoverFromUrl(panelId) {
+            const url = getVal("coverUrlInput", panelId);
+            if (!url || !this.storyId) return;
+
+            const statusEl = $(`coverStatus-${panelId}`);
+            if (statusEl) { statusEl.textContent = "Fetching…"; statusEl.className = "unified-panel-status"; }
+
+            try {
+                const result = await fetchJSON(`/api/stories/${this.storyId}/cover/from-url`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ url }),
+                });
+                if (!result.ok) throw new Error(result.data.detail || "Fetch failed");
+
+                const preview = $(`coverPreview-${panelId}`);
+                if (preview) preview.innerHTML = `<img src="${result.data.cover_url}" alt="Cover" />`;
+                const removeBtn = $(`coverRemoveBtn-${panelId}`);
+                if (removeBtn) removeBtn.style.display = "";
+                setVal("coverUrlInput", panelId, "");
+                $(`coverUrlRow-${panelId}`).style.display = "none";
+
+                if (statusEl) { statusEl.textContent = "Cover updated"; statusEl.className = "unified-panel-status success"; }
+            } catch (e) {
+                if (statusEl) { statusEl.textContent = e.message; statusEl.className = "unified-panel-status error"; }
+            }
+        },
+
+        async removeCover(panelId) {
+            if (!this.storyId) return;
+            try {
+                const result = await fetchJSON(`/api/stories/${this.storyId}/cover`, { method: "DELETE" });
+                if (!result.ok) throw new Error(result.data.detail || "Failed to remove cover");
+                this.renderCoverPreview(panelId, null);
+            } catch (e) {
+                err("metadata", e);
+            }
+        },
     };
 
     // ─────────────────────────────────────────────────────────────────
@@ -694,6 +800,7 @@ const UnifiedPanel = (() => {
             }
         },
     };
+    
 
     // ─────────────────────────────────────────────────────────────────
     // PUBLIC API

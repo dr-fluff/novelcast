@@ -1,8 +1,10 @@
-#factory.py
+# novelcast/app/factory.py
+
 from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
+from novelcast import app
 from novelcast.core.config import AppConfig
 
 from novelcast.api.errors import register_error_handlers
@@ -36,6 +38,8 @@ def create_app(config: AppConfig) -> FastAPI:
 
     app.state.config = config
     app.state.templates = AppTemplates(directory=str(TEMPLATES_DIR))
+    app.state.templates = AppTemplates(directory=str(TEMPLATES_DIR))
+    app.state.templates.env.globals["api_port"] = config.port
 
     app.add_middleware(RequestIDMiddleware)
     app.add_middleware(AuthMiddleware)

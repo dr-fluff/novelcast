@@ -1,8 +1,4 @@
 {# novelcast/templates/partials/metadata_panels_unified.html #}
-{# 
-  Unified Metadata & Author Panels
-  Usage: {% include "partials/metadata_panels_unified.html" %}
-#}
 
 {# ════════════════════════════════════════════════════════════════════
     METADATA PANEL
@@ -117,14 +113,33 @@
         {# ── Cover tab ────────────────────────────────────────────────── #}
         <div class="unified-panel-content" id="tabCover-metaPanel" style="display:none">
             <div class="cover-upload">
-                <div class="cover-preview">
+                <div class="cover-preview" id="coverPreview-metaPanel">
                     <i class="fa-solid fa-image"></i>
                     <p>No cover image</p>
                 </div>
+
                 <div class="cover-actions">
-                    <button class="btn btn-outline"><i class="fa-solid fa-upload"></i> Upload image</button>
-                    <button class="btn btn-outline"><i class="fa-solid fa-link"></i> From URL</button>
+                    <input type="file" id="coverFileInput-metaPanel" accept="image/png,image/jpeg,image/webp"
+                        style="display:none" onchange="UnifiedPanel.handleCoverFileSelect('metaPanel', this)" />
+                    <button type="button" class="btn btn-outline"
+                            onclick="document.getElementById('coverFileInput-metaPanel').click()">
+                        <i class="fa-solid fa-upload"></i> Upload image
+                    </button>
+                    <button type="button" class="btn btn-outline" onclick="UnifiedPanel.toggleCoverUrlInput('metaPanel')">
+                        <i class="fa-solid fa-link"></i> From URL
+                    </button>
+                    <button type="button" class="btn btn-outline btn-danger" id="coverRemoveBtn-metaPanel"
+                            style="display:none" onclick="UnifiedPanel.removeCover('metaPanel')">
+                        <i class="fa-solid fa-trash"></i> Remove
+                    </button>
                 </div>
+
+                <div class="cover-url-row" id="coverUrlRow-metaPanel" style="display:none">
+                    <input type="url" id="coverUrlInput-metaPanel" class="form-input" placeholder="https://example.com/cover.jpg" />
+                    <button type="button" class="btn btn-primary" onclick="UnifiedPanel.fetchCoverFromUrl('metaPanel')">Fetch</button>
+                </div>
+
+                <span class="unified-panel-status" id="coverStatus-metaPanel"></span>
             </div>
         </div>
 

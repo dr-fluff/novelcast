@@ -37,6 +37,9 @@
 
   <body>
     <script>window.NOVELCAST_API_HOST = "{{ api_host }}";</script>
+    <script>
+        window.NOVELCAST_API_HOST = "{{ request.client.host if false else '' }}{{ request.url.hostname }}:{{ api_port }}";
+    </script>
 
     {% include "partials/add_story_panel_unified.html" %}
     {% include "partials/metadata_author_panels_unified.html" %}
