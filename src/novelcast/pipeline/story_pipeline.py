@@ -4,6 +4,7 @@ from pathlib import Path
 import copy
 import json
 import logging
+import shutil
 
 from novelcast.utils.html import clean_html_description
 
@@ -375,7 +376,7 @@ class StoryPipeline:
             return
 
         dest = base_dir / self.file_utils.safe(source.name)
-        source.replace(dest)
+        shutil.move(str(source), str(dest))
 
     def _write_cover(self, base_dir: Path, cover_bytes: bytes | None):
         if not cover_bytes:
