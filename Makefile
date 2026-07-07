@@ -1,70 +1,90 @@
-.PHONY: install dev backend frontend predev lint format test clean ports db
+.PHONY: install dev backend frontend predev lint format test clean ports db doctor docker-build docker-up docker-down docker-logs docker-rebuild
 
 VENV ?= .venv
-PYTHON := $(VENV)/bin/python
-UV := $(VENV)/bin/uv
+
+UV := uv
 NPX := npx
 NPM := npm
 
-install:
-	python3 -m venv $(VENV)
-	$(PYTHON) -m pip install --upgrade pip
-	$(PYTHON) -m pip install uv
-	$(UV) sync
-	$(NPM) install
 
-predev:
-	$(NPX) kill-port 8001 3000
+install:
+	@./scripts/install.sh
+
 
 dev: predev
-	$(NPX) concurrently -k -n BACKEND,FRONTEND -c auto "$(UV) run python -m novelcast.main" "$(NPX) browser-sync start --config bs-config.js"
+	$(NPX) concurrently -k \
+		-n BACKEND,FRONTEND \
+		-c auto \
+		"$(UV) run python -m novelcast.main" \
+		"$(NPX) browser-sync start --config bs-config.js"
+
 
 backend:
 	$(UV) run python -m novelcast.main
 
+
 frontend:
 	$(NPX) browser-sync start --config bs-config.js
 
+
+predev:
+	$(NPX) kill-port 8001 3000 || true
+
+
 ports:
-	$(NPX) kill-port 8001 3000
+	$(NPX) kill-port 8001 3000 || true
+
 
 lint:
 	$(UV) run ruff src
 
+
 format:
 	$(UV) run black src
+
 
 test:
 	$(UV) run pytest tests
 
-# Run all available test suites, including future additions in tests/
-test-all: test
 
 db:
 	$(UV) run python -m novelcast.db.migrate
 
+
 clean:
-	find . -type d -name "__pycache__" -exec rm -r {} + || true
-	find . -type d -name ".pytest_cache" -exec rm -r {} + || true
+	rm -rf .venv
+	find . -type d -name "__pycache__" -exec rm -rf {} +
+	find . -type d -name ".pytest_cache" -exec rm -rf {} +
 
-clean-generated: clean-db clean-log clean-config
 
-clean-db:
-	rm -rf data/
+doctor:
+	@echo "Python:"
+	@python3 --version || true
+	@echo "Node:"
+	@node --version || true
+	@echo "npm:"
+	@npm --version || true
+	@echo "uv:"
+	@uv --version || true
 
-clean-log:
-	rm -rf logs/
 
-clean-config:
-	rm -rf config/
+docker-build:
+	docker compose build
 
-reset-db:
-	rm -f data/novelcast.db data/novelcast.db-wal data/novelcast.db-shm
-	rm -rf alembic/versions/*
-	uv run alembic revision --autogenerate -m "baseline"
-	uv run alembic upgrade head
 
-ci: test build
+docker-up:
+	docker compose up -d
 
-build:
-	docker build -t novelcast .
+
+docker-down:
+	docker compose down
+
+
+docker-logs:
+	docker compose logs -f
+
+
+docker-rebuild:
+	docker compose down
+	docker compose build --no-cache
+	docker compose up -d
