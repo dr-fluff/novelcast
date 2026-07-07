@@ -6,7 +6,6 @@ __pycache__/
 *.py[codz]
 *$py.class
 *.db
-uv.lock
 data/*
 node_modules/
 package-lock.json
@@ -215,8 +214,6 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 >>>>>>> 7125adbf86dc80ecfd31e2db54ee2707c6c2a593
-uv.lock
 data/novelcast.db
 data/novelcast.db
-uv.lock
 data/
