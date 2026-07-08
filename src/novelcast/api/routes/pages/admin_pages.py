@@ -1,5 +1,9 @@
 from fastapi import Depends, HTTPException, Request
 from fastapi.templating import Jinja2Templates
+from fastapi.responses import FileResponse
+import logging
+from pathlib import Path
+
 
 from novelcast.api.deps import (
     get_chapter_filter,
@@ -242,3 +246,63 @@ def delete_pattern(
         return {"success": True}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+    
+
+@router.get("/admin/logs")
+def logs(
+    request: Request,
+    current_user: dict | None = Depends(get_current_user),
+    templates: Jinja2Templates = Depends(get_templates),
+):
+    if not current_user or not current_user.get("is_root"):
+        raise HTTPException(
+            status_code=403,
+            detail="Admin access required"
+        )
+
+    return templates.TemplateResponse(
+        "pages/logs.html",
+        {
+            "request": request,
+            "user": current_user,
+        }
+    )
+
+
+
+
+@router.get("/admin/logs/raw")
+def raw_logs(
+    current_user: dict | None = Depends(get_current_user),
+):
+    if not current_user or not current_user.get("is_root"):
+        raise HTTPException(
+            status_code=403,
+            detail="Admin access required"
+        )
+
+    log_dir = Path("logs")
+
+    files = sorted(
+        log_dir.glob("novelcast_*.log"),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
+
+    if not files:
+        raise HTTPException(
+            status_code=404,
+            detail="No log files found"
+        )
+
+    response = FileResponse(
+        path=files[0],
+        media_type="text/plain",
+    )
+
+    # Tell browser: show it, don't download it
+    response.headers["Content-Disposition"] = (
+        f'inline; filename="{files[0].name}"'
+    )
+
+    return response

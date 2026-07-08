@@ -7,6 +7,7 @@ from .admin import router as admin_router
 
 from novelcast.api.ws.notifications import router as notifications_router
 
+
 from . import static, users, files, stories, download, sync, password_reset, add_story
 
 router = APIRouter()

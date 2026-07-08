@@ -10,11 +10,17 @@ from novelcast.services.chapter_filter_service import ChapterFilterService
 from novelcast.api.routes.utils import require_admin
 from .telegram import router as telegram_router 
 from .patreon import router as patreon_router
+from .log_tail import router as log_tail_router
 
 router = APIRouter()
 
 router.include_router(telegram_router, prefix="/telegram")
 router.include_router(patreon_router, prefix="/patreon")
+router.include_router(
+    log_tail_router,
+    prefix="/logs",
+    tags=["admin"]
+)
 
 
 # ── Users ─────────────────────────────────────────────────────────────────

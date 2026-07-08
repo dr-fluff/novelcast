@@ -10,36 +10,54 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, Request,
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 
+from novelcast.core.logging import log_buffer
 from novelcast.api.deps import get_current_user, get_settings, get_templates, get_logs
-from novelcast.services import LoggingService
+from novelcast.services import LoggingService, SettingsService
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-POLL_INTERVAL = 0.5   # seconds
+POLL_INTERVAL = .5   # seconds
 
 
-@router.websocket("/admin/logs/tail")
-async def log_tail_ws(websocket: WebSocket):
-    
+@router.websocket("/tail")
+async def log_tail_ws(
+    websocket: WebSocket,
+):
     await websocket.accept()
 
-    # Import the singleton buffer — already populated since startup
-    from novelcast.core.logging import log_buffer
+    # TODO: validate session/cookie here
+    # Example:
+    # user = await get_current_user_from_ws(websocket)
+    # if not user or not user.get("is_root"):
+    #     await websocket.close(code=1008)
+    #     return
 
-    # Send backlog so the page isn't empty on load
+    
+
     backlog, cursor = log_buffer.drain()
+
     if backlog:
-        await websocket.send_json({"type": "backlog", "lines": backlog})
+        await websocket.send_json({
+            "type": "backlog",
+            "lines": backlog
+        })
 
     try:
         while True:
             await asyncio.sleep(POLL_INTERVAL)
-            new_lines, cursor = log_buffer.drain(cursor)
-            if new_lines:
-                await websocket.send_json({"type": "lines", "lines": new_lines})
+
+            lines, cursor = log_buffer.drain(cursor)
+
+            if lines:
+                await websocket.send_json({
+                    "type": "lines",
+                    "lines": lines
+                })
+
     except WebSocketDisconnect:
         pass
+
     except Exception:
         logger.exception("log_tail_ws error")
     

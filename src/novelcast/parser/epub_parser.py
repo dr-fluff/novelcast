@@ -77,6 +77,7 @@ class EpubParser(BaseParser):
             raise FileNotFoundError(f"EPUB file not found: {epub_path}")
 
         with ZipFile(epub_path, "r") as epub:
+            self._validate_epub(epub, epub_path)
             root_file_path = self._find_root_file_path(epub)
             manifest, spine = self._parse_package_document(epub.read(root_file_path))
             logger.debug(
@@ -170,17 +171,44 @@ class EpubParser(BaseParser):
     def _find_root_file_path(self, epub: ZipFile) -> str:
         try:
             container_data = epub.read("META-INF/container.xml")
+
         except KeyError as exc:
-            raise RuntimeError("Invalid EPUB: META-INF/container.xml missing") from exc
+            raise RuntimeError(
+                "Invalid EPUB: META-INF/container.xml missing"
+            ) from exc
 
-        root = ET.fromstring(container_data)
-        for elem in root.iter():
-            if elem.tag.endswith("root_file"):
-                path = elem.attrib.get("full-path")
-                if path:
-                    return path
+        try:
+            root = ET.fromstring(container_data)
 
-        raise RuntimeError("Invalid EPUB: root_file not found in container.xml")
+        except ET.ParseError as exc:
+            raise RuntimeError(
+                "Invalid EPUB: container.xml contains invalid XML"
+            ) from exc
+
+        rootfiles = [
+            elem
+            for elem in root.iter()
+            if elem.tag.endswith("rootfile")
+        ]
+
+        if not rootfiles:
+            raise RuntimeError(
+                "Invalid EPUB: container.xml has no rootfile entries"
+            )
+
+        for elem in rootfiles:
+            path = elem.attrib.get("full-path")
+
+            if path:
+                logger.debug(
+                    "EPUB root file found: %s",
+                    path
+                )
+                return path
+
+        raise RuntimeError(
+            "Invalid EPUB: rootfile exists but has no full-path attribute"
+        )
 
     def _parse_package_document(self, package_data: bytes):
         root = ET.fromstring(package_data)
@@ -238,3 +266,52 @@ class EpubParser(BaseParser):
                     pass
 
         return None
+    
+    def _validate_epub(self, epub: ZipFile, epub_path: Path) -> None:
+        """Basic EPUB integrity checks."""
+
+        required_files = [
+            "META-INF/container.xml",
+        ]
+
+        logger.debug("Validating EPUB: %s", epub_path)
+
+        names = set(epub.namelist())
+
+        for required in required_files:
+            if required not in names:
+                raise RuntimeError(
+                    f"Invalid EPUB '{epub_path}': missing required file '{required}'. "
+                    f"Available META-INF files: "
+                    f"{[n for n in names if n.startswith('META-INF')]}"
+                )
+
+        try:
+            container = epub.read("META-INF/container.xml")
+        except Exception as exc:
+            raise RuntimeError(
+                f"Invalid EPUB '{epub_path}': unable to read META-INF/container.xml"
+            ) from exc
+
+        try:
+            root = ET.fromstring(container)
+        except ET.ParseError as exc:
+            raise RuntimeError(
+                f"Invalid EPUB '{epub_path}': malformed container.xml XML"
+            ) from exc
+
+        rootfiles = [
+            elem
+            for elem in root.iter()
+            if elem.tag.endswith("rootfile")
+        ]
+
+        if not rootfiles:
+            raise RuntimeError(
+                f"Invalid EPUB '{epub_path}': container.xml contains no <rootfile>"
+            )
+
+        logger.debug(
+            "EPUB validation passed: %s",
+            epub_path
+        )
