@@ -1,6 +1,14 @@
 {
     "cSpell.words": [
-        "PYTHONPATH"
+        "chapterorigtitle",
+        "chaptertitle",
+        "chaptertoctitle",
+        "epubs",
+        "idref",
+        "itemref",
+        "PYTHONPATH",
+        "zchapter",
+        "zchapters"
     ],
     "files.exclude": {
         "**/.venv": true,

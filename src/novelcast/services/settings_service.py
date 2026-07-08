@@ -8,9 +8,25 @@ logger = logging.getLogger(__name__)
 
 _SITE_PREFIX = "fanficfare.site."
 
+_READING_KEY_MAP = {
+    "chapter_theme": "theme",
+    "chapter_font_family": "fontFamily",
+    "chapter_font_size": "fontSize",
+    "chapter_line_spacing": "lineSpacing",
+    "chapter_font_weight": "fontWeight",
+    "chapter_paragraph_spacing": "paragraphSpacing",
+    "chapter_content_padding": "contentPadding",
+}
+
 
 class SettingsService:
-    def __init__(self, repo, settings_schema=None, secret_key: str = ""):
+    def __init__(self, repo, settings_schema=None, user_settings_schema=None, required_user_settings=None, secret_key: str = ""):
+
+        if required_user_settings is None:
+            raise ValueError("required_user_settings must be provided")
+
+        self.user_settings_schema = user_settings_schema or {}
+        self.required_user_settings = required_user_settings or set()
         self.repo = repo
         self.schema = settings_schema or {}
         self.secret_key = secret_key
@@ -38,7 +54,7 @@ class SettingsService:
                 grouped[section][scope][key] = value
 
         return grouped
-    
+
     def get_server_setting(self, key: str, default=None):
         value = self.repo.get_server_setting(key)
         return default if value is None else value
@@ -82,7 +98,7 @@ class SettingsService:
                 resolved[section][key] = value
 
         return resolved
-    
+
     def get_field_meta(self, section: str, key: str) -> dict:
         return self.schema.get(section, {}).get(key, {})
 
@@ -90,6 +106,10 @@ class SettingsService:
         db_values = self.get_server_settings()
 
         for section, fields in self.schema.items():
+            if not isinstance(fields, dict):
+                logger.warning(f"BAD SCHEMA SECTION: {section!r} -> {type(fields)} = {fields!r}")
+                continue
+
             for key, meta in fields.items():
                 if meta.get("type") != "secret":
                     continue
@@ -213,49 +233,44 @@ class SettingsService:
         return fields.get(field, {}).get("type") == "secret"
 
     # ─────────────────────────────
-    # USER SETTINGS (UPDATED)
+    # USER SETTINGS (schema-driven, device-aware)
     # ─────────────────────────────
 
-    def get_user_settings(self, user_id: int):
-        """Get all user settings including chapter reading preferences."""
-        row = self.repo.get_user_settings(user_id)
+    def _sanitize_setting(self, key: str, value):
+        """Validate/coerce a single user setting value against its schema spec."""
+        spec = self.user_settings_schema[key]
+        t = spec["type"]
 
-        defaults = {
-            "user_id": user_id,
-            # Display settings (existing)
-            "theme": "light",
-            "font_size": 14,
-            "line_height": 1.5,
-            "auto_update": 1,
-            # Chapter reading settings (new)
-            "chapter_theme": "light",
-            "chapter_font_family": "serif",
-            "chapter_font_size": 100,
-            "chapter_line_spacing": 100,
-            "chapter_font_weight": 0,
-            "chapter_paragraph_spacing": 100,
-            "chapter_content_padding": 3,
-        }
+        if t == "choice":
+            return value if value in spec["choices"] else spec["default"]
 
-        if not row:
-            return defaults
+        if t == "bool":
+            return 1 if str(value) in ("1", "true", "True") else 0
 
-        return {
-            "user_id": row.get("user_id", user_id),
-            # Display settings
-            "theme": row.get("theme", "light"),
-            "font_size": row.get("font_size", 14),
-            "line_height": row.get("line_height", 1.5),
-            "auto_update": row.get("auto_update", 1),
-            # Chapter reading settings
-            "chapter_theme": row.get("chapter_theme", "light"),
-            "chapter_font_family": row.get("chapter_font_family", "serif"),
-            "chapter_font_size": row.get("chapter_font_size", 100),
-            "chapter_line_spacing": row.get("chapter_line_spacing", 100),
-            "chapter_font_weight": row.get("chapter_font_weight", 0),
-            "chapter_paragraph_spacing": row.get("chapter_paragraph_spacing", 100),
-            "chapter_content_padding": row.get("chapter_content_padding", 3),
-        }
+        if t == "int_range":
+            try:
+                v = int(value)
+            except (TypeError, ValueError):
+                return spec["default"]
+            return max(spec["min"], min(v, spec["max"]))
+
+        if t == "float_range":
+            try:
+                v = float(value)
+            except (TypeError, ValueError):
+                return spec["default"]
+            return max(spec["min"], min(v, spec["max"]))
+
+        return value
+
+    def get_user_settings(self, user_id: int, device_id: str | None = None) -> dict:
+        row = self.repo.get_user_settings(user_id, device_id=device_id) or {}
+
+        result = {"user_id": row.get("user_id", user_id)}
+        for key, spec in self.user_settings_schema.items():
+            result[key] = row.get(key, spec["default"])
+
+        return result
 
     def get_user_preference(self, user_id: int, key: str, default=None):
         row = self.repo.get_user_settings(user_id) or {}
@@ -273,102 +288,39 @@ class SettingsService:
     def delete_user_preference(self, user_id: int, key: str) -> None:
         self.repo.delete_user_setting(user_id, key)
 
-    def save_user_settings(
-        self,
-        user_id: int,
-        theme: str,
-        font_size,
-        line_height,
-        auto_update,
-        # NEW: Chapter reading settings
-        chapter_theme: str = None,
-        chapter_font_family: str = None,
-        chapter_font_size: int = None,
-        chapter_line_spacing: int = None,
-        chapter_font_weight: int = None,
-        chapter_paragraph_spacing: int = None,
-        chapter_content_padding: int = None, 
-    ):
-        """Sanitized write to avoid corrupted DB values from forms."""
-
-        # Validate & sanitize display settings
-        theme = theme if theme in ("light", "dark") else "light"
-
-        try:
-            font_size = max(10, min(int(font_size), 30))
-        except Exception:
-            font_size = 14
-
-        try:
-            line_height = float(line_height)
-            line_height = max(1.0, min(line_height, 2.5))
-        except Exception:
-            line_height = 1.5
-
-        auto_update = 1 if str(auto_update) in ("1", "true", "True") else 0
-
-        # NEW: Validate & sanitize chapter reading settings
-        if chapter_theme is not None:
-            chapter_theme = chapter_theme if chapter_theme in ("light", "sepia", "dark") else "light"
-
-        if chapter_font_family is not None:
-            chapter_font_family = chapter_font_family if chapter_font_family in ("serif", "sans") else "serif"
-
-        if chapter_font_size is not None:
-            try:
-                chapter_font_size = max(80, min(int(chapter_font_size), 170))
-            except Exception:
-                chapter_font_size = 100
-
-        if chapter_line_spacing is not None:
-            try:
-                chapter_line_spacing = max(80, min(int(chapter_line_spacing), 150))
-            except Exception:
-                chapter_line_spacing = 100
-
-        if chapter_font_weight is not None:
-            try:
-                chapter_font_weight = max(-30, min(int(chapter_font_weight), 100))
-            except Exception:
-                chapter_font_weight = 0
-
-        if chapter_paragraph_spacing is not None:
-            try:
-                chapter_paragraph_spacing = max(50, min(int(chapter_paragraph_spacing), 200))
-            except Exception:
-                chapter_paragraph_spacing = 100
+    def save_user_settings(self, user_id: int, device_id: str | None = None, **kwargs):
         
-        if chapter_content_padding is not None:
-            try:
-                chapter_content_padding = max(3, min(int(chapter_content_padding), 20))
-            except Exception:
-                chapter_content_padding = 3
+        current = self.get_user_settings(user_id, device_id=device_id)
+        sanitized = {}
 
-        return self.repo.save_user_settings(
-            user_id,
-            theme,
-            font_size,
-            line_height,
-            auto_update,
-            chapter_theme=chapter_theme,
-            chapter_font_family=chapter_font_family,
-            chapter_font_size=chapter_font_size,
-            chapter_line_spacing=chapter_line_spacing,
-            chapter_font_weight=chapter_font_weight,
-            chapter_paragraph_spacing=chapter_paragraph_spacing,
-            chapter_content_padding=chapter_content_padding, 
-        )
+        for key in self.required_user_settings:
+            value = kwargs.get(key)
+            if value is not None:
+                sanitized[key] = self._sanitize_setting(key, value)
+            else:
+                spec = self.user_settings_schema[key]
+                sanitized[key] = current.get(key, spec["default"])
 
-    # NEW: Convenience method for chapter reader JS
-    def get_chapter_reading_settings(self, user_id: int) -> dict:
-        """Get only chapter reading settings (for reader JS API)."""
-        settings = self.get_user_settings(user_id)
+        for key, value in kwargs.items():
+            if key in self.required_user_settings or key not in self.user_settings_schema:
+                continue
+            if value is None:
+                continue
+            sanitized[key] = self._sanitize_setting(key, value)
+
+        return self.repo.save_user_settings(user_id, device_id=device_id, **sanitized)
+
+    def get_chapter_reading_settings(self, user_id: int, device_id: str | None = None) -> dict:
+        """Get only chapter reading settings (for reader JS API), keyed by
+        the JS-facing field names (theme, fontFamily, fontSize, ...)."""
+        settings = self.get_user_settings(user_id, device_id=device_id)
         return {
-            "theme": settings.get("chapter_theme", "light"),
-            "fontFamily": settings.get("chapter_font_family", "serif"),
-            "fontSize": settings.get("chapter_font_size", 100),
-            "lineSpacing": settings.get("chapter_line_spacing", 100),
-            "fontWeight": settings.get("chapter_font_weight", 0),
-            "paragraphSpacing": settings.get("chapter_paragraph_spacing", 100),
-            "contentPadding": settings.get("chapter_content_padding", 3), 
+            js_key: settings.get(schema_key, self.user_settings_schema[schema_key]["default"])
+            for schema_key, js_key in _READING_KEY_MAP.items()
+        }
+
+    def get_reading_settings_schema(self) -> dict:
+        return {
+            js_key: self.user_settings_schema[schema_key]
+            for schema_key, js_key in _READING_KEY_MAP.items()
         }

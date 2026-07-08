@@ -6,6 +6,7 @@ import os
 import re
 from pathlib import Path
 from typing import Dict, List, Optional
+from ebooklib import epub, ITEM_DOCUMENT
 
 from bs4 import BeautifulSoup
 
@@ -233,7 +234,7 @@ class PatreonParser(BaseParser):
         if not file_path or not os.path.exists(file_path):
             return ""
         try:
-            from ebooklib import epub, ITEM_DOCUMENT
+            
 
             book = epub.read_epub(file_path)
             parts = []

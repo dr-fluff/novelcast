@@ -53,13 +53,7 @@ async def save_settings(
     form = dict(await request.form())
     user_updates, server_updates = parse_settings_form(form)
 
-    settings.save_user_settings(
-        current_user["id"],
-        user_updates.get("theme", "light"),
-        user_updates.get("font_size", 14),
-        user_updates.get("line_height", 1.5),
-        user_updates.get("auto_update", 0),
-    )
+    settings.save_user_settings(current_user["id"], **user_updates)
 
     if current_user.get("is_root"):
         # Validate Patreon settings before saving if they're being updated

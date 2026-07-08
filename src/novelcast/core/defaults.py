@@ -282,7 +282,7 @@ FANFICTIONFARE_DEFAULTS = {
 }
 
 SCRAPER_DEFAULTS = {
-    "royalroad_enabled": {
+        "royalroad_enabled": {
             "type": "bool",
             "description": "Enable searching/scraping RoyalRoad",
             "default": True,
@@ -291,8 +291,14 @@ SCRAPER_DEFAULTS = {
         "scribblehub_enabled": {
             "type": "bool",
             "description": "Enable searching/scraping ScribbleHub",
-            "default": True,
+            "default": False,
             "label": "Enable ScribbleHub",
+        },
+        "patreon_enabled": {
+            "type": "bool",
+            "description": "Enable searching/scraping Patreon",
+            "default": False,
+            "label": "Enable Patreon",  
         },
 }
 
@@ -343,6 +349,103 @@ PATREON_DEFAULTS = {
 }
 
 
+SETTINGS = {
+    "patreon": PATREON_DEFAULTS,
+    "fanficfare": FANFICTIONFARE_DEFAULTS,
+    "scrapers": SCRAPER_DEFAULTS,
+    "app": APP_DEFAULTS,
+    "downloads": DOWNLOAD_DEFAULTS,
+    "logging": LOGGING_DEFAULTS,
+    "library": LIBRARY_DEFAULTS,
+    "telegram": TELEGRAM_DEFAULTS,
+}
+
+
+"""
+    ----------- User settings -------------
+"""
+
+
+USER_SETTINGS_SCHEMA = {
+    "theme": {
+        "type": "choice", "choices": ("light", "dark"), "default": "light",
+        "category": "display",
+    },
+    "font_size": {
+        "type": "int_range", "min": 10, "max": 30, "default": 14,
+        "category": "display",
+    },
+    "line_height": {
+        "type": "float_range", "min": 1.0, "max": 2.5, "default": 1.5,
+        "category": "display",
+    },
+    "auto_update": {
+        "type": "bool", "default": False,
+        "category": "display",
+    },
+
+    "chapter_theme": {
+        "type": "choice", "choices": ("light", "sepia", "dark"), "default": "light",
+        "category": "reading", "label": "Theme", "control": "buttons",
+        "options": [
+            {"value": "light", "label": "Light", "icon": "fa-sun"},
+            {"value": "sepia", "label": "Sepia", "icon": "fa-book"},
+            {"value": "dark", "label": "Dark", "icon": "fa-moon"},
+        ],
+    },
+    "chapter_font_family": {
+        "type": "choice", "choices": ("serif", "sans"), "default": "serif",
+        "category": "reading", "label": "Font Family", "control": "buttons",
+        "options": [
+            {"value": "sans", "label": "Sans"},
+            {"value": "serif", "label": "Serif"},
+        ],
+    },
+    "chapter_font_size": {
+        "type": "choice", "choices": (75, 88, 100, 113, 125, 150, 225), "default": 100,
+        "category": "reading", "label": "Font Size", "control": "buttons",
+        "options": [
+            {"value": 75, "label": "12"},
+            {"value": 88, "label": "14"},
+            {"value": 100, "label": "16"},
+            {"value": 113, "label": "18"},
+            {"value": 125, "label": "20"},
+            {"value": 150, "label": "24"},
+            {"value": 225, "label": "36"},
+        ],
+    },
+    "chapter_line_spacing": {
+        "type": "int_range", "min": 50, "max": 150, "default": 100,
+        "category": "reading", "label": "Line Spacing", "control": "slider",
+        "unit": "%", "step": 5,
+    },
+    "chapter_font_weight": {
+        "type": "choice", "choices": (0, 1, 2), "default": 1,
+        "category": "reading", "label": "Font Weight", "control": "buttons",
+        "options": [
+            {"value": 0, "label": "Light"},
+            {"value": 1, "label": "Normal"},
+            {"value": 2, "label": "Bold"},
+        ],
+    },
+    "chapter_paragraph_spacing": {
+        "type": "int_range", "min": 0, "max": 200, "default": 100,
+        "category": "reading", "label": "Paragraph Spacing", "control": "slider",
+        "unit": "%", "step": 5,
+    },
+    "chapter_content_padding": {
+        "type": "int_range", "min": 3, "max": 20, "default": 3,
+        "category": "reading", "label": "Margin", "control": "slider",
+        "unit": "rem", "step": 1,
+    },
+}
+
+REQUIRED_USER_SETTINGS = {"theme", "font_size", "line_height", "auto_update"}
+
+""""
+    ------------- Chapter patterns for titles -------------
+"""
+
 DEFAULT_CHAPTER_PATTERNS: dict[str, str] = {
     r"^(\d+)\s*[-–—‑−]": "Leading number (53 —, 102 —)",
     r"\bchapter\s*:?\s*(\d+)": "Chapter format (Chapter 1, Chapter: 1)",
@@ -363,15 +466,6 @@ DEFAULT_CHAPTER_PATTERNS: dict[str, str] = {
     r"\w.*\s+(\d+)\s*[-–—‑−]": "Text with trailing number (In Search of Harmony 26 —)",
     r"^\s*ch\.?\s*(\d+)\b(?:\s*[-–—-−]?\s*.*)?$": "CH format (CH7, CH13- Title, CH1 Prologue)",
     r"\bchapter\s+(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|and|[-\s])+": "Chapter with written number (Chapter Ten, Chapter One Hundred and Twenty-One)",   
+    r"^\s*Day\s+(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion|and)(?:[-\s]+(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion|and))*\s*$": "Day with written number",
 }
 
-SETTINGS = {
-    "patreon": PATREON_DEFAULTS,
-    "fanficfare": FANFICTIONFARE_DEFAULTS,
-    "scrapers": SCRAPER_DEFAULTS,
-    "app": APP_DEFAULTS,
-    "downloads": DOWNLOAD_DEFAULTS,
-    "logging": LOGGING_DEFAULTS,
-    "library": LIBRARY_DEFAULTS,
-    "telegram": TELEGRAM_DEFAULTS,
-}

@@ -20,7 +20,7 @@ ALIAS_MAP = {
 }
 
 _ENABLED_SETTING = {
-    "patreon":     ("patreon", "enabled"),
+    "patreon":     ("scrapers", "patreon_enabled"),
     "royalroad":   ("scrapers", "royalroad_enabled"),
     "scribblehub": ("scrapers", "scribblehub_enabled"),
 }

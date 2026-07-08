@@ -57,7 +57,7 @@ from novelcast.rss import (
 
 from novelcast.pipeline.story_pipeline import StoryPipeline
 from novelcast.utils.files import FileUtils
-from novelcast.core.defaults import SETTINGS
+from novelcast.core.defaults import SETTINGS, USER_SETTINGS_SCHEMA, REQUIRED_USER_SETTINGS
 
 logger = logging.getLogger(__name__)
 
@@ -142,6 +142,8 @@ class AppContext:
         self.settings = SettingsService(
             self.settings_repo,
             settings_schema=SETTINGS,
+            user_settings_schema=USER_SETTINGS_SCHEMA,
+            required_user_settings=REQUIRED_USER_SETTINGS,
             secret_key=self.app_config.secret_key,
         )
         self.settings.migrate_server_secrets()

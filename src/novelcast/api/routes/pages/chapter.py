@@ -1,5 +1,5 @@
 # novelcast/api/router/chapter.py
-from fastapi import Depends, HTTPException, Request
+from fastapi import Depends, Header, HTTPException, Request
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import JSONResponse
 from starlette.requests import ClientDisconnect
@@ -24,6 +24,7 @@ def chapter(
     stories: StoryService = Depends(get_stories),
     chapters: ChaptersService = Depends(get_chapters),
     progress: ProgressService = Depends(get_progress),
+    settings_service: SettingsService = Depends(get_settings),
     current_user: dict | None = Depends(get_current_user),
     templates: Jinja2Templates = Depends(get_templates),
 ):
@@ -62,6 +63,8 @@ def chapter(
     )
     hide_author_notes = story.get("hide_author_notes", True)
 
+    reading_settings_schema = settings_service.get_reading_settings_schema()
+
     return templates.TemplateResponse("pages/chapter.html", {
         "request": request,
         "title": story.get("title"),
@@ -75,6 +78,7 @@ def chapter(
         "next_chapter_id": next_id,
         "first_unread_chapter_id": first_unread,
         "hide_author_notes": hide_author_notes,
+        "reading_settings_schema": reading_settings_schema,
     })
 
 
@@ -82,6 +86,7 @@ def chapter(
 async def get_chapter_settings(
     current_user: dict | None = Depends(get_current_user),
     settings_service: SettingsService = Depends(get_settings),
+    x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
 ):
 
     if not current_user:
@@ -89,7 +94,7 @@ async def get_chapter_settings(
 
     try:
         chapter_settings = settings_service.get_chapter_reading_settings(
-            current_user["id"]
+            current_user["id"], device_id=x_device_id
         )
         return {"settings": chapter_settings}
     except Exception as e:
@@ -101,7 +106,7 @@ async def get_chapter_settings(
                 "fontFamily": "serif",
                 "fontSize": 100,
                 "lineSpacing": 100,
-                "fontWeight": 0,
+                "fontWeight": 1,
                 "paragraphSpacing": 100,
                 "contentPadding": 3,
             }
@@ -113,6 +118,7 @@ async def update_chapter_settings(
     request: Request,
     current_user: dict | None = Depends(get_current_user),
     settings_service: SettingsService = Depends(get_settings),
+    x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
 ):
     if not current_user:
         raise HTTPException(status_code=401, detail="Authentication required")
@@ -121,36 +127,9 @@ async def update_chapter_settings(
         body = await request.json()
         data = body.get("settings", {})
 
-        # Validate ranges to prevent invalid data
-        if "fontSize" in data:
-            fs = data["fontSize"]
-            if not (80 <= fs <= 170):
-                raise ValueError("fontSize must be between 80 and 170")
-        
-        if "lineSpacing" in data:
-            ls = data["lineSpacing"]
-            if not (80 <= ls <= 150):
-                raise ValueError("lineSpacing must be between 80 and 150")
-        
-        if "paragraphSpacing" in data:
-            ps = data["paragraphSpacing"]
-            if not (50 <= ps <= 200):
-                raise ValueError("paragraphSpacing must be between 50 and 200")
-        
-        if "contentPadding" in data:
-            cp = data["contentPadding"]
-            if not (3 <= cp <= 20):
-                raise ValueError("contentPadding must be between 3 and 20")
-
-        # Save via SettingsService
-        # Pass None for display settings so we only update chapter settings
         settings_service.save_user_settings(
             user_id=current_user["id"],
-            theme=None,           # Don't update UI theme from chapter API
-            font_size=None,       # Don't update UI font size from chapter API
-            line_height=None,     # Don't update UI line height from chapter API
-            auto_update=None,     # Don't update auto_update from chapter API
-            # Only update chapter reading settings
+            device_id=x_device_id,
             chapter_theme=data.get("theme"),
             chapter_font_family=data.get("fontFamily"),
             chapter_font_size=data.get("fontSize"),
@@ -172,7 +151,7 @@ async def update_chapter_settings(
     except Exception as e:
         logger.error(f"Error saving chapter settings for user {current_user['id']}: {e}")
         raise HTTPException(status_code=500, detail="Failed to save settings")
-    
+
 
 from starlette.requests import ClientDisconnect
 

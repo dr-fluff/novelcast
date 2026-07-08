@@ -27,15 +27,24 @@ class PaginatedEReader {
     this.repaginateTimer = null;
     this.touch = { startX: 0, endX: 0, threshold: 50 };
 
+    // Safety-net defaults, used only until the schema (server-provided)
+    // and/or the saved settings load. Once loadSchema() runs, defaults
+    // come from the schema instead.
     this.settings = {
       theme: 'light',
       fontFamily: 'serif',
-      fontSize: 110,
+      fontSize: 100,
       lineSpacing: 100,
       fontWeight: 1,
       paragraphSpacing: 100,
+      contentPadding: 3,
     };
 
+    // Reading settings schema (label/control/options/range per field),
+    // provided by the server via data-reading-schema on #settingsPanel.
+    this.schema = {};
+
+    this.deviceId = this.getDeviceId();
     this.userLoaded = false;
 
     document.readyState === 'loading'
@@ -50,15 +59,57 @@ class PaginatedEReader {
   async init() {
     this.cacheContainerData();
     this.cacheElements();
+    this.loadSchema();
+    this.buildSettingsPanel();
     await this.loadUserSettings();
     this.updateSettingsUI();
     this.attachEvents();
-    this.buildIframe(); 
+    this.attachSettingsEvents();
+    this.buildIframe();
+  }
+
+  getDeviceId() {
+    try {
+      let id = localStorage.getItem('nc_device_id');
+      if (!id) {
+        id = crypto.randomUUID();
+        localStorage.setItem('nc_device_id', id);
+      }
+      return id;
+    } catch (e) {
+      // localStorage unavailable (e.g. private mode) — settings just
+      // won't be device-scoped for this session.
+      return null;
+    }
+  }
+
+  loadSchema() {
+    const panel = document.getElementById('settingsPanel');
+    if (!panel) {
+      this.schema = {};
+      return;
+    }
+    try {
+      this.schema = JSON.parse(panel.dataset.readingSchema || '{}');
+    } catch (e) {
+      this.schema = {};
+    }
+
+    // Seed settings defaults from the schema (server-provided), so the
+    // safety-net defaults above only matter if this parse ever fails.
+    Object.entries(this.schema).forEach(([key, spec]) => {
+      if (spec.default !== undefined) this.settings[key] = spec.default;
+    });
   }
 
   async loadUserSettings() {
     try {
-      const r = await fetch('/api/chapter-settings', { headers: { 'Content-Type': 'application/json' } });
+      const r = await fetch('/api/chapter-settings', {
+        headers: {
+          'Content-Type': 'application/json',
+          ...(this.deviceId ? { 'X-Device-Id': this.deviceId } : {}),
+        },
+      });
       if (r.ok) {
         const data = await r.json();
         this.settings = { ...this.settings, ...data.settings };
@@ -72,7 +123,10 @@ class PaginatedEReader {
     try {
       await fetch('/api/chapter-settings', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(this.deviceId ? { 'X-Device-Id': this.deviceId } : {}),
+        },
         body: JSON.stringify({ settings: this.settings }),
       });
     } catch (e) { /* ignore */ }
@@ -92,28 +146,21 @@ class PaginatedEReader {
   cacheElements() {
     const $ = id => document.getElementById(id);
     this.el = {
-      scrollContainer:        document.querySelector('.chapter-scroll-container'),
-      chapterSource:          $('chapterSource'),
-      header:                 document.querySelector('.reader-header'),
-      settingsBtn:            $('settingsBtn'),
-      closeSettingsBtn:       $('closeSettings'),
-      settingsPanel:          $('settingsPanel'),
-      settingsOverlay:        $('settingsOverlay'),
-      lineSpacingSlider:      $('lineSpacingSlider'),
-      lineSpacingValue:       $('lineSpacingValue'),
-      paragraphSpacingSlider: $('paragraphSpacingSlider'),
-      paragraphSpacingValue:  $('paragraphSpacingValue'),
-      themeBtns:              document.querySelectorAll('.theme-btn'),
-      fontFamilyBtns:         document.querySelectorAll('.font-family-btn'),
-      fontSizeBtns:           document.querySelectorAll('.font-size-btn'),
-      fontSizeValue:          $('fontSizeValue'),
-      fontWeightBtns:         document.querySelectorAll('.font-weight-btn'),
-      nextBtn:                $('nextChapterFloating'),
-      prevBtn:                $('prevChapter'),
-      backBtn:                document.querySelector('.back-btn'),
-      pageCounter:            this.createPageCounter(),
-      marginSlider:           $('marginSlider'),
-      marginSliderValue:      $('marginSliderValue'),
+      scrollContainer:  document.querySelector('.chapter-scroll-container'),
+      chapterSource:    $('chapterSource'),
+      header:           document.querySelector('.reader-header'),
+      settingsBtn:      $('settingsBtn'),
+      closeSettingsBtn: $('closeSettings'),
+      settingsPanel:    $('settingsPanel'),
+      settingsOverlay:  $('settingsOverlay'),
+      settingsFields:   $('settingsFields'),
+      nextBtn:          $('nextChapterFloating'),
+      prevBtn:          $('prevChapter'),
+      backBtn:          document.querySelector('.back-btn'),
+      pageCounter:      this.createPageCounter(),
+      // populated by buildSettingsPanel() once the panel is rendered
+      settingBtns:      null,
+      settingSliders:   null,
     };
   }
 
@@ -517,44 +564,114 @@ class PaginatedEReader {
   }
 
   // ======================
-  // SETTINGS
+  // SETTINGS — rendered dynamically from this.schema
   // ======================
 
+  buildSettingsPanel() {
+    const container = this.el.settingsFields;
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    Object.entries(this.schema).forEach(([key, spec]) => {
+      const group = document.createElement('div');
+      group.className = 'settings-group';
+
+      const label = document.createElement('label');
+      label.textContent = `${spec.label}:`;
+      group.appendChild(label);
+
+      if (spec.control === 'buttons') {
+        const btnGroup = document.createElement('div');
+        btnGroup.className = 'button-group';
+
+        (spec.options || []).forEach(opt => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'setting-btn';
+          btn.dataset.settingKey = key;
+          btn.dataset.settingValue = opt.value;
+          btn.innerHTML = opt.icon
+            ? `<i class="fa-solid ${opt.icon}"></i> ${opt.label}`
+            : opt.label;
+          btnGroup.appendChild(btn);
+        });
+
+        group.appendChild(btnGroup);
+      } else if (spec.control === 'slider') {
+        const sliderContainer = document.createElement('div');
+        sliderContainer.className = 'slider-container';
+        sliderContainer.innerHTML = `
+          <span class="slider-min">−</span>
+          <input type="range" class="slider" data-setting-key="${key}"
+                 min="${spec.min}" max="${spec.max}" step="${spec.step || 1}">
+          <span class="slider-max">+</span>
+        `;
+        group.appendChild(sliderContainer);
+
+        const valueDisplay = document.createElement('div');
+        valueDisplay.className = 'slider-value';
+        valueDisplay.dataset.valueFor = key;
+        group.appendChild(valueDisplay);
+      }
+
+      container.appendChild(group);
+    });
+
+    this.el.settingBtns = container.querySelectorAll('.setting-btn');
+    this.el.settingSliders = container.querySelectorAll('.slider[data-setting-key]');
+  }
+
   updateSettingsUI() {
-    const sizeLabels = {
-      75: '12',
-      88: '14',
-      100: '16',
-      113: '18',
-      125: '20',
-      150: '24',
-      225: '36'
-    };
-    this.el.themeBtns.forEach(b =>
-      b.classList.toggle('active', b.dataset.theme === this.settings.theme));
-    this.el.fontFamilyBtns.forEach(b =>
-      b.classList.toggle('active', b.dataset.font === this.settings.fontFamily));
-    this.el.fontSizeBtns.forEach(b =>
-      b.classList.toggle('active', Number(b.dataset.size) === this.settings.fontSize));
-    if (this.el.fontSizeValue)
-      this.el.fontSizeValue.textContent = sizeLabels[this.settings.fontSize] ?? '16';
-    this.el.fontWeightBtns.forEach(b =>
-      b.classList.toggle('active', Number(b.dataset.weight) === this.settings.fontWeight));
-    if (this.el.lineSpacingSlider) {
-      this.el.lineSpacingSlider.value = this.settings.lineSpacing;
-      if (this.el.lineSpacingValue)
-        this.el.lineSpacingValue.textContent = this.settings.lineSpacing + '%';
-    }
-    if (this.el.paragraphSpacingSlider) {
-      this.el.paragraphSpacingSlider.value = this.settings.paragraphSpacing;
-      if (this.el.paragraphSpacingValue)
-        this.el.paragraphSpacingValue.textContent = this.settings.paragraphSpacing + '%';
-    }
-    if (this.el.marginSlider) {
-      this.el.marginSlider.value = this.settings.contentPadding;
-      if (this.el.marginSliderValue)
-        this.el.marginSliderValue.textContent = this.settings.contentPadding + 'rem';
-    }
+    this.el.settingBtns?.forEach(btn => {
+      const key = btn.dataset.settingKey;
+      const isActive = String(this.settings[key]) === btn.dataset.settingValue;
+      btn.classList.toggle('active', isActive);
+    });
+
+    this.el.settingSliders?.forEach(slider => {
+      const key = slider.dataset.settingKey;
+      const spec = this.schema[key] || {};
+      const value = this.settings[key];
+
+      slider.value = value;
+
+      const display = this.el.settingsFields?.querySelector(`[data-value-for="${key}"]`);
+      if (display) display.textContent = `${value}${spec.unit || ''}`;
+    });
+  }
+
+  attachSettingsEvents() {
+    const container = this.el.settingsFields;
+    if (!container) return;
+
+    container.addEventListener('click', e => {
+      const btn = e.target.closest('.setting-btn');
+      if (!btn) return;
+
+      const key = btn.dataset.settingKey;
+      let value = btn.dataset.settingValue;
+      const asNumber = Number(value);
+      if (!Number.isNaN(asNumber) && value !== '') value = asNumber;
+
+      this.settings[key] = value;
+      this.updateSettingsUI();
+      this.repaginate(this.state.currentPage);
+      this.saveUserSettings();
+    });
+
+    container.addEventListener('input', e => {
+      const slider = e.target.closest('.slider[data-setting-key]');
+      if (!slider) return;
+
+      const key = slider.dataset.settingKey;
+      this.settings[key] = Number(slider.value);
+      this.updateSettingsUI();
+      this.repaginate(this.state.currentPage);
+
+      clearTimeout(this.sliderSaveTimer);
+      this.sliderSaveTimer = setTimeout(() => this.saveUserSettings(), 300);
+    });
   }
 
   // ======================
@@ -585,16 +702,6 @@ class PaginatedEReader {
         this.repaginate(this.state.currentPage);
       }, 250);
     });
-    
-    this.el.marginSlider?.addEventListener('input', e => {
-      this.settings.contentPadding = Number(e.target.value);
-      if (this.el.marginSliderValue)
-        this.el.marginSliderValue.textContent = e.target.value + 'rem';
-      this.updateSettingsUI();
-      this.repaginate(this.state.currentPage);
-      clearTimeout(this.marginSaveTimer);
-      this.marginSaveTimer = setTimeout(() => this.saveUserSettings(), 300);
-    });
 
     // Settings panel open/close
     this.el.settingsBtn?.addEventListener('click', () => {
@@ -608,75 +715,6 @@ class PaginatedEReader {
     };
     this.el.closeSettingsBtn?.addEventListener('click', closePanel);
     this.el.settingsOverlay?.addEventListener('click', closePanel);
-
-    // Settings changes
-    this.el.themeBtns.forEach(btn => btn.addEventListener('click', e => {
-      this.settings.theme = e.currentTarget.dataset.theme;
-      this.updateSettingsUI();
-      this.repaginate(this.state.currentPage);
-      this.saveUserSettings();
-    }));
-
-    this.el.fontFamilyBtns.forEach(btn => btn.addEventListener('click', e => {
-      this.settings.fontFamily = e.currentTarget.dataset.font;
-      this.updateSettingsUI();
-      this.repaginate(this.state.currentPage);
-      this.saveUserSettings();
-    }));
-
-    this.el.fontSizeBtns.forEach(btn => btn.addEventListener('click', e => {
-      this.settings.fontSize = Number(e.currentTarget.dataset.size);
-      this.updateSettingsUI();
-      this.repaginate(this.state.currentPage);
-      this.saveUserSettings();
-    }));
-
-    this.el.lineSpacingSlider?.addEventListener('input', e => {
-      if (this.el.lineSpacingValue)
-        this.el.lineSpacingValue.textContent = e.target.value + '%';
-    });
-    this.el.lineSpacingSlider?.addEventListener('input', e => {
-      this.settings.lineSpacing = Number(e.target.value);
-
-      if (this.el.lineSpacingValue) {
-        this.el.lineSpacingValue.textContent = e.target.value + '%';
-      }
-
-      this.updateSettingsUI();
-      this.repaginate(this.state.currentPage);
-
-      clearTimeout(this.lineSpacingSaveTimer);
-      this.lineSpacingSaveTimer = setTimeout(() => {
-        this.saveUserSettings();
-      }, 300);
-    });
-
-    this.el.fontWeightBtns.forEach(btn => btn.addEventListener('click', e => {
-      this.settings.fontWeight = Number(e.currentTarget.dataset.weight);
-      this.updateSettingsUI();
-      this.repaginate(this.state.currentPage);
-      this.saveUserSettings();
-    }));
-
-    this.el.paragraphSpacingSlider?.addEventListener('input', e => {
-      if (this.el.paragraphSpacingValue)
-        this.el.paragraphSpacingValue.textContent = e.target.value + '%';
-    });
-    this.el.paragraphSpacingSlider?.addEventListener('input', e => {
-      this.settings.paragraphSpacing = Number(e.target.value);
-
-      if (this.el.paragraphSpacingValue) {
-        this.el.paragraphSpacingValue.textContent = e.target.value + '%';
-      }
-
-      this.updateSettingsUI();
-      this.repaginate(this.state.currentPage);
-
-      clearTimeout(this.paragraphSaveTimer);
-      this.paragraphSaveTimer = setTimeout(() => {
-        this.saveUserSettings();
-      }, 300);
-    });
 
     this.el.nextBtn?.addEventListener('click', this.nextPage);
     this.el.prevBtn?.addEventListener('click', this.prevPage);

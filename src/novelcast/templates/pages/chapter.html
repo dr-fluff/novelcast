@@ -36,7 +36,10 @@
     </div>
 
     <!-- READER SETTINGS PANEL -->
-    <div class="settings-panel" id="settingsPanel">
+    <!-- Fields are rendered by chapter_paginated.js from the schema below,
+         mirroring how settings.html renders server settings from `schema`. -->
+    <div class="settings-panel" id="settingsPanel"
+         data-reading-schema='{{ reading_settings_schema | tojson | e }}'>
         <div class="settings-content">
             <div class="settings-header">
                 <h2>Reading Settings</h2>
@@ -45,75 +48,7 @@
                 </button>
             </div>
 
-            <div class="settings-group">
-                <label>Theme:</label>
-                <div class="button-group">
-                    <button class="theme-btn" data-theme="light"><i class="fa-solid fa-sun"></i> Light</button>
-                    <button class="theme-btn" data-theme="sepia"><i class="fa-solid fa-book"></i> Sepia</button>
-                    <button class="theme-btn" data-theme="dark"><i class="fa-solid fa-moon"></i> Dark</button>
-                </div>
-            </div>
-
-            <div class="settings-group">
-                <label>Font Family:</label>
-                <div class="button-group">
-                    <button class="font-family-btn" data-font="sans">Sans</button>
-                    <button class="font-family-btn" data-font="serif">Serif</button>
-                </div>
-            </div>
-
-            <div class="settings-group">
-                <label>Font Size:</label>
-                <div class="button-group">
-                    <button class="font-size-btn" data-size="75">12</button>
-                    <button class="font-size-btn" data-size="88">14</button>
-                    <button class="font-size-btn" data-size="100">16</button>
-                    <button class="font-size-btn" data-size="113">18</button>
-                    <button class="font-size-btn" data-size="125">20</button>
-                    <button class="font-size-btn" data-size="150">24</button>
-                    <button class="font-size-btn" data-size="225">36</button>
-                </div>
-                <div class="slider-value" id="fontSizeValue">16</div>
-            </div>
-
-            <div class="settings-group">
-                <label>Margin:</label>
-                <div class="slider-container">
-                    <span class="slider-min">−</span>
-                    <input type="range" id="marginSlider" class="slider" min="3" max="20" value="3">
-                    <span class="slider-max">+</span>
-                </div>
-                <div class="slider-value" id="marginSliderValue">3rem</div>
-            </div>
-
-            <div class="settings-group">
-                <label>Line Spacing:</label>
-                <div class="slider-container">
-                    <span class="slider-min">−</span>
-                    <input type="range" id="lineSpacingSlider" class="slider" min="50" max="150" value="100">
-                    <span class="slider-max">+</span>
-                </div>
-                <div class="slider-value" id="lineSpacingValue">100%</div>
-            </div>
-
-            <div class="settings-group">
-                <label>Font Weight:</label>
-                <div class="button-group">
-                    <button class="font-weight-btn" data-weight="0">Light</button>
-                    <button class="font-weight-btn" data-weight="1">Normal</button>
-                    <button class="font-weight-btn" data-weight="2">Bold</button>
-                </div>
-            </div>
-
-            <div class="settings-group">
-                <label>Paragraph Spacing:</label>
-                <div class="slider-container">
-                    <span class="slider-min">−</span>
-                    <input type="range" id="paragraphSpacingSlider" class="slider" min="0" max="200" value="100">
-                    <span class="slider-max">+</span>
-                </div>
-                <div class="slider-value" id="paragraphSpacingValue">100%</div>
-            </div>
+            <div id="settingsFields"></div>
         </div>
     </div>
 
