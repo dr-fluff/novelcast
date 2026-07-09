@@ -348,16 +348,37 @@ PATREON_DEFAULTS = {
     },
 }
 
+RSS_DEFAULTS = {
+    "enabled": {
+        "type": "bool",
+        "default": True,
+        "label": "Enable RSS polling",
+    },
+    "interval": {
+        "type": "int",
+        "default": 10,
+        "label": "Polling interval (minutes)",
+        "min": 1,
+        "max": 1440,
+    },
+    "royalroad": {
+        "type": "bool",
+        "default": True,
+        "label": "Enable Royal Road RSS",
+    },
+}
+
 
 SETTINGS = {
-    "patreon": PATREON_DEFAULTS,
+    "app": APP_DEFAULTS,
+    "library": LIBRARY_DEFAULTS,
     "fanficfare": FANFICTIONFARE_DEFAULTS,
     "scrapers": SCRAPER_DEFAULTS,
-    "app": APP_DEFAULTS,
+    "rss": RSS_DEFAULTS,
     "downloads": DOWNLOAD_DEFAULTS,
     "logging": LOGGING_DEFAULTS,
-    "library": LIBRARY_DEFAULTS,
     "telegram": TELEGRAM_DEFAULTS,
+    "patreon": PATREON_DEFAULTS,
 }
 
 

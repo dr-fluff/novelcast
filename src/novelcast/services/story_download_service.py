@@ -8,7 +8,7 @@ import uuid
 from pathlib import Path
 
 from novelcast.utils.html import clean_html_description
-from novelcast.utils.url_normalizer import normalize_story_url
+from novelcast.utils.url import normalize_story_url
 
 logger = logging.getLogger(__name__)
 

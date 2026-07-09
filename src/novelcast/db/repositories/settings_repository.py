@@ -1,6 +1,7 @@
 # novelcast/db/repositories/settings_repository.py
 
 import json
+import logging
 
 from sqlalchemy import select
 from sqlalchemy.dialects.sqlite import insert
@@ -8,6 +9,7 @@ from sqlalchemy.dialects.sqlite import insert
 from novelcast.db.repositories.base import BaseRepository
 from novelcast.db.models.settings import ServerSetting, UserSetting
 
+logger = logging.getLogger(__name__)
 
 def _storage_type_for(spec: dict) -> str:
     """Derive the UserSetting.type column value from a schema spec."""
@@ -108,6 +110,42 @@ class SettingsRepository(BaseRepository):
             result.update(device_overrides)
             return result
 
+    def save_user_settings(self, user_id: int, device_id: str | None = None, **kwargs) -> None:
+        """Bulk, schema-driven upsert. Used for reading/preference settings
+        that are defined in user_settings_schema (category derived from spec)."""
+        with self.session() as db:
+            for name, value in kwargs.items():
+                spec = self.user_settings_schema.get(name, {})
+                category = spec.get("category", "preference")
+                type_ = _storage_type_for(spec)
+
+                if category == "reading" and not device_id:
+                    logger.warning(
+                        "Skipping save of reading setting %r for user %s: no device_id provided",
+                        name, user_id,
+                    )
+                    continue
+
+                stored_name = name
+                if category == "reading":
+                    stored_name = f"{self.DEVICE_PREFIX}{device_id}.{name}"
+
+                stmt = (
+                    insert(UserSetting)
+                    .values(
+                        user_id=user_id,
+                        name=stored_name,
+                        value=json.dumps(value),
+                        category=category,
+                        type=type_,
+                    )
+                    .on_conflict_do_update(
+                        index_elements=["user_id", "name"],
+                        set_={"value": json.dumps(value)},
+                    )
+                )
+                db.execute(stmt)
+
     def set_user_setting(
         self,
         user_id: int,
@@ -116,6 +154,10 @@ class SettingsRepository(BaseRepository):
         category: str = "preference",
         type_: str = "json",
     ) -> None:
+        """Single-key upsert for arbitrary, non-schema user preferences
+        (e.g. device.{id}.library.index). Unlike save_user_settings, this
+        does not consult user_settings_schema — the caller supplies the
+        fully-qualified name and its own category/type."""
         with self.session() as db:
             stmt = (
                 insert(UserSetting)
@@ -144,34 +186,6 @@ class SettingsRepository(BaseRepository):
             if row:
                 db.delete(row)
 
-    def save_user_settings(self, user_id: int, device_id: str | None = None, **kwargs) -> None:
-        
-        with self.session() as db:
-            for name, value in kwargs.items():
-                spec = self.user_settings_schema.get(name, {})
-                category = spec.get("category", "preference")
-                type_ = _storage_type_for(spec)
-
-                stored_name = name
-                if device_id and category == "reading":
-                    stored_name = f"{self.DEVICE_PREFIX}{device_id}.{name}"
-
-                stmt = (
-                    insert(UserSetting)
-                    .values(
-                        user_id=user_id,
-                        name=stored_name,
-                        value=json.dumps(value),
-                        category=category,
-                        type=type_,
-                    )
-                    .on_conflict_do_update(
-                        index_elements=["user_id", "name"],
-                        set_={"value": json.dumps(value)},
-                    )
-                )
-                db.execute(stmt)
-
 
 # ── helpers ───────────────────────────────────────────────────────────────
 
@@ -180,4 +194,5 @@ def _deserialize(value: str):
     try:
         return json.loads(value)
     except (TypeError, json.JSONDecodeError):
+        logger.warning("Failed to deserialize value: %r", value)
         return value

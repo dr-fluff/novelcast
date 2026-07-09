@@ -16,6 +16,7 @@ from novelcast.db.repositories import (
     SyncRepository,
     SettingsRepository,
     AuthorRepository,
+    RssEntryRepository,
 )
 from novelcast.db.repositories.chapter_pattern_repository import ChapterPatternRepository
 
@@ -124,7 +125,8 @@ class AppContext:
         self.progress_repo         = ProgressRepository(sf)
         self.sync_repo             = SyncRepository(self.chapters_repo)
         self.settings_repo         = SettingsRepository(sf)
-        self.chapter_pattern_repo  = ChapterPatternRepository(sf)  # ← new
+        self.chapter_pattern_repo  = ChapterPatternRepository(sf)
+        self.rss_entry_repo        = RssEntryRepository(sf)
 
     # ─────────────────────────────
     # SERVICES (business logic)
@@ -196,6 +198,19 @@ class AppContext:
     def _init_utils(self):
         self.file_utils = FileUtils()
 
+    
+    def _init_rss(self):
+        logger.info("Initializing RSS service...")
+
+        self.rss = RssService(
+            settings=self.settings,
+            story_service=self.stories,
+            download_service=self.story_download,
+            rss_repo=self.rss_entry_repo,
+        )
+        
+        self.rss.start()
+    
     # ─────────────────────────────
     # ENGINE (fetch only)
     # ─────────────────────────────
@@ -252,13 +267,6 @@ class AppContext:
             epub_parser=self.epub_parser,
         )
     
-    def _init_rss(self):
-        logger.info("Initializing RSS")
-
-        self.rss_service = RssService(readers=[
-            RoyalRoadRss(self.stories),
-        ])
-        
     # ─────────────────────────────
     # ORCHESTRATOR (engine coordination only)
     # ─────────────────────────────

@@ -18,7 +18,7 @@ _ALLOWED_NAMES = {
 def device_preference_key(device_id: str | None, name: str) -> str | None:
     if not device_id or name not in _ALLOWED_NAMES or not _DEVICE_RE.match(device_id):
         return None
-    return f"device.{device_id}.{name}"
+    return f"device:{device_id}.{name}"
 
 
 @router.post("/api/user-preferences")

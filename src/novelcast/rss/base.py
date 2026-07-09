@@ -1,21 +1,20 @@
 from abc import ABC, abstractmethod
 
 
-class BaseRssReader(ABC):
+class BaseRssReader:
+    SITE = ""
 
-    @abstractmethod
-    def build_feed(self) -> str:
-        pass
+    def __init__(self, rss_service):
+        self.rss_service = rss_service
 
-    @abstractmethod
-    def fetch(self, url: str) -> str:
-        pass
+    def get_story_site_ids(self):
+        return self.rss_service.story_service.get_story_site_ids(self.site)
 
-    @abstractmethod
-    def parse(self, xml: str) -> list[dict]:
-        pass
+    def build_feed(self):
+        raise NotImplementedError
 
-    def run(self) -> list[dict]:
-        url = self.build_feed()
-        xml = self.fetch(url)
-        return self.parse(xml)
+    def fetch(self, url):
+        raise NotImplementedError
+
+    def parse(self, text):
+        raise NotImplementedError

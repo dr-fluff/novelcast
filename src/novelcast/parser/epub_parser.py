@@ -23,7 +23,6 @@ def _compile(patterns: list[str]) -> list[re.Pattern]:
     logger.debug("Compiled %d/%d chapter patterns", len(compiled), len(patterns))
     return compiled
 
-
 def _is_chapter(title: str, compiled: list[re.Pattern]) -> bool:
     if not title:
         logger.debug("Empty title cannot be chapter")
@@ -210,6 +209,53 @@ class EpubParser(BaseParser):
             "Invalid EPUB: rootfile exists but has no full-path attribute"
         )
 
+    def _remove_empty_paragraphs(self, html: str) -> str:
+        soup = BeautifulSoup(html, "html.parser")
+
+        for p in soup.find_all("p"):
+            # Remove whitespace and NBSPs from the text
+            text = p.get_text().replace("\xa0", "").strip()
+
+            # Check if it contains any meaningful elements besides <br> or empty <span>
+            meaningful = False
+            for child in p.find_all(True):
+                if child.name not in {"br", "span"}:
+                    meaningful = True
+                    break
+
+            if not text and not meaningful:
+                p.decompose()
+
+        return str(soup)
+
+    def _br_to_paragraphs(self, html: str) -> str:
+        # Already uses paragraphs
+        if "<p" in html.lower():
+            return html
+
+        # Normalize newlines
+        html = html.replace("\r\n", "\n")
+
+        # Convert <br> to newlines
+        html = re.sub(r"<br\s*/?>", "\n", html, flags=re.I)
+
+        # Split on blank lines
+        parts = [
+            part.strip()
+            for part in re.split(r"\n\s*\n+", html)
+            if part.strip()
+        ]
+
+        return "\n".join(f"<p>{part}</p>" for part in parts)
+
+    def _clean_html(self, html: str) -> str:
+        if "<p" not in html.lower():
+            html = self._br_to_paragraphs(html)
+
+        html = self._remove_empty_paragraphs(html)
+
+        return html
+    
     def _parse_package_document(self, package_data: bytes):
         root = ET.fromstring(package_data)
         manifest: dict[str, str] = {}
@@ -249,6 +295,7 @@ class EpubParser(BaseParser):
             content = soup.get_text(separator="\n", strip=True)
         else:
             content = "".join(str(child) for child in body.contents).strip()
+            content = self._clean_html(content)
 
         return title, content
 

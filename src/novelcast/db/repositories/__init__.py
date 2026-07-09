@@ -9,6 +9,7 @@ from novelcast.db.repositories.settings_repository import SettingsRepository
 from novelcast.db.repositories.stories_repository import StoriesRepository
 from novelcast.db.repositories.sync_repository import SyncRepository
 from novelcast.db.repositories.users_repository import UsersRepository
+from novelcast.db.repositories.rss_entry_repository import RssEntryRepository
 
 __all__ = [
     "AuthRepository",
@@ -22,4 +23,5 @@ __all__ = [
     "StoriesRepository",
     "SyncRepository",
     "UsersRepository",
+    "RssEntryRepository",
 ]

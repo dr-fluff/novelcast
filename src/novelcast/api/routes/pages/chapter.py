@@ -118,7 +118,7 @@ async def update_chapter_settings(
     request: Request,
     current_user: dict | None = Depends(get_current_user),
     settings_service: SettingsService = Depends(get_settings),
-    x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
+    x_device_id: str = Header(alias="X-Device-Id"),
 ):
     if not current_user:
         raise HTTPException(status_code=401, detail="Authentication required")

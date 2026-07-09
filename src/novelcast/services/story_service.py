@@ -4,8 +4,11 @@ from pathlib import Path
 from urllib.parse import quote
 import re
 import logging
-from novelcast.db.repositories.author_repository import AuthorRepository
-from novelcast.db.models.story import Story
+
+from novelcast.utils.url import get_site_from_url
+
+from novelcast.db.repositories import AuthorRepository
+from novelcast.db.models import Story
 
 logger = logging.getLogger(__name__)
 class StoryService:
@@ -189,6 +192,37 @@ class StoryService:
 
     # ── author reads ───────────────────────────────────────────────────────
 
+    def get_stories_by_site(self, site: str) -> list[dict]:
+        stories = self.repo.get_all()
+
+        return [
+            story
+            for story in stories
+            if get_site_from_url(story.get("source_url")) == site
+        ]
+
+    def get_auto_update_stories_by_site(self, site: str) -> list[dict]:
+        """Same as get_stories_by_site, but restricted to stories with the
+        auto_update story setting enabled. Used by RSS readers so stories
+        the user hasn't opted into auto-updating aren't polled/downloaded."""
+        return [
+            story
+            for story in self.get_stories_by_site(site)
+            if story.get("auto_update")
+        ]
+
+    def get_story_by_site_id(self, site: str, site_id: str | None) -> dict | None:
+        """Find a story by its external site + site_id (e.g. RoyalRoad's
+        numeric fiction id), matching Story.story_site_id."""
+        if not site_id:
+            return None
+
+        for story in self.get_stories_by_site(site):
+            if str(story.get("story_site_id")) == str(site_id):
+                return story
+
+        return None
+    
     def get_all_authors(self, query: str = "", sort: str = "name") -> list[dict]:
         if not self.author_repo:
             return []

@@ -82,6 +82,18 @@ class StoriesRepository(BaseRepository):
                 select(Chapter.chapter_number).where(Chapter.story_id == story_id)
             ).all())
 
+    def get_stories_by_site(self, site: str) -> list[dict]:
+        with self.session_no_commit() as db:
+            stories = db.scalars(
+                select(Story)
+                .where(Story.site == site)
+                .where(Story.story_site_id.isnot(None))
+                .where(Story.story_site_id != "")
+            ).all()
+
+            return [_to_dict(s) for s in stories]
+
+
     # ── writes ─────────────────────────────────────────────────────────────
 
     def create(self, title: str, author: str | None, url: str | None) -> int:

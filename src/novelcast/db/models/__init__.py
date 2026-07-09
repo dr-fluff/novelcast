@@ -14,6 +14,7 @@ from novelcast.db.models.user import User, PasswordResetToken
 from novelcast.db.models.tag import Tag
 from novelcast.db.models.genre import Genre
 from novelcast.db.models.series import Series
+from .rss_entry import RssEntry
 
 
 __all__ = [
@@ -37,4 +38,5 @@ __all__ = [
     "Tag",
     "Genre",
     "Series",
+    "RssEntry",
 ]

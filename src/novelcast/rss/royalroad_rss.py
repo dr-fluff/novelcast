@@ -1,29 +1,65 @@
 import logging
 import requests
 import xml.etree.ElementTree as ET
-from .base import BaseRssReader
+
+from email.utils import parsedate_to_datetime
 
 logger = logging.getLogger(__name__)
 
 
-class RoyalRoadRss(BaseRssReader):
+class RoyalRoadRss:
+
+    site = "royalroad"
+
     def __init__(self, rss_service):
         self.rss_service = rss_service
-        self.base_rss_url = "https://www.royalroad.com/fiction/syndication/"
-        self.story_site_ids = set()
 
-    def build_feed(self) -> str:
-        ids = self.rss_service.get_royalroad_ids()
+        self.base_rss_url = (
+            "https://www.royalroad.com/fiction/syndication/"
+        )
 
-        logger.debug("RoyalRoad build_feed | ids=%s", ids)
+
+    # ------------------------------------------------------------------
+
+    def get_feed_urls(self) -> list[tuple[str, str]]:
+        """Return [(story_site_id, feed_url), ...] — one feed per tracked
+        RoyalRoad story, fetched individually rather than as one combined
+        comma-separated feed.
+
+        RoyalRoad's combined multi-id feed carries no reliable per-item
+        field tying a chapter back to its fiction id: the item <link> is
+        a bare chapter permalink with no fiction id in it, the <category>
+        is left blank by RoyalRoad even on combined feeds, and the item
+        title can't be trusted either since a story's title can change
+        over time while its story_site_id stays fixed. Fetching one feed
+        per known id sidesteps all of that — the id is known before the
+        request is even made.
+        """
+        stories = self.rss_service.get_auto_update_stories_by_site(self.site)
+
+        ids = sorted({
+            str(story["story_site_id"])
+            for story in stories
+            if story.get("story_site_id")
+        })
 
         if not ids:
-            return ""
+            logger.debug("No RoyalRoad stories configured")
+            return []
 
-        return self.base_rss_url + ",".join(sorted(set(ids)))
+        return [
+            (story_id, f"{self.base_rss_url}{story_id}")
+            for story_id in ids
+        ]
+
+
+    # ------------------------------------------------------------------
 
     def fetch(self, url: str) -> str:
-        logger.debug("RoyalRoad fetch | url=%s", url)
+        logger.debug(
+            "RoyalRoad fetch | url=%s",
+            url,
+        )
 
         if not url:
             return ""
@@ -32,31 +68,122 @@ class RoyalRoadRss(BaseRssReader):
             r = requests.get(
                 url,
                 timeout=10,
-                headers={"User-Agent": "NovelCast-RSS/1.0"},
+                headers={
+                    "User-Agent": "NovelCast-RSS/1.0",
+                },
             )
-            r.raise_for_status()
-            return r.text
 
-        except Exception:
-            logger.exception("RoyalRoad RSS fetch failed")
+            logger.info(
+                "RoyalRoad response status=%s content-type=%s length=%s",
+                r.status_code,
+                r.headers.get("content-type"),
+                len(r.content),
+            )
+
+            r.raise_for_status()
+
+            return r.content.decode(
+                "utf-8-sig"
+            )
+
+        except requests.exceptions.HTTPError as e:
+            status = e.response.status_code if e.response is not None else None
+
+            if status == 429:
+                retry_after = (
+                    e.response.headers.get("Retry-After")
+                    if e.response is not None
+                    else None
+                )
+                logger.warning(
+                    "RoyalRoad rate-limited (429) | url=%s retry_after=%s",
+                    url,
+                    retry_after,
+                )
+            else:
+                logger.exception(
+                    "RoyalRoad RSS fetch failed"
+                )
             return ""
 
-    def parse(self, xml_text: str) -> list[dict]:
-        logger.debug("RoyalRoad parse called")
+        except Exception:
+            logger.exception(
+                "RoyalRoad RSS fetch failed"
+            )
+            return ""
+
+
+    # ------------------------------------------------------------------
+
+    def parse(self, xml_text: str, story_site_id: str) -> list[dict]:
+        logger.debug(
+            "RoyalRoad parse called | story_site_id=%s",
+            story_site_id,
+        )
 
         if not xml_text:
             return []
 
-        root = ET.fromstring(xml_text)
+        # Remove UTF-8 BOM and whitespace
+        xml_text = xml_text.lstrip(
+            "\ufeff\r\n\t "
+        )
+
+        try:
+            root = ET.fromstring(
+                xml_text
+            )
+
+        except ET.ParseError:
+            logger.exception(
+                "RoyalRoad XML parse failed. Start=%r",
+                xml_text[:200],
+            )
+            return []
+
+
         items = []
 
         for item in root.findall(".//item"):
-            items.append({
-                "title": item.findtext("title"),
-                "link": item.findtext("link"),
-                "published": item.findtext("pubDate"),
-                "source": "royalroad",
-            })
 
-        logger.debug("RoyalRoad parsed items=%d", len(items))
+            link = item.findtext(
+                "link"
+            )
+
+            published_raw = item.findtext(
+                "pubDate"
+            )
+
+            published = None
+
+            if published_raw:
+                try:
+                    published = parsedate_to_datetime(
+                        published_raw
+                    )
+
+                except Exception:
+                    logger.warning(
+                        "Failed parsing RSS date: %s",
+                        published_raw,
+                    )
+
+            entry = {
+                "guid": link,
+                "title": item.findtext("title"),
+                "link": link,
+                "published": published,
+                "source": self.site,
+                "story_site_id": story_site_id,
+            }
+
+            items.append(entry)
+
+
+        logger.info(
+            "RoyalRoad parsed items=%d for story_site_id=%s",
+            len(items),
+            story_site_id,
+        )
+
         return items
