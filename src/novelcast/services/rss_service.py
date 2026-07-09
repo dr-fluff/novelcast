@@ -1,9 +1,11 @@
 import logging
+import re
 import threading
 import time
 
 from novelcast.services import SettingsService, StoryService, StoryDownloadService
 from novelcast.db.repositories.rss_entry_repository import RssEntryRepository
+from novelcast.services.chapter_filter_service import ChapterFilterService
 
 from novelcast.rss import RoyalRoadRss
 
@@ -19,11 +21,13 @@ class RssService:
         story_service: StoryService,
         download_service: StoryDownloadService,
         rss_repo: RssEntryRepository,
+        chapter_filter: ChapterFilterService | None = None,
     ):
         self.settings = settings
         self.story_service = story_service
         self.download_service = download_service
         self.rss_repo = rss_repo
+        self.chapter_filter = chapter_filter
 
         self.readers = []
 
@@ -170,7 +174,7 @@ class RssService:
                     entries = reader.parse(xml, story_site_id)
 
 
-                    logger.info(
+                    logger.debug(
                         "%s returned %s entries for story_site_id=%s",
                         reader.__class__.__name__,
                         len(entries),
@@ -223,6 +227,14 @@ class RssService:
 
 
             rss_entry = self.rss_repo.create(entry)
+
+            if not self._is_chapter_entry(entry):
+                logger.info(
+                    "Skipping non-chapter RSS entry: %s",
+                    entry.get("title"),
+                )
+                self.rss_repo.mark_processed(rss_entry["id"])
+                continue
 
 
             story = self.story_service.get_story_by_site_id(
@@ -353,6 +365,36 @@ class RssService:
         # Later:
         # self.sync_service.update_story(story["id"])
 
+
+
+    def _is_chapter_entry(self, entry) -> bool:
+        """Return True if this RSS entry's title looks like an actual
+        chapter release, using the same DB-stored regex patterns
+        ChaptersService uses to separate real chapters from author's
+        notes/announcements (e.g. "<Not a Chapter> Important Information
+        for Readers...").
+
+        Unlike ChaptersService.list_by_story_filtered, which returns an
+        empty list when no patterns are enabled (fine for a UI listing),
+        we default to treating every entry as a chapter when there's no
+        chapter_filter or no enabled patterns — silently skipping every
+        RSS entry because patterns happen to be unset would be a much
+        worse failure mode here than occasionally over-triggering.
+        """
+        if not self.chapter_filter:
+            return True
+
+        patterns = self.chapter_filter.get_enabled_regexes()
+
+        if not patterns:
+            return True
+
+        title = entry.get("title") or ""
+
+        return any(
+            re.search(pattern, title, re.IGNORECASE)
+            for pattern in patterns
+        )
 
 
     @staticmethod

@@ -73,7 +73,7 @@ class RoyalRoadRss:
                 },
             )
 
-            logger.info(
+            logger.debug(
                 "RoyalRoad response status=%s content-type=%s length=%s",
                 r.status_code,
                 r.headers.get("content-type"),
@@ -180,7 +180,7 @@ class RoyalRoadRss:
             items.append(entry)
 
 
-        logger.info(
+        logger.debug(
             "RoyalRoad parsed items=%d for story_site_id=%s",
             len(items),
             story_site_id,
