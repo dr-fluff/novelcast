@@ -1,6 +1,7 @@
 # novelcast/api/ws/notifications.py
 import asyncio
 from contextlib import asynccontextmanager
+
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 router = APIRouter()
@@ -71,13 +72,12 @@ class ConnectionManager:
         handle = _JobHandle(self, job_id)
         try:
             yield handle
-            asyncio.ensure_future(
-                self._job_finish(job_id, "job:done", {"label": label, "status": "done"})
-            )
+            asyncio.ensure_future(self._job_finish(job_id, "job:done", {"label": label, "status": "done"}))
         except Exception as exc:
             asyncio.ensure_future(
                 self._job_finish(
-                    job_id, "job:error",
+                    job_id,
+                    "job:error",
                     {"label": label, "status": "error", "error": str(exc)},
                     linger_seconds=15,  # errors linger longer so users can see them
                 )
@@ -87,6 +87,7 @@ class ConnectionManager:
 
 class _JobHandle:
     """Returned by `manager.job()` — call `.update()` to push progress."""
+
     def __init__(self, manager: "ConnectionManager", job_id: str):
         self._manager = manager
         self._job_id = job_id

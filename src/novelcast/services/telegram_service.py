@@ -10,23 +10,22 @@ import httpx
 logger = logging.getLogger(__name__)
 
 TELEGRAM_API = "https://api.telegram.org/bot{token}/{method}"
-_MAX_BACKOFF  = 30
+_MAX_BACKOFF = 30
 _MAX_FAILURES = 5
-_OFFLINE_RETRY_INTERVAL = 60 
+_OFFLINE_RETRY_INTERVAL = 60
 
 
 class TelegramService:
-
     def __init__(self, settings_service, story_service, download_service):
-        self.settings  = settings_service
-        self.stories   = story_service
+        self.settings = settings_service
+        self.stories = story_service
         self.downloads = download_service
 
-        self._task:   Optional[asyncio.Task] = None
-        self._loop:   Optional[asyncio.AbstractEventLoop] = None
-        self._offset  = 0
+        self._task: Optional[asyncio.Task] = None
+        self._loop: Optional[asyncio.AbstractEventLoop] = None
+        self._offset = 0
 
-        self._disabled             = False   # permanent auth failure
+        self._disabled = False  # permanent auth failure
         self._consecutive_failures = 0
 
     # ── settings helpers ──────────────────────────────────────────────────
@@ -101,10 +100,10 @@ class TelegramService:
     async def _poll_loop(self):
         async with httpx.AsyncClient(
             timeout=httpx.Timeout(
-                connect=5.0,   # ← CHANGED: was 10s; fail fast when offline
-                read=35.0,     # long-poll read must exceed Telegram's timeout param
-                write=5.0,     # ← CHANGED: was 10s
-                pool=5.0,      # ← CHANGED: was 10s
+                connect=5.0,  # ← CHANGED: was 10s; fail fast when offline
+                read=35.0,  # long-poll read must exceed Telegram's timeout param
+                write=5.0,  # ← CHANGED: was 10s
+                pool=5.0,  # ← CHANGED: was 10s
             )
         ) as client:
             while True:
@@ -112,7 +111,10 @@ class TelegramService:
                     await self._poll_once(client)
                     # successful poll — reset failure counter
                     if self._consecutive_failures > 0:
-                        logger.info("Telegram reconnected after %d failures", self._consecutive_failures)
+                        logger.info(
+                            "Telegram reconnected after %d failures",
+                            self._consecutive_failures,
+                        )
                     self._consecutive_failures = 0
 
                 except asyncio.CancelledError:
@@ -124,8 +126,8 @@ class TelegramService:
 
                     if self._consecutive_failures < _MAX_FAILURES:
                         # Normal transient error — short backoff, keep logging
-                        backoff = min(_MAX_BACKOFF, 2 ** self._consecutive_failures)
-                        logger.warning(          # ← CHANGED: was logger.exception (huge traceback every time)
+                        backoff = min(_MAX_BACKOFF, 2**self._consecutive_failures)
+                        logger.warning(  # ← CHANGED: was logger.exception (huge traceback every time)
                             "Telegram poll failed (%d/%d), retrying in %ds",
                             self._consecutive_failures,
                             _MAX_FAILURES,
@@ -139,8 +141,7 @@ class TelegramService:
                         # This way Telegram recovers automatically when internet returns.
                         if self._consecutive_failures == _MAX_FAILURES:
                             logger.warning(
-                                "Telegram appears offline after %d failures. "
-                                "Will retry every %ds silently.",
+                                "Telegram appears offline after %d failures. Will retry every %ds silently.",
                                 _MAX_FAILURES,
                                 _OFFLINE_RETRY_INTERVAL,
                             )
@@ -148,21 +149,21 @@ class TelegramService:
 
     async def _poll_once(self, client: httpx.AsyncClient):
         if not self._enabled():
-            await asyncio.sleep(5)   # ← CHANGED: avoid tight spin if disabled mid-run
+            await asyncio.sleep(5)  # ← CHANGED: avoid tight spin if disabled mid-run
             return
 
         r = await client.get(
             self._url("getUpdates"),
             params={
-                "offset":          self._offset,
-                "timeout":         30,           # Telegram long-poll seconds
+                "offset": self._offset,
+                "timeout": 30,  # Telegram long-poll seconds
                 "allowed_updates": ["message"],
             },
         )
 
         if r.status_code in (401, 403):
             logger.error("Telegram auth failed (%s). Disabling bot permanently.", r.status_code)
-            self._disabled = True   # only permanent-disable on auth failure, not network errors
+            self._disabled = True  # only permanent-disable on auth failure, not network errors
             return
 
         data = r.json()
@@ -201,8 +202,8 @@ class TelegramService:
             logger.exception("Failed to schedule Telegram notification")
 
     async def _handle_update(self, update: dict):
-        msg     = update.get("message", {})
-        text    = msg.get("text", "").strip()
+        msg = update.get("message", {})
+        text = msg.get("text", "").strip()
         chat_id = str(msg.get("chat", {}).get("id", ""))
 
         if chat_id != self._chat_id():
@@ -212,7 +213,7 @@ class TelegramService:
             await self.send_message("✅ NovelCast is running.")
         elif text.startswith("/stories"):
             stories = await self.stories.list_stories(limit=10)
-            lines   = [f"📚 {s.title} — {s.chapter_count}" for s in stories]
+            lines = [f"📚 {s.title} — {s.chapter_count}" for s in stories]
             await self.send_message("\n".join(lines) or "No stories")
         else:
             await self.send_message("Commands: /status /stories /download <url>")
@@ -227,8 +228,8 @@ class TelegramService:
                 r = await client.post(
                     self._url("sendMessage"),
                     json={
-                        "chat_id":    self._chat_id(),
-                        "text":       text,
+                        "chat_id": self._chat_id(),
+                        "text": text,
                         "parse_mode": "Markdown",
                     },
                 )
@@ -256,7 +257,10 @@ class TelegramService:
             ) as client:
                 r = await client.post(
                     self._url("sendMessage"),
-                    json={"chat_id": self._chat_id(), "text": "👋 Telegram integration OK"},
+                    json={
+                        "chat_id": self._chat_id(),
+                        "text": "👋 Telegram integration OK",
+                    },
                 )
             data = r.json()
             if r.status_code == 401:
@@ -273,8 +277,7 @@ class TelegramService:
     def notify_story_added(self, title: str, author: str, link: str | None):
         self._fire_and_forget(
             self.send_message(
-                f"📖 *New story added*\n{title}" + (f" by _{author}_" if author else "")
-                + (f"\n{link}" if link else "")
+                f"📖 *New story added*\n{title}" + (f" by _{author}_" if author else "") + (f"\n{link}" if link else "")
             )
         )
 
@@ -284,11 +287,10 @@ class TelegramService:
                 f"🔄 *Story updated*\n{title}"
                 + (f" by _{author}_" if author else "")
                 + (f"\n{link}" if link else "")
-                + f"\n+{new_chapters} new chapter" + ("s" if new_chapters != 1 else "")
+                + f"\n+{new_chapters} new chapter"
+                + ("s" if new_chapters != 1 else "")
             )
         )
 
     def notify_story_deleted(self, title: str):
-        self._fire_and_forget(
-            self.send_message(f"🗑️ *Story deleted*\n{title}")
-        )
+        self._fire_and_forget(self.send_message(f"🗑️ *Story deleted*\n{title}"))

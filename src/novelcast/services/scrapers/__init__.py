@@ -4,28 +4,30 @@ Scraper orchestration with per-site enable/disable support.
 """
 
 import asyncio
+
 import httpx
 
-from .base import ScrapedResult
-from . import royalroad, scribblehub, patreon
-from .utils import normalize
 from novelcast.services.search_service import SearchResult
 from novelcast.services.site_adapters import registry
 
+from . import patreon, royalroad, scribblehub
+from .base import ScrapedResult
+from .utils import normalize
+
 _SCRAPERS = {
-    "royalroad":   royalroad,
+    "royalroad": royalroad,
     "scribblehub": scribblehub,
 }
 
 # SearchResult.kind -> scraper module method name
 _KIND_METHOD = {
     "fiction_search": "scrape_fiction_search",
-    "author_search":  "scrape_author_search",
+    "author_search": "scrape_author_search",
     "fiction_detail": "scrape_fiction_detail",
     "author_profile": "scrape_author_detail",
     # used by scrape_details() below
     "fiction": "scrape_fiction_detail",
-    "author":  "scrape_author_detail",
+    "author": "scrape_author_detail",
 }
 
 

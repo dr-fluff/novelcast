@@ -2,6 +2,7 @@
 
 import httpx
 from bs4 import BeautifulSoup
+
 from .base import ScrapedResult
 
 HEADERS = {
@@ -15,24 +16,26 @@ async def scrape_fiction_search(client: httpx.AsyncClient, url: str) -> list[Scr
     results = []
 
     for row in soup.select(".fiction-list-item"):
-        title_el  = row.select_one(".fiction-title")
+        title_el = row.select_one(".fiction-title")
         author_el = row.select_one(".author-name") or row.select_one("[title~='by']")
-        cover_el  = row.select_one("img")
-        desc_el   = row.select_one(".fiction-description, .description")
-        link_el   = row.select_one("a[href*='/fiction/']")
+        cover_el = row.select_one("img")
+        desc_el = row.select_one(".fiction-description, .description")
+        link_el = row.select_one("a[href*='/fiction/']")
 
         if not title_el or not link_el:
             continue
 
-        results.append(ScrapedResult(
-            site="royalroad",
-            kind="fiction",
-            title=title_el.get_text(strip=True),
-            author=author_el.get_text(strip=True) if author_el else None,
-            cover_url=cover_el.get("src") if cover_el else None,
-            description=desc_el.get_text(strip=True)[:300] if desc_el else None,
-            url="https://www.royalroad.com" + link_el["href"],
-        ))
+        results.append(
+            ScrapedResult(
+                site="royalroad",
+                kind="fiction",
+                title=title_el.get_text(strip=True),
+                author=author_el.get_text(strip=True) if author_el else None,
+                cover_url=cover_el.get("src") if cover_el else None,
+                description=desc_el.get_text(strip=True)[:300] if desc_el else None,
+                url="https://www.royalroad.com" + link_el["href"],
+            )
+        )
 
     return results
 
@@ -43,24 +46,26 @@ async def scrape_author_search(client: httpx.AsyncClient, url: str) -> list[Scra
     results = []
 
     for row in soup.select(".fiction-list-item"):
-        title_el  = row.select_one(".fiction-title")
+        title_el = row.select_one(".fiction-title")
         author_el = row.select_one(".author-name")
-        cover_el  = row.select_one("img")
-        desc_el   = row.select_one(".fiction-description, .description")
-        link_el   = row.select_one("a[href*='/fiction/']")
+        cover_el = row.select_one("img")
+        desc_el = row.select_one(".fiction-description, .description")
+        link_el = row.select_one("a[href*='/fiction/']")
 
         if not title_el or not link_el:
             continue
 
-        results.append(ScrapedResult(
-            site="royalroad",
-            kind="fiction",
-            title=title_el.get_text(strip=True),
-            author=author_el.get_text(strip=True) if author_el else None,
-            cover_url=cover_el.get("src") if cover_el else None,
-            description=desc_el.get_text(strip=True)[:300] if desc_el else None,
-            url="https://www.royalroad.com" + link_el["href"],
-        ))
+        results.append(
+            ScrapedResult(
+                site="royalroad",
+                kind="fiction",
+                title=title_el.get_text(strip=True),
+                author=author_el.get_text(strip=True) if author_el else None,
+                cover_url=cover_el.get("src") if cover_el else None,
+                description=desc_el.get_text(strip=True)[:300] if desc_el else None,
+                url="https://www.royalroad.com" + link_el["href"],
+            )
+        )
 
     return results
 
@@ -70,10 +75,10 @@ async def scrape_fiction_detail(client: httpx.AsyncClient, url: str) -> ScrapedR
     resp = await client.get(url, headers=HEADERS, follow_redirects=True)
     soup = BeautifulSoup(resp.text, "html.parser")
 
-    title_el  = soup.select_one(".fiction-title, h1.font-white")
+    title_el = soup.select_one(".fiction-title, h1.font-white")
     author_el = soup.select_one("a[href*='/profile/']")
-    cover_el  = soup.select_one(".cover-art img, img.thumbnail")
-    desc_el   = soup.select_one(".description .prose, .fiction-description")
+    cover_el = soup.select_one(".cover-art img, img.thumbnail")
+    desc_el = soup.select_one(".description .prose, .fiction-description")
 
     if not title_el:
         return None
@@ -103,12 +108,14 @@ async def scrape_author_detail(client: httpx.AsyncClient, url: str):
 
         full_url = "https://www.royalroad.com" + href
 
-        results.append(ScrapedResult(
-            site="royalroad",
-            kind="fiction",
-            title=link.get_text(strip=True),
-            url=full_url,
-        ))
+        results.append(
+            ScrapedResult(
+                site="royalroad",
+                kind="fiction",
+                title=link.get_text(strip=True),
+                url=full_url,
+            )
+        )
 
     # remove duplicates
     unique = {r.url: r for r in results}

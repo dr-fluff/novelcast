@@ -1,10 +1,9 @@
 # novelcast/services/engine_config_service.py
 
-from pathlib import Path
 import hashlib
 import logging
 from collections import OrderedDict
-import requests
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -12,8 +11,6 @@ logger = logging.getLogger(__name__)
 # ─────────────────────────────
 # INI BUILDER (NO STRING LOGIC OUTSIDE HERE)
 # ─────────────────────────────
-
-from collections import OrderedDict
 
 
 class IniBuilder:
@@ -28,15 +25,10 @@ class IniBuilder:
     def render(self, section_order: list[str] | None = None) -> list[str]:
         lines = []
 
-
         if section_order:
             ordered_sections = sorted(
                 self.sections.items(),
-                key=lambda x: (
-                    section_order.index(x[0])
-                    if x[0] in section_order
-                    else 999
-                )
+                key=lambda x: section_order.index(x[0]) if x[0] in section_order else 999,
             )
         else:
             ordered_sections = self.sections.items()
@@ -52,9 +44,11 @@ class IniBuilder:
 
         return lines
 
+
 # ─────────────────────────────
 # BASE ENGINE CONFIG SERVICE
 # ─────────────────────────────
+
 
 class BaseEngineConfigService:
     """
@@ -111,10 +105,7 @@ class BaseEngineConfigService:
         return resolved.get(self.section_key(), {})
 
     def _get_meta(self, key: str) -> dict:
-        return self.settings_service.get_field_meta(
-            self.section_key(),
-            key
-        )
+        return self.settings_service.get_field_meta(self.section_key(), key)
 
     # -------------------------
     # BUILD INI
@@ -176,11 +167,7 @@ class BaseEngineConfigService:
 
         path_obj = Path(path)
 
-        if (
-            not force
-            and self._last_hash == new_hash
-            and self._last_path == str(path_obj)
-        ):
+        if not force and self._last_hash == new_hash and self._last_path == str(path_obj):
             return str(path_obj)
 
         path_obj.parent.mkdir(parents=True, exist_ok=True)
@@ -195,7 +182,8 @@ class BaseEngineConfigService:
         )
 
         return str(path_obj)
-    
+
+
 class FanFicFareConfigService(BaseEngineConfigService):
     SECTION_ORDER = ["defaults", "epub"]
 

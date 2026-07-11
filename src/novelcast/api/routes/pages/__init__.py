@@ -1,14 +1,14 @@
-#novelcast/api/routers/pages/__init__.py
+# novelcast/api/routers/pages/__init__.py
 from fastapi import APIRouter
 
-from .home import router as home_router
-from .story import router as story_router
-from .settings import router as settings_router
-from .authors import router as authors_router
-from .search import router as search_router
-from .chapter import router as chapter_router
 from .admin_pages import router as admin_pages_router
+from .authors import router as authors_router
+from .chapter import router as chapter_router
+from .home import router as home_router
 from .preferences import router as preferences_router
+from .search import router as search_router
+from .settings import router as settings_router
+from .story import router as story_router
 
 router = APIRouter()
 

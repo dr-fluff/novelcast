@@ -16,5 +16,3 @@ def verify_password(password: str, stored: str) -> bool:
     if looks_like_hash(stored):
         return hash_password(password) == stored
     return password == stored
-
-

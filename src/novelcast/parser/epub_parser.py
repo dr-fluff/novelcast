@@ -1,15 +1,16 @@
 # novelcast/parser/epub_parser.py
+import logging
 import re
 from pathlib import Path
-from zipfile import ZipFile
-import logging
 from xml.etree import ElementTree as ET
+from zipfile import ZipFile
 
 from bs4 import BeautifulSoup
 
 from novelcast.parser.base import BaseParser, Story
 
 logger = logging.getLogger(__name__)
+
 
 def _compile(patterns: list[str]) -> list[re.Pattern]:
     compiled = []
@@ -23,6 +24,7 @@ def _compile(patterns: list[str]) -> list[re.Pattern]:
     logger.debug("Compiled %d/%d chapter patterns", len(compiled), len(patterns))
     return compiled
 
+
 def _is_chapter(title: str, compiled: list[re.Pattern]) -> bool:
     if not title:
         logger.debug("Empty title cannot be chapter")
@@ -30,10 +32,10 @@ def _is_chapter(title: str, compiled: list[re.Pattern]) -> bool:
 
     for regex in compiled:
         if regex.search(title):
-            logger.debug("Chapter match: %r matched %r",title,regex.pattern)
+            logger.debug("Chapter match: %r matched %r", title, regex.pattern)
             return True
 
-    logger.debug("No chapter pattern matched: %r",title)
+    logger.debug("No chapter pattern matched: %r", title)
 
     return False
 
@@ -42,19 +44,13 @@ class EpubParser(BaseParser):
     def __init__(self, patterns: list[str] | None = None):
         self._patterns = _compile(patterns or [])
 
-        logger.debug(
-            "EpubParser initialized with %d chapter patterns",
-            len(self._patterns)
-        )
-        
+        logger.debug("EpubParser initialized with %d chapter patterns", len(self._patterns))
+
     def set_patterns(self, patterns: list[str]) -> None:
         """Update patterns (e.g., after DB reload)."""
         self._patterns = _compile(patterns)
 
-        logger.info(
-            "Chapter patterns updated. Loaded %d patterns",
-            len(self._patterns)
-        )
+        logger.info("Chapter patterns updated. Loaded %d patterns", len(self._patterns))
 
     def parse(self, data: dict) -> Story:
         epub_path = Path(data["file_path"])
@@ -82,7 +78,7 @@ class EpubParser(BaseParser):
             logger.debug(
                 "EPUB package loaded. Manifest items: %d, Spine items: %d",
                 len(manifest),
-                len(spine)
+                len(spine),
             )
             base_path = Path(root_file_path).parent
 
@@ -92,14 +88,14 @@ class EpubParser(BaseParser):
             for itemref in spine:
                 href = manifest.get(itemref)
                 if not href:
-                    logger.warning("Spine item %s has no manifest entry",itemref)
+                    logger.warning("Spine item %s has no manifest entry", itemref)
                     continue
 
                 item_path = (base_path / href).as_posix()
                 try:
                     item_data = epub.read(item_path)
                 except KeyError:
-                    logger.warning("Missing EPUB resource: %s",item_path)
+                    logger.warning("Missing EPUB resource: %s", item_path)
                     continue
 
                 title, content = self._parse_chapter(item_data)
@@ -107,15 +103,12 @@ class EpubParser(BaseParser):
                     "Parsed EPUB item %s -> title=%r content_length=%d",
                     item_path,
                     title,
-                    len(content)
+                    len(content),
                 )
 
                 if not _is_chapter(title, self._patterns):
-                    logger.debug(
-                        "Skipping non-chapter item: %r",
-                        title
-                    )
-                    continue 
+                    logger.debug("Skipping non-chapter item: %r", title)
+                    continue
 
                 parsed_number = self._parse_chapter_number(title)
                 if parsed_number is not None:
@@ -132,9 +125,9 @@ class EpubParser(BaseParser):
                 )
 
             if not chapters:
-                logger.warning("No chapters extracted from EPUB: %s",epub_path)
+                logger.warning("No chapters extracted from EPUB: %s", epub_path)
             else:
-                logger.info("Extracted %d chapters from %s",len(chapters),epub_path)
+                logger.info("Extracted %d chapters from %s", len(chapters), epub_path)
 
             return chapters
 
@@ -162,7 +155,7 @@ class EpubParser(BaseParser):
                     if "cover" in name.lower() and name.lower().endswith((".jpg", ".jpeg", ".png")):
                         return epub.read(name)
         except Exception:
-            logger.exception("Failed extracting cover from %s",epub_path)
+            logger.exception("Failed extracting cover from %s", epub_path)
             return None
 
         return None
@@ -172,42 +165,27 @@ class EpubParser(BaseParser):
             container_data = epub.read("META-INF/container.xml")
 
         except KeyError as exc:
-            raise RuntimeError(
-                "Invalid EPUB: META-INF/container.xml missing"
-            ) from exc
+            raise RuntimeError("Invalid EPUB: META-INF/container.xml missing") from exc
 
         try:
             root = ET.fromstring(container_data)
 
         except ET.ParseError as exc:
-            raise RuntimeError(
-                "Invalid EPUB: container.xml contains invalid XML"
-            ) from exc
+            raise RuntimeError("Invalid EPUB: container.xml contains invalid XML") from exc
 
-        rootfiles = [
-            elem
-            for elem in root.iter()
-            if elem.tag.endswith("rootfile")
-        ]
+        rootfiles = [elem for elem in root.iter() if elem.tag.endswith("rootfile")]
 
         if not rootfiles:
-            raise RuntimeError(
-                "Invalid EPUB: container.xml has no rootfile entries"
-            )
+            raise RuntimeError("Invalid EPUB: container.xml has no rootfile entries")
 
         for elem in rootfiles:
             path = elem.attrib.get("full-path")
 
             if path:
-                logger.debug(
-                    "EPUB root file found: %s",
-                    path
-                )
+                logger.debug("EPUB root file found: %s", path)
                 return path
 
-        raise RuntimeError(
-            "Invalid EPUB: rootfile exists but has no full-path attribute"
-        )
+        raise RuntimeError("Invalid EPUB: rootfile exists but has no full-path attribute")
 
     def _remove_empty_paragraphs(self, html: str) -> str:
         soup = BeautifulSoup(html, "html.parser")
@@ -240,11 +218,7 @@ class EpubParser(BaseParser):
         html = re.sub(r"<br\s*/?>", "\n", html, flags=re.I)
 
         # Split on blank lines
-        parts = [
-            part.strip()
-            for part in re.split(r"\n\s*\n+", html)
-            if part.strip()
-        ]
+        parts = [part.strip() for part in re.split(r"\n\s*\n+", html) if part.strip()]
 
         return "\n".join(f"<p>{part}</p>" for part in parts)
 
@@ -255,7 +229,7 @@ class EpubParser(BaseParser):
         html = self._remove_empty_paragraphs(html)
 
         return html
-    
+
     def _parse_package_document(self, package_data: bytes):
         root = ET.fromstring(package_data)
         manifest: dict[str, str] = {}
@@ -276,7 +250,7 @@ class EpubParser(BaseParser):
         except Exception:
             logger.exception("Failed parsing XHTML chapter")
             return "", ""
-        
+
         title_tag = soup.find(["h1", "h2", "h3", "title"])
         if not title_tag:
             title_tag = soup.find("meta", attrs={"name": "chaptertitle"})
@@ -313,7 +287,7 @@ class EpubParser(BaseParser):
                     pass
 
         return None
-    
+
     def _validate_epub(self, epub: ZipFile, epub_path: Path) -> None:
         """Basic EPUB integrity checks."""
 
@@ -336,29 +310,16 @@ class EpubParser(BaseParser):
         try:
             container = epub.read("META-INF/container.xml")
         except Exception as exc:
-            raise RuntimeError(
-                f"Invalid EPUB '{epub_path}': unable to read META-INF/container.xml"
-            ) from exc
+            raise RuntimeError(f"Invalid EPUB '{epub_path}': unable to read META-INF/container.xml") from exc
 
         try:
             root = ET.fromstring(container)
         except ET.ParseError as exc:
-            raise RuntimeError(
-                f"Invalid EPUB '{epub_path}': malformed container.xml XML"
-            ) from exc
+            raise RuntimeError(f"Invalid EPUB '{epub_path}': malformed container.xml XML") from exc
 
-        rootfiles = [
-            elem
-            for elem in root.iter()
-            if elem.tag.endswith("rootfile")
-        ]
+        rootfiles = [elem for elem in root.iter() if elem.tag.endswith("rootfile")]
 
         if not rootfiles:
-            raise RuntimeError(
-                f"Invalid EPUB '{epub_path}': container.xml contains no <rootfile>"
-            )
+            raise RuntimeError(f"Invalid EPUB '{epub_path}': container.xml contains no <rootfile>")
 
-        logger.debug(
-            "EPUB validation passed: %s",
-            epub_path
-        )
+        logger.debug("EPUB validation passed: %s", epub_path)

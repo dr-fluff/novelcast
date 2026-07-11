@@ -3,7 +3,7 @@ novelcast/db/models/jobs.py
 """
 
 from datetime import datetime
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -18,9 +18,7 @@ class UpdateJob(Base):
     __tablename__ = "update_jobs"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    story_id: Mapped[Optional[int]] = mapped_column(
-        Integer, ForeignKey("stories.id", ondelete="CASCADE")
-    )
+    story_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("stories.id", ondelete="CASCADE"))
     status: Mapped[str] = mapped_column(String, default="pending")
     last_run: Mapped[Optional[datetime]] = mapped_column(DateTime)
     next_run: Mapped[Optional[datetime]] = mapped_column(DateTime)

@@ -14,10 +14,7 @@ logger = logging.getLogger(__name__)
 def wants_json(request: Request) -> bool:
     accept = request.headers.get("accept", "").lower()
 
-    return (
-        "application/json" in accept
-        or request.url.path.startswith("/api")
-    )
+    return "application/json" in accept or request.url.path.startswith("/api")
 
 
 def error_response(
@@ -93,10 +90,7 @@ async def http_exception_handler(
         },
     )
 
-    if (
-        exc.status_code in {401, 403}
-        and not wants_json(request)
-    ):
+    if exc.status_code in {401, 403} and not wants_json(request):
         return RedirectResponse(
             url="/login",
             status_code=303,
@@ -135,10 +129,6 @@ async def unhandled_exception_handler(
 # REGISTER
 # ─────────────────────────────
 def register_error_handlers(app: FastAPI) -> None:
-    app.exception_handler(HTTPException)(
-        http_exception_handler
-    )
+    app.exception_handler(HTTPException)(http_exception_handler)
 
-    app.exception_handler(Exception)(
-        unhandled_exception_handler
-    )
+    app.exception_handler(Exception)(unhandled_exception_handler)

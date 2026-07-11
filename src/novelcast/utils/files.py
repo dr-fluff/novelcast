@@ -9,8 +9,8 @@ class FileUtils:
         self.base_dir = Path(base_dir).resolve()
 
     def safe(self, name: str) -> str:
-        name = re.sub(r'[<>:"/\\|?*]', '', name)
-        return re.sub(r'\s+', '_', name).strip('_')
+        name = re.sub(r'[<>:"/\\|?*]', "", name)
+        return re.sub(r"\s+", "_", name).strip("_")
 
     def story_dir(self, author: str | None, title: str | None) -> Path:
         safe_author = self._safe(author or "Unknown_Author")
@@ -47,7 +47,7 @@ def human_readable_size(num: int) -> str:
     """Convert bytes to human readable string."""
     if num is None:
         return ""
-    for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+    for unit in ["B", "KB", "MB", "GB", "TB"]:
         if num < 1024.0:
             return f"{num:.1f}{unit}"
         num /= 1024.0

@@ -1,10 +1,10 @@
 # novelcast/pipeline/story_pipeline.py
 
-from pathlib import Path
 import copy
 import json
 import logging
 import shutil
+from pathlib import Path
 
 from novelcast.utils.html import clean_html_description
 
@@ -62,9 +62,7 @@ class StoryPipeline:
         chapter_numbers = []
 
         for ch in story.get("chapters", []):
-            chapter_numbers.append(
-                self._persist_chapter(story_id, base_dir, story, ch)
-            )
+            chapter_numbers.append(self._persist_chapter(story_id, base_dir, story, ch))
 
         self._write_metadata_json(base_dir, story)
         self._update_stats(story_id, chapter_numbers)
@@ -84,9 +82,13 @@ class StoryPipeline:
     def append_new_chapters(self, story_id: int, story: dict):
         existing_story = self.stories_repo.get_by_id(story_id) or {}
         local_path = existing_story.get("local_path")
-        base_dir = Path(local_path) if local_path else self.file_utils.story_dir(
-            story.get("author"),
-            story.get("title"),
+        base_dir = (
+            Path(local_path)
+            if local_path
+            else self.file_utils.story_dir(
+                story.get("author"),
+                story.get("title"),
+            )
         )
 
         epub_source_path = story.get("source_file_path")
@@ -173,7 +175,9 @@ class StoryPipeline:
         result["missing"] = sorted(missing)
         logger.info(
             "integrity_check: story %s missing %d chapter file(s): %s",
-            story_id, len(missing), missing,
+            story_id,
+            len(missing),
+            missing,
         )
 
         # Look for a local EPUB to restore from
@@ -227,7 +231,8 @@ class StoryPipeline:
             if not epub_ch:
                 logger.warning(
                     "integrity_check: chapter %s not found in EPUB for story %s (may have been removed from site)",
-                    chapter_number, story_id,
+                    chapter_number,
+                    story_id,
                 )
                 not_in_epub.append(chapter_number)
                 continue
@@ -243,12 +248,14 @@ class StoryPipeline:
                 restored.append(chapter_number)
                 logger.info(
                     "integrity_check: restored chapter %s for story %s",
-                    chapter_number, story_id,
+                    chapter_number,
+                    story_id,
                 )
             except Exception:
                 logger.exception(
                     "integrity_check: failed to restore chapter %s for story %s",
-                    chapter_number, story_id,
+                    chapter_number,
+                    story_id,
                 )
                 not_in_epub.append(chapter_number)
 
@@ -278,7 +285,8 @@ class StoryPipeline:
     # ─────────────────────────────
     def _persist_chapter(self, story_id, base_dir: Path, story: dict, ch: dict) -> int:
         title_safe = self.file_utils.safe(ch.get("title") or "")
-        filename = f"{ch['number']:03d}_{title_safe or f'chapter_{ch['number']:03d}'}.html"
+        num = ch["number"]
+        filename = f"{num:03d}_{title_safe or f'chapter_{num:03d}'}.html"
 
         path = self.file_utils.write_chapter(
             base_dir,
@@ -287,11 +295,7 @@ class StoryPipeline:
         )
 
         story_url = story.get("source_url") or story.get("url") or ""
-        chapter_url = (
-            f"{story_url}#chapter-{ch['number']}"
-            if story_url
-            else f"file://{path}"
-        )
+        chapter_url = f"{story_url}#chapter-{ch['number']}" if story_url else f"file://{path}"
 
         self.chapters_repo.upsert(
             story_id,

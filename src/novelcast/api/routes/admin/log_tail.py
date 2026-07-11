@@ -5,19 +5,23 @@ from __future__ import annotations
 import asyncio
 import logging
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, Request, APIRouter
-
-from fastapi.responses import RedirectResponse
+from fastapi import (
+    APIRouter,
+    Depends,
+    Request,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from fastapi.templating import Jinja2Templates
 
+from novelcast.api.deps import get_current_user, get_logs, get_settings, get_templates
 from novelcast.core.logging import log_buffer
-from novelcast.api.deps import get_current_user, get_settings, get_templates, get_logs
 from novelcast.services import LoggingService, SettingsService
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-POLL_INTERVAL = .5   # seconds
+POLL_INTERVAL = 0.5  # seconds
 
 
 @router.websocket("/tail")
@@ -33,15 +37,10 @@ async def log_tail_ws(
     #     await websocket.close(code=1008)
     #     return
 
-    
-
     backlog, cursor = log_buffer.drain()
 
     if backlog:
-        await websocket.send_json({
-            "type": "backlog",
-            "lines": backlog
-        })
+        await websocket.send_json({"type": "backlog", "lines": backlog})
 
     try:
         while True:
@@ -50,18 +49,15 @@ async def log_tail_ws(
             lines, cursor = log_buffer.drain(cursor)
 
             if lines:
-                await websocket.send_json({
-                    "type": "lines",
-                    "lines": lines
-                })
+                await websocket.send_json({"type": "lines", "lines": lines})
 
     except WebSocketDisconnect:
         pass
 
     except Exception:
         logger.exception("log_tail_ws error")
-    
-    
+
+
 @router.get("/logs")
 def logs(
     request: Request,

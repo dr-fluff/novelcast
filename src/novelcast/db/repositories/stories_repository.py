@@ -1,25 +1,24 @@
 # novelcast/db/repositories/stories_repository.py
 
 from datetime import datetime, timezone
-from sqlalchemy import select, func
+
+from sqlalchemy import func, select
 from sqlalchemy.dialects.sqlite import insert
 
-from novelcast.db.repositories.base import BaseRepository
 from novelcast.db.models import (
-    Story,
     Chapter,
     ChapterFile,
-    Tag,
     Genre,
     Series,
+    Story,
     StorySetting,
+    Tag,
 )
-
+from novelcast.db.repositories.base import BaseRepository
 from novelcast.utils.files import human_readable_size
 
 
 class StoriesRepository(BaseRepository):
-
     # ── reads ──────────────────────────────────────────────────────────────
 
     def get_all(self) -> list[dict]:
@@ -37,11 +36,9 @@ class StoriesRepository(BaseRepository):
                 .subquery()
             )
             rows = db.execute(
-                select(Chapter.story_id, Chapter.title)
-                .join(
+                select(Chapter.story_id, Chapter.title).join(
                     subq,
-                    (Chapter.story_id == subq.c.story_id)
-                    & (Chapter.chapter_number == subq.c.max_num),
+                    (Chapter.story_id == subq.c.story_id) & (Chapter.chapter_number == subq.c.max_num),
                 )
             ).all()
             latest_title = {row.story_id: row.title for row in rows}
@@ -78,9 +75,7 @@ class StoriesRepository(BaseRepository):
 
     def get_chapter_numbers(self, story_id: int) -> list[int]:
         with self.session_no_commit() as db:
-            return list(db.scalars(
-                select(Chapter.chapter_number).where(Chapter.story_id == story_id)
-            ).all())
+            return list(db.scalars(select(Chapter.chapter_number).where(Chapter.story_id == story_id)).all())
 
     def get_stories_by_site(self, site: str) -> list[dict]:
         with self.session_no_commit() as db:
@@ -92,7 +87,6 @@ class StoriesRepository(BaseRepository):
             ).all()
 
             return [_to_dict(s) for s in stories]
-
 
     # ── writes ─────────────────────────────────────────────────────────────
 
@@ -188,7 +182,14 @@ class StoriesRepository(BaseRepository):
                 story.local_path = local_path
                 story.cover_path = cover_path
 
-    def set_story_setting(self, story_id: int, name: str, value: str, category: str | None = None, type: str = "str") -> None:
+    def set_story_setting(
+        self,
+        story_id: int,
+        name: str,
+        value: str,
+        category: str | None = None,
+        type: str = "str",
+    ) -> None:
         """Create or update a StorySetting entry for a story."""
         with self.session() as db:
             existing = db.scalars(
@@ -199,7 +200,13 @@ class StoriesRepository(BaseRepository):
                 existing.category = category
                 existing.type = type
             else:
-                s = StorySetting(story_id=story_id, name=name, value=value, category=category, type=type)
+                s = StorySetting(
+                    story_id=story_id,
+                    name=name,
+                    value=value,
+                    category=category,
+                    type=type,
+                )
                 db.add(s)
 
     def get_story_setting(self, story_id: int, name: str) -> str | None:
@@ -263,42 +270,42 @@ def _sync_story_relations(db, story, model, attr_name, names):
 
 # ── helper ─────────────────────────────────────────────────────────────────
 
+
 def _to_dict(story: Story | None) -> dict | None:
     if story is None:
         return None
 
     result = {
-        "id":                        story.id,
-        "title":                     story.title,
-        "author":                    story.author,
-        "subtitle":                  getattr(story, "subtitle", None),
-        "source_url":                story.source_url,
-        "story_site_id":             story.story_site_id,
-        "auto_update":               _story_setting_bool(story, "auto_update", default=False),
-        "hide_author_notes":         _story_setting_bool(story, "hide_author_notes", default=True),
-        
-        "local_path":                story.local_path,
-        "cover_path":                story.cover_path,
-        "total_chapters":            story.total_chapters,
-        "downloaded_chapters":       story.downloaded_chapters,
-        "latest_online_chapter":     story.latest_online_chapter,
+        "id": story.id,
+        "title": story.title,
+        "author": story.author,
+        "subtitle": getattr(story, "subtitle", None),
+        "source_url": story.source_url,
+        "story_site_id": story.story_site_id,
+        "auto_update": _story_setting_bool(story, "auto_update", default=False),
+        "hide_author_notes": _story_setting_bool(story, "hide_author_notes", default=True),
+        "local_path": story.local_path,
+        "cover_path": story.cover_path,
+        "total_chapters": story.total_chapters,
+        "downloaded_chapters": story.downloaded_chapters,
+        "latest_online_chapter": story.latest_online_chapter,
         "latest_downloaded_chapter": story.latest_downloaded_chapter,
-        "online_chapters":           story.online_chapters,
-        "last_updated":              story.last_updated,
-        "description":               getattr(story, "description", None),
-        "publish_year":              getattr(story, "publish_year", None),
-        "language":                  getattr(story, "language", None),
-        "publisher":                 getattr(story, "publisher", None),
-        "narrators":                 getattr(story, "narrators", None),
-        "genres":                    ", ".join([g.name for g in getattr(story, "genres", [])]) if getattr(story, "genres", None) else None,
-        "tags":                      ", ".join([t.name for t in getattr(story, "tags", [])]) if getattr(story, "tags", None) else None,
-        "series":                    ", ".join([s.name for s in getattr(story, "series", [])]) if getattr(story, "series", None) else None,
-        "genres_list":               [g.name for g in getattr(story, "genres", [])],
-        "tags_list":                 [t.name for t in getattr(story, "tags", [])],
-        "series_list":               [s.name for s in getattr(story, "series", [])],
-        "duration":                  getattr(story, "duration", None),
-        "size":                      None,
-        "created_at":                story.created_at,
+        "online_chapters": story.online_chapters,
+        "last_updated": story.last_updated,
+        "description": getattr(story, "description", None),
+        "publish_year": getattr(story, "publish_year", None),
+        "language": getattr(story, "language", None),
+        "publisher": getattr(story, "publisher", None),
+        "narrators": getattr(story, "narrators", None),
+        "genres": ", ".join([g.name for g in getattr(story, "genres", [])]) if getattr(story, "genres", None) else None,
+        "tags": ", ".join([t.name for t in getattr(story, "tags", [])]) if getattr(story, "tags", None) else None,
+        "series": ", ".join([s.name for s in getattr(story, "series", [])]) if getattr(story, "series", None) else None,
+        "genres_list": [g.name for g in getattr(story, "genres", [])],
+        "tags_list": [t.name for t in getattr(story, "tags", [])],
+        "series_list": [s.name for s in getattr(story, "series", [])],
+        "duration": getattr(story, "duration", None),
+        "size": None,
+        "created_at": story.created_at,
     }
 
     # FIX: size enrichment was unreachable (came after an early return). Now runs correctly.

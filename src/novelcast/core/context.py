@@ -1,64 +1,60 @@
 # novelcast/core/context.py
 import logging
 from queue import Queue
-import asyncio
 
-from novelcast.db.init_db import init_db
-from novelcast.db.session import SessionLocal
+from novelcast.core.defaults import (
+    REQUIRED_USER_SETTINGS,
+    SETTINGS,
+    USER_SETTINGS_SCHEMA,
+)
 from novelcast.db.engine import engine
-
+from novelcast.db.init_db import init_db
 from novelcast.db.repositories import (
-    StoriesRepository,
-    UsersRepository,
-    FilesRepository,
-    ChaptersRepository,
-    ProgressRepository,
-    SyncRepository,
-    SettingsRepository,
     AuthorRepository,
+    ChaptersRepository,
+    FilesRepository,
+    ProgressRepository,
     RssEntryRepository,
+    SettingsRepository,
+    StoriesRepository,
+    SyncRepository,
+    UsersRepository,
 )
-from novelcast.db.repositories.chapter_pattern_repository import ChapterPatternRepository
-
-from novelcast.services import (
-    AuthService,
-    ChaptersService,
-    FileService,
-    ProgressService,
-    SettingsService,
-    StoryService,
-    UserService,
-    FanFicFareConfigService,
-    StoryDownloadService,
-    LibrarySyncService,
-    RssService,
-    HealthCheckService,
+from novelcast.db.repositories.chapter_pattern_repository import (
+    ChapterPatternRepository,
 )
-from novelcast.services.chapter_filter_service import ChapterFilterService
-
+from novelcast.db.session import SessionLocal
 from novelcast.engine import (
+    EngineSelector,
     FanFicFareEngine,
     PatreonEngine,
-    EngineSelector,
     StoryDownloadOrchestrator,
 )
-
 from novelcast.parser import (
-    StoryParser,
     EpubParser,
     FanFicFareParser,
     HtmlParser,
     ParserRegistry,
-    PatreonParser
+    PatreonParser,
+    StoryParser,
 )
-
-from novelcast.rss import (
-    RoyalRoadRss
-)
-
 from novelcast.pipeline.story_pipeline import StoryPipeline
+from novelcast.services import (
+    AuthService,
+    ChaptersService,
+    FanFicFareConfigService,
+    FileService,
+    HealthCheckService,
+    LibrarySyncService,
+    ProgressService,
+    RssService,
+    SettingsService,
+    StoryDownloadService,
+    StoryService,
+    UserService,
+)
+from novelcast.services.chapter_filter_service import ChapterFilterService
 from novelcast.utils.files import FileUtils
-from novelcast.core.defaults import SETTINGS, USER_SETTINGS_SCHEMA, REQUIRED_USER_SETTINGS
 
 logger = logging.getLogger(__name__)
 
@@ -84,7 +80,6 @@ class AppContext:
         self._init_service_layer()
         self._init_rss()
         self._validate()
-        
 
         logger.info("AppContext ready")
 
@@ -95,7 +90,6 @@ class AppContext:
         if not self.notifier:
             return
         self.notifier.broadcast(event_type, payload)
-
 
     # ─────────────────────────────
     # DATABASE
@@ -117,16 +111,16 @@ class AppContext:
 
         sf = self.SessionLocal
 
-        self.stories_repo          = StoriesRepository(sf)
-        self.authors_repo          = AuthorRepository(sf)
-        self.users_repo            = UsersRepository(sf)
-        self.files_repo            = FilesRepository(sf)
-        self.chapters_repo         = ChaptersRepository(sf)
-        self.progress_repo         = ProgressRepository(sf)
-        self.sync_repo             = SyncRepository(self.chapters_repo)
-        self.settings_repo         = SettingsRepository(sf)
-        self.chapter_pattern_repo  = ChapterPatternRepository(sf)
-        self.rss_entry_repo        = RssEntryRepository(sf)
+        self.stories_repo = StoriesRepository(sf)
+        self.authors_repo = AuthorRepository(sf)
+        self.users_repo = UsersRepository(sf)
+        self.files_repo = FilesRepository(sf)
+        self.chapters_repo = ChaptersRepository(sf)
+        self.progress_repo = ProgressRepository(sf)
+        self.sync_repo = SyncRepository(self.chapters_repo)
+        self.settings_repo = SettingsRepository(sf)
+        self.chapter_pattern_repo = ChapterPatternRepository(sf)
+        self.rss_entry_repo = RssEntryRepository(sf)
 
     # ─────────────────────────────
     # SERVICES (business logic)
@@ -134,10 +128,10 @@ class AppContext:
     def _init_services(self):
         logger.info("Initializing services...")
 
-        self.stories  = StoryService(self.stories_repo, author_repo=self.authors_repo)
-        self.users    = UserService(self.users_repo)
-        self.auth     = AuthService(self.users_repo)
-        self.files    = FileService(self.files_repo)
+        self.stories = StoryService(self.stories_repo, author_repo=self.authors_repo)
+        self.users = UserService(self.users_repo)
+        self.auth = AuthService(self.users_repo)
+        self.files = FileService(self.files_repo)
         self.chapters = ChaptersService(self.chapters_repo)
         self.progress = ProgressService(self.progress_repo)
 
@@ -165,7 +159,7 @@ class AppContext:
             session_factory=self.SessionLocal,
             stories_dir=stories_dir,
         )
-        
+
     # ─────────────────────────────
     # ENGINE CONFIG (writers)
     # ─────────────────────────────
@@ -198,7 +192,6 @@ class AppContext:
     def _init_utils(self):
         self.file_utils = FileUtils()
 
-    
     def _init_rss(self):
         logger.info("Initializing RSS service...")
 
@@ -208,9 +201,9 @@ class AppContext:
             download_service=self.story_download,
             rss_repo=self.rss_entry_repo,
         )
-        
+
         self.rss.start()
-    
+
     # ─────────────────────────────
     # ENGINE (fetch only)
     # ─────────────────────────────
@@ -227,10 +220,12 @@ class AppContext:
             self.settings,
         )
 
-        self.engine_selector = EngineSelector([
-            self.fanficfare_engine,
-            self.patreon_engine,
-        ])
+        self.engine_selector = EngineSelector(
+            [
+                self.fanficfare_engine,
+                self.patreon_engine,
+            ]
+        )
 
     # ─────────────────────────────
     # PARSER REGISTRY
@@ -248,6 +243,7 @@ class AppContext:
                 "patreon": PatreonParser(),
             }
         )
+
     # ─────────────────────────────
     # PARSER
     # ─────────────────────────────
@@ -266,7 +262,7 @@ class AppContext:
             file_utils=self.file_utils,
             epub_parser=self.epub_parser,
         )
-    
+
     # ─────────────────────────────
     # ORCHESTRATOR (engine coordination only)
     # ─────────────────────────────
@@ -288,6 +284,7 @@ class AppContext:
             pipeline=self.story_pipeline,
             parser=self.story_parser,
             stories_repo=self.stories_repo,
+            settings_service=self.settings,
             notifier=self.emit,
         )
 
@@ -297,7 +294,6 @@ class AppContext:
             settings=self.settings,
             notifier=self.emit,
         )
-        
 
     # ─────────────────────────────
     # VALIDATION
@@ -312,9 +308,9 @@ class AppContext:
             "story_parser",
             "engine_selector",
             "story_pipeline",
-            "chapter_filter",       
+            "chapter_filter",
             "chapter_pattern_repo",
-            "health_check", 
+            "health_check",
         ]
 
         for r in required:

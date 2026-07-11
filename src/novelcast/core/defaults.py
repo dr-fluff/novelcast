@@ -1,86 +1,120 @@
 # novelcast/core/defaults.py
 
-import string
+
+# ─────────────────────────────
+# Type constants (used as "type" values in the schema dicts below)
+# ─────────────────────────────
+
+TYPE_STRING = "string"
+TYPE_BOOL = "bool"
+TYPE_NUMBER = "number"
+TYPE_INT = "int"
+TYPE_SELECT = "select"
+TYPE_SECRET = "secret"
+TYPE_SITE_MAP = "site_map"
+
+# ─────────────────────────────
+# library
+# ─────────────────────────────
+
+LIBRARY_DATA_PATH = "data_path"
+LIBRARY_DATABASE_PATH = "database_path"
+LIBRARY_AUTO_UPDATE = "auto_update"
+LIBRARY_UPDATE_INTERVAL_HOURS = "update_interval_hours"
+LIBRARY_UPDATE_ON_STARTUP = "update_on_startup"
+LIBRARY_UPDATE_TIME = "update_time"
+LIBRARY_IGNORE_PREFIXES = "ignore_prefixes"
 
 LIBRARY_DEFAULTS = {
-    "data_path": {
-            "type": "string",
-            "description": "Path to the library data directory",
-            "default": "data/",
-            "label": "Data path",
-        },
-        "database_path": {
-            "type": "string",
-            "description": "Path to the library database file",
-            "default": "data/novelcast.db",
-            "label": "Database path",
-        },
-        "auto_update": {
-            "type": "bool",
-            "description": "Automatically check books in the library for new chapters",
-            "default": True,
-            "label": "Automatic sync",
-        },
-        "update_interval_hours": {
-            "type": "number",
-            "description": "How often automatic checks for new chapters run",
-            "default": 24,
-            "min": 1,
-            "max": 168,
-            "label": "Sync frequency (hours)",
-        },
-        "update_on_startup": {
-            "type": "bool",
-            "description": "Run an automatic check when NovelCast starts",
-            "default": False,
-            "label": "Sync on startup",
-        },
-        "update_time": {
-            "type": "string",
-            "description": "Time of day to check for updates (HH:MM, 24h format)",
-            "default": "02:00",
-            "label": "Update time",
-        },
-        "ignore_prefixes": {
-            "type": "string",
-            "description": "Comma-separated list of prefixes to ignore when sorting novels (e.g. 'the,a,an')",
-            "default": "the,a,an",
-            "label": "Ignore prefixes",
-        },
+    LIBRARY_DATA_PATH: {
+        "type": TYPE_STRING,
+        "description": "Path to the library data directory",
+        "default": "data/",
+        "label": "Data path",
+    },
+    LIBRARY_DATABASE_PATH: {
+        "type": TYPE_STRING,
+        "description": "Path to the library database file",
+        "default": "data/novelcast.db",
+        "label": "Database path",
+    },
+    LIBRARY_AUTO_UPDATE: {
+        "type": TYPE_BOOL,
+        "description": "Automatically check books in the library for new chapters",
+        "default": True,
+        "label": "Automatic sync",
+    },
+    LIBRARY_UPDATE_INTERVAL_HOURS: {
+        "type": TYPE_NUMBER,
+        "description": "How often automatic checks for new chapters run",
+        "default": 24,
+        "min": 1,
+        "max": 168,
+        "label": "Sync frequency (hours)",
+    },
+    LIBRARY_UPDATE_ON_STARTUP: {
+        "type": TYPE_BOOL,
+        "description": "Run an automatic check when NovelCast starts",
+        "default": False,
+        "label": "Sync on startup",
+    },
+    LIBRARY_UPDATE_TIME: {
+        "type": TYPE_STRING,
+        "description": "Time of day to check for updates (HH:MM, 24h format)",
+        "default": "02:00",
+        "label": "Update time",
+    },
+    LIBRARY_IGNORE_PREFIXES: {
+        "type": TYPE_STRING,
+        "description": "Comma-separated list of prefixes to ignore when sorting novels (e.g. 'the,a,an')",
+        "default": "the,a,an",
+        "label": "Ignore prefixes",
+    },
 }
 
+# ─────────────────────────────
+# logging
+# ─────────────────────────────
+
+LOGGING_LEVEL = "level"
+LOGGING_FILE = "file"
+LOGGING_MAX_BYTES = "max_bytes"
+LOGGING_TAIL_BUFFER_SIZE = "tail_buffer_size"
+LOGGING_NOISY_LOGGERS = "noisy_loggers"
+LOGGING_MAX_AMOUNT_OF_FILES = "max_amount_of_files"
+
 LOGGING_DEFAULTS = {
-    "level": {
-        "type": "select",
+    LOGGING_LEVEL: {
+        "type": TYPE_SELECT,
         "description": "Log verbosity level",
         "default": "info",
         "options": ["debug", "info", "warning", "error"],
         "label": "Log level",
     },
-    "file": {
-        "type": "string",
+    LOGGING_FILE: {
+        "type": TYPE_STRING,
         "description": "Log file path (relative to app root, leave empty for console only)",
         "default": "logs/novelcast.log",
         "label": "Log file",
     },
-    "max_bytes": {
-        "type": "number",
+    LOGGING_MAX_BYTES: {
+        "type": TYPE_NUMBER,
         "description": "Maximum log file size before rotation (bytes)",
-        "default": 10485760,   # 10 MB
-        "min": 1048576,        # 1 MB
-        "max": 104857600,      # 100 MB
+        "default": 10485760,  # 10 MB
+        "min": 1048576,  # 1 MB
+        "max": 104857600,  # 100 MB
         "label": "Max file size (bytes)",
     },
-    "tail_buffer_size": {
-        "type": "number",
+    LOGGING_TAIL_BUFFER_SIZE: {
+        "type": TYPE_NUMBER,
         "description": "Number of recent log lines kept in memory for the live log viewer",
         "default": 500,
         "min": 50,
         "max": 5000,
         "label": "Live tail buffer (lines)",
     },
-    "noisy_loggers": {
-        "type": "string",
+    LOGGING_NOISY_LOGGERS: {
+        "type": TYPE_STRING,
         "description": "JSON array of logger names to suppress to WARNING level",
         "default": (
             '["websockets","websockets.server","websockets.protocol",'
@@ -91,161 +125,204 @@ LOGGING_DEFAULTS = {
         ),
         "label": "Suppressed loggers (JSON)",
     },
-    "max_amount_of_files": {
-        "type": "int",
+    LOGGING_MAX_AMOUNT_OF_FILES: {
+        "type": TYPE_INT,
         "description": "How many log files are going to be saved",
         "default": 20,
         "label": "Amount of saved log files",
     },
 }
 
+# ─────────────────────────────
+# downloads
+# ─────────────────────────────
+
+DOWNLOADS_PATH = "path"
+
 DOWNLOAD_DEFAULTS = {
-    "path": {
-            "type": "string",
-            "description": "Default download path for novels",
-            "default": "downloads",
-            "label": "Download path",
-        },
+    DOWNLOADS_PATH: {
+        "type": TYPE_STRING,
+        "description": "Default download path for novels",
+        "default": "downloads",
+        "label": "Download path",
+    },
 }
 
+# ─────────────────────────────
+# app
+# ─────────────────────────────
+
+APP_THEME = "theme"
+APP_MAX_CONCURRENT_JOBS = "max_concurrent_jobs"
+APP_DEFAULT_SORT = "default_sort"
+APP_DEFAULT_CHAPTER_SORT = "default_chapter_sort"
+APP_FONT_SIZE = "font_size"
+APP_LINE_HEIGHT = "line_height"
+APP_TIME_FORMAT = "time_format"
+APP_DATE_FORMAT = "date_format"
+
 APP_DEFAULTS = {
-    "theme": {
-        "type": "select",
+    APP_THEME: {
+        "type": TYPE_SELECT,
         "description": "Default theme for the application",
         "default": "dark",
         "options": ["light", "dark", "sepia"],
         "label": "Theme",
     },
-    "max_concurrent_jobs": {
-        "type": "number",
+    APP_MAX_CONCURRENT_JOBS: {
+        "type": TYPE_NUMBER,
         "description": "Maximum number of concurrent download jobs",
         "default": 3,
         "min": 1,
         "max": 10,
         "label": "Max concurrent jobs",
     },
-    "default_sort": {
-        "type": "select",
+    APP_DEFAULT_SORT: {
+        "type": TYPE_SELECT,
         "description": "Default sort order for the library",
         "default": "title",
-        "options": ["title", "author", "downloaded", "total_chapters", "last_updated", "created_at"],
+        "options": [
+            "title",
+            "author",
+            "downloaded",
+            "total_chapters",
+            "last_updated",
+            "created_at",
+        ],
         "label": "Default sort",
     },
-    "default_chapter_sort": {
-        "type": "select",
+    APP_DEFAULT_CHAPTER_SORT: {
+        "type": TYPE_SELECT,
         "description": "Default sort order for chapters",
         "default": "name",
         "options": ["name", "number"],
         "label": "Chapter sort",
     },
-    "font_size": {
-        "type": "string",
+    APP_FONT_SIZE: {
+        "type": TYPE_STRING,
         "description": "Default font size for the application",
         "default": "1em",
         "label": "Font size",
     },
-    "line_height": {
-        "type": "string",
+    APP_LINE_HEIGHT: {
+        "type": TYPE_STRING,
         "description": "Default line height for the application",
         "default": "1.5em",
         "label": "Line height",
     },
-    "time_format": {
-        "type": "select",
+    APP_TIME_FORMAT: {
+        "type": TYPE_SELECT,
         "description": "Default time format for the application",
         "default": "24h",
         "options": ["24h", "12h"],
         "label": "Time format",
     },
-    "date_format": {
-        "type": "string",
+    APP_DATE_FORMAT: {
+        "type": TYPE_STRING,
         "description": "Default date format for the application (strftime format)",
         "default": "%Y-%m-%d",
         "label": "Date format",
     },
 }
 
+# ─────────────────────────────
+# fanficfare
+# ─────────────────────────────
+
+FFF_CONFIG_PATH = "config_path"
+FFF_OUTPUT_FORMAT = "output_format"
+FFF_INCLUDE_IMAGES = "include_images"
+FFF_IS_ADULT = "is_adult"
+FFF_LANGUAGE = "language"
+FFF_TIMEOUT = "timeout"
+FFF_RETRIES = "retries"
+FFF_KEEP_SUMMARY_HTML = "keep_summary_html"
+FFF_ROYALROAD_EMAIL = "royalroad_email"
+FFF_ROYALROAD_PASSWORD = "royalroad_password"
+FFF_ROYALROAD_SLOW_DOWN_SLEEP_TIME = "royalroad_slow_down_sleep_time"
+FFF_TTHFANFIC_USERNAME = "tthfanfic_username"
+FFF_TTHFANFIC_EMAIL = "tthfanfic_email"
+FFF_TTHFANFIC_PASSWORD = "tthfanfic_password"
+
 FANFICTIONFARE_DEFAULTS = {
-    "config_path": {
-        "type": "string",
+    FFF_CONFIG_PATH: {
+        "type": TYPE_STRING,
         "description": "Path to FanFicFare config file",
         "default": "config/fanficfare.ini",
         "label": "Config path",
     },
-
-    # nested group → flattened for sanity
-    "output_format": {
-        "type": "select",
+    FFF_OUTPUT_FORMAT: {
+        "type": TYPE_SELECT,
         "description": "Default output format for FanFicFare",
         "default": "epub",
         "options": ["epub", "mobi", "html", "txt"],
         "label": "Output format",
-        "scope":"defaults",
+        "scope": "defaults",
     },
-    "include_images": {
-        "type": "bool",
+    FFF_INCLUDE_IMAGES: {
+        "type": TYPE_BOOL,
         "description": "Whether to include images in the output",
         "default": True,
         "label": "Include images",
-        "scope":"defaults",
+        "scope": "defaults",
     },
-    "is_adult": {
-        "type": "bool",
+    FFF_IS_ADULT: {
+        "type": TYPE_BOOL,
         "description": "Whether the content is adult",
         "default": True,
         "label": "Adult content",
-        "scope":"defaults",
+        "scope": "defaults",
     },
-    "language": {
-        "type": "string",
+    FFF_LANGUAGE: {
+        "type": TYPE_STRING,
         "description": "Default language for FanFicFare",
         "default": "en",
         "label": "Language",
-        "scope":"defaults",
+        "scope": "defaults",
     },
-    "timeout": {
-        "type": "number",
+    FFF_TIMEOUT: {
+        "type": TYPE_NUMBER,
         "description": "Request timeout for FanFicFare (seconds)",
         "default": 60,
         "min": 1,
         "max": 300,
         "label": "Timeout (seconds)",
-        "scope":"defaults",
+        "scope": "defaults",
     },
-    "retries": {
-        "type": "number",
+    FFF_RETRIES: {
+        "type": TYPE_NUMBER,
         "description": "Number of retries for failed requests in FanFicFare",
         "default": 3,
         "min": 0,
         "max": 10,
         "label": "Retries",
-        "scope":"defaults",
+        "scope": "defaults",
     },
-    "keep_summary_html": {
-        "type": "bool",
+    FFF_KEEP_SUMMARY_HTML: {
+        "type": TYPE_BOOL,
         "description": "Whether to keep HTML in summaries",
         "default": True,
         "label": "Keep summary HTML",
-        "scope":"epub",
+        "scope": "epub",
     },
-    "royalroad_email": {
-        "type": "string",
+    FFF_ROYALROAD_EMAIL: {
+        "type": TYPE_STRING,
         "description": "E-mail for RoyalRoad",
         "default": "email@email.com",
         "label": "E-mail",
         "scope": "www.royalroad.com",
         "ini_key": "e-mail",
     },
-    "royalroad_password": {
-        "type": "secret",
+    FFF_ROYALROAD_PASSWORD: {
+        "type": TYPE_SECRET,
         "description": "Password for RoyalRoad",
         "default": "",
         "label": "Password",
         "scope": "www.royalroad.com",
         "ini_key": "password",
     },
-    "royalroad_slow_down_sleep_time": {
-        "type": "number",
+    FFF_ROYALROAD_SLOW_DOWN_SLEEP_TIME: {
+        "type": TYPE_NUMBER,
         "description": "Sleep time between requests to RoyalRoad (seconds)",
         "default": 2,
         "min": 1,
@@ -253,16 +330,16 @@ FANFICTIONFARE_DEFAULTS = {
         "label": "Slow down sleep time (seconds)",
         "scope": "www.royalroad.com",
     },
-    "tthfanfic_username": {
-        "type": "string",
+    FFF_TTHFANFIC_USERNAME: {
+        "type": TYPE_STRING,
         "description": "Username for TTHFanfic",
         "default": "Username",
         "label": "Username",
         "scope": "www.tthfanfic.org",
         "ini_key": "username",
     },
-    "tthfanfic_email": {
-        "type": "string",
+    FFF_TTHFANFIC_EMAIL: {
+        "type": TYPE_STRING,
         "description": "E-mail for TTHFanfic",
         "default": "email@email.com",
         "label": "E-mail",
@@ -270,8 +347,8 @@ FANFICTIONFARE_DEFAULTS = {
         "ini_key": "e-mail",
         "legacy_key": "fanficfare.e-mail",
     },
-    "tthfanfic_password": {
-        "type": "secret",
+    FFF_TTHFANFIC_PASSWORD: {
+        "type": TYPE_SECRET,
         "description": "Password for TTHFanfic",
         "default": "",
         "label": "Password",
@@ -281,57 +358,80 @@ FANFICTIONFARE_DEFAULTS = {
     },
 }
 
+# ─────────────────────────────
+# scrapers
+# ─────────────────────────────
+
+SCRAPERS_ROYALROAD_ENABLED = "royalroad_enabled"
+SCRAPERS_SCRIBBLEHUB_ENABLED = "scribblehub_enabled"
+SCRAPERS_PATREON_ENABLED = "patreon_enabled"
+
 SCRAPER_DEFAULTS = {
-        "royalroad_enabled": {
-            "type": "bool",
-            "description": "Enable searching/scraping RoyalRoad",
-            "default": True,
-            "label": "Enable RoyalRoad",
-        },
-        "scribblehub_enabled": {
-            "type": "bool",
-            "description": "Enable searching/scraping ScribbleHub",
-            "default": False,
-            "label": "Enable ScribbleHub",
-        },
-        "patreon_enabled": {
-            "type": "bool",
-            "description": "Enable searching/scraping Patreon",
-            "default": False,
-            "label": "Enable Patreon",  
-        },
+    SCRAPERS_ROYALROAD_ENABLED: {
+        "type": TYPE_BOOL,
+        "description": "Enable searching/scraping RoyalRoad",
+        "default": True,
+        "label": "Enable RoyalRoad",
+    },
+    SCRAPERS_SCRIBBLEHUB_ENABLED: {
+        "type": TYPE_BOOL,
+        "description": "Enable searching/scraping ScribbleHub",
+        "default": False,
+        "label": "Enable ScribbleHub",
+    },
+    SCRAPERS_PATREON_ENABLED: {
+        "type": TYPE_BOOL,
+        "description": "Enable searching/scraping Patreon",
+        "default": False,
+        "label": "Enable Patreon",
+    },
 }
 
+# ─────────────────────────────
+# telegram
+# ─────────────────────────────
+
+TELEGRAM_ENABLED = "enabled"
+TELEGRAM_BOT_TOKEN = "bot_token"
+TELEGRAM_CHAT_ID = "chat_id"
+
 TELEGRAM_DEFAULTS = {
-    "enabled": {
-        "type": "bool",
+    TELEGRAM_ENABLED: {
+        "type": TYPE_BOOL,
         "description": "Enable Telegram bot integration",
         "default": False,
         "label": "Enable Telegram",
     },
-    "bot_token": {
-        "type": "secret",
+    TELEGRAM_BOT_TOKEN: {
+        "type": TYPE_SECRET,
         "description": "Telegram Bot API token (from @BotFather)",
         "default": "",
         "label": "Bot Token",
     },
-    "chat_id": {
-        "type": "string",
+    TELEGRAM_CHAT_ID: {
+        "type": TYPE_STRING,
         "description": "Telegram chat ID to send messages to",
         "default": "",
         "label": "Chat ID",
     },
 }
 
+# ─────────────────────────────
+# patreon
+# ─────────────────────────────
+
+PATREON_ENABLED = "enabled"
+PATREON_SESSION_COOKIE = "session_cookie"
+
 PATREON_DEFAULTS = {
-    "enabled": {
-        "type": "bool",
+    PATREON_ENABLED: {
+        "type": TYPE_BOOL,
         "description": "Enable Patreon integration",
         "default": False,
         "label": "Enable Patreon",
     },
-    "session_cookie": {
-        "type": "secret",
+    PATREON_SESSION_COOKIE: {
+        "type": TYPE_SECRET,
         "description": (
             "Log into patreon.com in your browser. Then:\n"
             "Chrome/Edge: press F12 to open Developer Tools, click the "
@@ -348,37 +448,58 @@ PATREON_DEFAULTS = {
     },
 }
 
+# ─────────────────────────────
+# rss
+# ─────────────────────────────
+
+RSS_ENABLED = "enabled"
+RSS_INTERVAL = "interval"
+RSS_ROYALROAD = "royalroad"
+
 RSS_DEFAULTS = {
-    "enabled": {
-        "type": "bool",
+    RSS_ENABLED: {
+        "type": TYPE_BOOL,
         "default": True,
         "label": "Enable RSS polling",
     },
-    "interval": {
-        "type": "int",
+    RSS_INTERVAL: {
+        "type": TYPE_INT,
         "default": 10,
         "label": "Polling interval (minutes)",
         "min": 1,
         "max": 1440,
     },
-    "royalroad": {
-        "type": "bool",
+    RSS_ROYALROAD: {
+        "type": TYPE_BOOL,
         "default": True,
         "label": "Enable Royal Road RSS",
     },
 }
 
+# ─────────────────────────────
+# section-name constants (for composing full "section.key" strings)
+# ─────────────────────────────
+
+SECTION_APP = "app"
+SECTION_LIBRARY = "library"
+SECTION_FANFICFARE = "fanficfare"
+SECTION_SCRAPERS = "scrapers"
+SECTION_RSS = "rss"
+SECTION_DOWNLOADS = "downloads"
+SECTION_LOGGING = "logging"
+SECTION_TELEGRAM = "telegram"
+SECTION_PATREON = "patreon"
 
 SETTINGS = {
-    "app": APP_DEFAULTS,
-    "library": LIBRARY_DEFAULTS,
-    "fanficfare": FANFICTIONFARE_DEFAULTS,
-    "scrapers": SCRAPER_DEFAULTS,
-    "rss": RSS_DEFAULTS,
-    "downloads": DOWNLOAD_DEFAULTS,
-    "logging": LOGGING_DEFAULTS,
-    "telegram": TELEGRAM_DEFAULTS,
-    "patreon": PATREON_DEFAULTS,
+    SECTION_APP: APP_DEFAULTS,
+    SECTION_LIBRARY: LIBRARY_DEFAULTS,
+    SECTION_FANFICFARE: FANFICTIONFARE_DEFAULTS,
+    SECTION_SCRAPERS: SCRAPER_DEFAULTS,
+    SECTION_RSS: RSS_DEFAULTS,
+    SECTION_DOWNLOADS: DOWNLOAD_DEFAULTS,
+    SECTION_LOGGING: LOGGING_DEFAULTS,
+    SECTION_TELEGRAM: TELEGRAM_DEFAULTS,
+    SECTION_PATREON: PATREON_DEFAULTS,
 }
 
 
@@ -386,45 +507,103 @@ SETTINGS = {
     ----------- User settings -------------
 """
 
+# left as-is below (unchanged from your version) — say the word if you want
+# USER_SETTINGS_SCHEMA and DEFAULT_CHAPTER_PATTERNS constant-ified too, same pattern.
+
+# ─────────────────────────────
+# user settings — field-name constants
+# ─────────────────────────────
+
+US_THEME = "theme"
+US_FONT_SIZE = "font_size"
+US_LINE_HEIGHT = "line_height"
+US_AUTO_UPDATE = "auto_update"
+US_CHAPTER_THEME = "chapter_theme"
+US_CHAPTER_FONT_FAMILY = "chapter_font_family"
+US_CHAPTER_FONT_SIZE = "chapter_font_size"
+US_CHAPTER_LINE_SPACING = "chapter_line_spacing"
+US_CHAPTER_FONT_WEIGHT = "chapter_font_weight"
+US_CHAPTER_PARAGRAPH_SPACING = "chapter_paragraph_spacing"
+US_CHAPTER_CONTENT_PADDING = "chapter_content_padding"
+
+# ─────────────────────────────
+# user settings — type/category/control constants
+# ─────────────────────────────
+
+US_TYPE_CHOICE = "choice"
+US_TYPE_INT_RANGE = "int_range"
+US_TYPE_FLOAT_RANGE = "float_range"
+US_TYPE_BOOL = "bool"
+
+US_CATEGORY_DISPLAY = "display"
+US_CATEGORY_READING = "reading"
+
+US_CONTROL_BUTTONS = "buttons"
+US_CONTROL_SLIDER = "slider"
+
+
+"""
+    ----------- User settings -------------
+"""
 
 USER_SETTINGS_SCHEMA = {
-    "theme": {
-        "type": "choice", "choices": ("light", "dark"), "default": "light",
-        "category": "display",
+    US_THEME: {
+        "type": US_TYPE_CHOICE,
+        "choices": ("light", "dark"),
+        "default": "light",
+        "category": US_CATEGORY_DISPLAY,
     },
-    "font_size": {
-        "type": "int_range", "min": 10, "max": 30, "default": 14,
-        "category": "display",
+    US_FONT_SIZE: {
+        "type": US_TYPE_INT_RANGE,
+        "min": 10,
+        "max": 30,
+        "default": 14,
+        "category": US_CATEGORY_DISPLAY,
     },
-    "line_height": {
-        "type": "float_range", "min": 1.0, "max": 2.5, "default": 1.5,
-        "category": "display",
+    US_LINE_HEIGHT: {
+        "type": US_TYPE_FLOAT_RANGE,
+        "min": 1.0,
+        "max": 2.5,
+        "default": 1.5,
+        "category": US_CATEGORY_DISPLAY,
     },
-    "auto_update": {
-        "type": "bool", "default": False,
-        "category": "display",
+    US_AUTO_UPDATE: {
+        "type": US_TYPE_BOOL,
+        "default": False,
+        "category": US_CATEGORY_DISPLAY,
     },
-
-    "chapter_theme": {
-        "type": "choice", "choices": ("light", "sepia", "dark"), "default": "light",
-        "category": "reading", "label": "Theme", "control": "buttons",
+    US_CHAPTER_THEME: {
+        "type": US_TYPE_CHOICE,
+        "choices": ("light", "sepia", "dark"),
+        "default": "light",
+        "category": US_CATEGORY_READING,
+        "label": "Theme",
+        "control": US_CONTROL_BUTTONS,
         "options": [
             {"value": "light", "label": "Light", "icon": "fa-sun"},
             {"value": "sepia", "label": "Sepia", "icon": "fa-book"},
             {"value": "dark", "label": "Dark", "icon": "fa-moon"},
         ],
     },
-    "chapter_font_family": {
-        "type": "choice", "choices": ("serif", "sans"), "default": "serif",
-        "category": "reading", "label": "Font Family", "control": "buttons",
+    US_CHAPTER_FONT_FAMILY: {
+        "type": US_TYPE_CHOICE,
+        "choices": ("serif", "sans"),
+        "default": "serif",
+        "category": US_CATEGORY_READING,
+        "label": "Font Family",
+        "control": US_CONTROL_BUTTONS,
         "options": [
             {"value": "sans", "label": "Sans"},
             {"value": "serif", "label": "Serif"},
         ],
     },
-    "chapter_font_size": {
-        "type": "choice", "choices": (75, 88, 100, 113, 125, 150, 225), "default": 100,
-        "category": "reading", "label": "Font Size", "control": "buttons",
+    US_CHAPTER_FONT_SIZE: {
+        "type": US_TYPE_CHOICE,
+        "choices": (75, 88, 100, 113, 125, 150, 225),
+        "default": 100,
+        "category": US_CATEGORY_READING,
+        "label": "Font Size",
+        "control": US_CONTROL_BUTTONS,
         "options": [
             {"value": 75, "label": "12"},
             {"value": 88, "label": "14"},
@@ -435,33 +614,55 @@ USER_SETTINGS_SCHEMA = {
             {"value": 225, "label": "36"},
         ],
     },
-    "chapter_line_spacing": {
-        "type": "int_range", "min": 50, "max": 150, "default": 100,
-        "category": "reading", "label": "Line Spacing", "control": "slider",
-        "unit": "%", "step": 5,
+    US_CHAPTER_LINE_SPACING: {
+        "type": US_TYPE_INT_RANGE,
+        "min": 50,
+        "max": 150,
+        "default": 100,
+        "category": US_CATEGORY_READING,
+        "label": "Line Spacing",
+        "control": US_CONTROL_SLIDER,
+        "unit": "%",
+        "step": 5,
     },
-    "chapter_font_weight": {
-        "type": "choice", "choices": (0, 1, 2), "default": 1,
-        "category": "reading", "label": "Font Weight", "control": "buttons",
+    US_CHAPTER_FONT_WEIGHT: {
+        "type": US_TYPE_CHOICE,
+        "choices": (0, 1, 2),
+        "default": 1,
+        "category": US_CATEGORY_READING,
+        "label": "Font Weight",
+        "control": US_CONTROL_BUTTONS,
         "options": [
             {"value": 0, "label": "Light"},
             {"value": 1, "label": "Normal"},
             {"value": 2, "label": "Bold"},
         ],
     },
-    "chapter_paragraph_spacing": {
-        "type": "int_range", "min": 0, "max": 200, "default": 100,
-        "category": "reading", "label": "Paragraph Spacing", "control": "slider",
-        "unit": "%", "step": 5,
+    US_CHAPTER_PARAGRAPH_SPACING: {
+        "type": US_TYPE_INT_RANGE,
+        "min": 0,
+        "max": 200,
+        "default": 100,
+        "category": US_CATEGORY_READING,
+        "label": "Paragraph Spacing",
+        "control": US_CONTROL_SLIDER,
+        "unit": "%",
+        "step": 5,
     },
-    "chapter_content_padding": {
-        "type": "int_range", "min": 3, "max": 20, "default": 3,
-        "category": "reading", "label": "Margin", "control": "slider",
-        "unit": "rem", "step": 1,
+    US_CHAPTER_CONTENT_PADDING: {
+        "type": US_TYPE_INT_RANGE,
+        "min": 3,
+        "max": 20,
+        "default": 3,
+        "category": US_CATEGORY_READING,
+        "label": "Margin",
+        "control": US_CONTROL_SLIDER,
+        "unit": "rem",
+        "step": 1,
     },
 }
 
-REQUIRED_USER_SETTINGS = {"theme", "font_size", "line_height", "auto_update"}
+REQUIRED_USER_SETTINGS = {US_THEME, US_FONT_SIZE, US_LINE_HEIGHT, US_AUTO_UPDATE}
 
 """"
     ------------- Chapter patterns for titles -------------
@@ -486,7 +687,6 @@ DEFAULT_CHAPTER_PATTERNS: dict[str, str] = {
     r"\bby\s+\w+": "Author attribution",
     r"\w.*\s+(\d+)\s*[-–—‑−]": "Text with trailing number (In Search of Harmony 26 —)",
     r"^\s*ch\.?\s*(\d+)\b(?:\s*[-–—-−]?\s*.*)?$": "CH format (CH7, CH13- Title, CH1 Prologue)",
-    r"\bchapter\s+(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|and|[-\s])+": "Chapter with written number (Chapter Ten, Chapter One Hundred and Twenty-One)",   
+    r"\bchapter\s+(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|and|[-\s])+": "Chapter with written number (Chapter Ten, Chapter One Hundred and Twenty-One)",
     r"^\s*Day\s+(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion|and)(?:[-\s]+(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion|and))*\s*$": "Day with written number",
 }
-

@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from sqlalchemy import String, Integer, DateTime, Boolean, func
+from sqlalchemy import Boolean, DateTime, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from novelcast.db.base import Base

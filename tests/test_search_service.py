@@ -1,10 +1,12 @@
 # tests/test_search_service.py
 
 import asyncio
+
 import pytest
-from novelcast.services.search_service import SearchService, ParsedQuery, SITE_REGISTRY
+
 from novelcast.services.scrapers import scrape_all
 from novelcast.services.scrapers.base import ScrapedResult
+from novelcast.services.search_service import SITE_REGISTRY, ParsedQuery, SearchService
 
 service = SearchService()
 
@@ -13,8 +15,10 @@ service = SearchService()
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def parse(raw: str) -> ParsedQuery:
     return service.parse_query(raw)
+
 
 def urls(raw: str) -> list[str]:
     return [r.url for r in service.build_search_urls(parse(raw))]
@@ -26,8 +30,10 @@ def test_parse_query_extracts_patreon_creator_from_vanity_url():
     assert q.patreon_creator == "MarvinKnight"
     assert q.resolved_url == "https://www.patreon.com/MarvinKnight"
 
+
 def kinds(raw: str) -> list[str]:
     return [r.kind for r in service.build_search_urls(parse(raw))]
+
 
 def sites(raw: str) -> list[str]:
     return [r.site for r in service.build_search_urls(parse(raw))]
@@ -36,6 +42,7 @@ def sites(raw: str) -> list[str]:
 # ---------------------------------------------------------------------------
 # Direct URLs
 # ---------------------------------------------------------------------------
+
 
 class TestDirectUrls:
     def test_royalroad_fiction_url(self):
@@ -70,6 +77,7 @@ class TestDirectUrls:
 # Site + numeric ID
 # ---------------------------------------------------------------------------
 
+
 class TestSiteNumericId:
     def test_royalroad_numeric(self):
         q = parse("royalroad:75345")
@@ -97,16 +105,20 @@ class TestSiteNumericId:
 # Site + title
 # ---------------------------------------------------------------------------
 
+
 class TestSiteTitle:
-    @pytest.mark.parametrize("raw", [
-        "royalroad:Changeling",
-        "rr:Changeling",
-        "royalroad : Changeling",
-        "royalroad :Changeling",
-        "royalroad: Changeling",
-        "royal road:Changeling",
-        "royal-road:Changeling",
-    ])
+    @pytest.mark.parametrize(
+        "raw",
+        [
+            "royalroad:Changeling",
+            "rr:Changeling",
+            "royalroad : Changeling",
+            "royalroad :Changeling",
+            "royalroad: Changeling",
+            "royal road:Changeling",
+            "royal-road:Changeling",
+        ],
+    )
     def test_royalroad_title_variants(self, raw):
         q = parse(raw)
         assert q.site == "royalroad"
@@ -134,6 +146,7 @@ class TestSiteTitle:
 # ---------------------------------------------------------------------------
 # Author searches
 # ---------------------------------------------------------------------------
+
 
 class TestAuthorSearch:
     def test_global_author_prefix(self):
@@ -187,6 +200,7 @@ class TestAuthorSearch:
 # Bare keyword (title_and_author, all sites)
 # ---------------------------------------------------------------------------
 
+
 class TestBareKeyword:
     def test_bare_title(self):
         q = parse("Changeling")
@@ -224,6 +238,7 @@ class TestBareKeyword:
 # Error handling
 # ---------------------------------------------------------------------------
 
+
 class TestErrors:
     def test_unknown_site_prefix_raises(self):
         with pytest.raises(ValueError, match="Unknown site prefix"):
@@ -237,6 +252,7 @@ class TestErrors:
 # ---------------------------------------------------------------------------
 # build_search_urls structure
 # ---------------------------------------------------------------------------
+
 
 class TestBuildSearchUrls:
     def test_resolved_url_returns_single_result(self):
@@ -281,14 +297,18 @@ def test_scrape_all_uses_patreon_creator_scraper(monkeypatch):
         fake_scrape_patreon_creator,
     )
 
-    results = asyncio.run(scrape_all([
-        {
-            "site": "patreon",
-            "kind": "author_profile",
-            "url": "https://www.patreon.com/test_creator",
-            "patreon_creator": "test_creator",
-        }
-    ]))
+    results = asyncio.run(
+        scrape_all(
+            [
+                {
+                    "site": "patreon",
+                    "kind": "author_profile",
+                    "url": "https://www.patreon.com/test_creator",
+                    "patreon_creator": "test_creator",
+                }
+            ]
+        )
+    )
 
     assert len(results) == 1
     assert results[0].title == "Creator post"

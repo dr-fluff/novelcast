@@ -1,25 +1,21 @@
 # novelcast/app/factory.py
 
 from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from novelcast import app
-from novelcast.core.config import AppConfig
-
-from novelcast.api.errors import register_error_handlers
 from novelcast.api import (
-    RequestIDMiddleware,
     AuthMiddleware,
     PermissionMiddleware,
+    RequestIDMiddleware,
 )
-
-from novelcast.app.lifespan import lifespan
-from novelcast.core.templates import AppTemplates
+from novelcast.api.errors import register_error_handlers
 from novelcast.api.routes import router as api_router
-from novelcast.core.logging import setup_logging, LogConfig
-
-
+from novelcast.app.lifespan import lifespan
+from novelcast.core.config import AppConfig
+from novelcast.core.logging import LogConfig, setup_logging
+from novelcast.core.templates import AppTemplates
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 TEMPLATES_DIR = BASE_DIR / "templates"
@@ -28,7 +24,7 @@ STATIC_DIR = BASE_DIR / "static"
 
 def create_app(config: AppConfig) -> FastAPI:
     setup_logging(LogConfig.console_only())
-    
+
     app = FastAPI(
         title="NovelCast",
         lifespan=lifespan,
@@ -52,5 +48,5 @@ def create_app(config: AppConfig) -> FastAPI:
         StaticFiles(directory=str(STATIC_DIR)),
         name="static",
     )
-    
+
     return app

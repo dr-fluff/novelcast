@@ -16,9 +16,23 @@ from pathlib import Path
 from threading import Lock
 from typing import Deque
 
+from novelcast.core import setting_keys
+from novelcast.core.defaults import (
+    LOGGING_DEFAULTS,
+    LOGGING_FILE,
+    LOGGING_LEVEL,
+    LOGGING_MAX_AMOUNT_OF_FILES,
+    LOGGING_MAX_BYTES,
+    LOGGING_NOISY_LOGGERS,
+    LOGGING_TAIL_BUFFER_SIZE,
+)
+
+logger = logging.getLogger(__name__)
+
+
 request_id_ctx: ContextVar[str | None] = ContextVar("request_id", default=None)
 
-_TOKEN_RE  = re.compile(r"bot\d+:[A-Za-z0-9:_-]+")
+_TOKEN_RE = re.compile(r"bot\d+:[A-Za-z0-9:_-]+")
 _BEARER_RE = re.compile(r"Bearer\s+[A-Za-z0-9\-\._~\+\/]+=*")
 
 
@@ -29,49 +43,43 @@ def redact(value: str) -> str:
     value = _BEARER_RE.sub("Bearer ***", value)
     return value
 
-_DEFAULT_NOISY = [
-    "websockets", "websockets.server", "websockets.protocol",
-    "websockets.client", "uvicorn", "uvicorn.access",
-    "uvicorn.protocols", "uvicorn.protocols.websockets",
-    "uvicorn.protocols.websockets.websockets_impl",
-    "asyncio", "httpx", "httpcore",
-    "multipart", "python_multipart", "starlette",
-]
 
+def _schema_default(key: str):
+    return LOGGING_DEFAULTS[key]["default"]
 
 
 @dataclass
 class LogConfig:
-    level:            str       = "INFO"
-    file_path:        str       = "logs/novelcast.log"   # matches defaults.py "file" default
-    max_bytes:        int       = 10 * 1024 * 1024
-    noisy_loggers:    list[str] = field(default_factory=lambda: list(_DEFAULT_NOISY))
-    tail_buffer_size: int       = 500
-    max_files:        int       = 20
+    level: str = field(default_factory=lambda: _schema_default(LOGGING_LEVEL).upper())
+    file_path: str = field(default_factory=lambda: _schema_default(LOGGING_FILE))
+    max_bytes: int = field(default_factory=lambda: _schema_default(LOGGING_MAX_BYTES))
+    noisy_loggers: list[str] = field(default_factory=lambda: json.loads(_schema_default(LOGGING_NOISY_LOGGERS)))
+    tail_buffer_size: int = field(default_factory=lambda: _schema_default(LOGGING_TAIL_BUFFER_SIZE))
+    max_files: int = field(default_factory=lambda: _schema_default(LOGGING_MAX_AMOUNT_OF_FILES))
 
     @classmethod
     def from_settings_service(cls, svc) -> "LogConfig":
         cfg = cls()
 
-        if v := _get(svc, "logging", "level"):
+        if v := _get(svc, setting_keys.LOGGING_SETTINGS.LEVEL):
             cfg.level = v.upper()
 
-        if v := _get(svc, "logging", "file"):
+        if v := _get(svc, setting_keys.LOGGING_SETTINGS.FILE):
             cfg.file_path = v
 
-        if v := _get(svc, "logging", "max_bytes"):
+        if v := _get(svc, setting_keys.LOGGING_SETTINGS.MAX_BYTES):
             with _swallow():
                 cfg.max_bytes = int(v)
 
-        if v := _get(svc, "logging", "noisy_loggers"):
+        if v := _get(svc, setting_keys.LOGGING_SETTINGS.NOISY_LOGGERS):
             with _swallow():
                 cfg.noisy_loggers = json.loads(v)
 
-        if v := _get(svc, "logging", "tail_buffer_size"):
+        if v := _get(svc, setting_keys.LOGGING_SETTINGS.TAIL_BUFFER_SIZE):
             with _swallow():
                 cfg.tail_buffer_size = int(v)
-        
-        if v := _get(svc, "logging", "max_amount_of_files"):
+
+        if v := _get(svc, setting_keys.LOGGING_SETTINGS.MAX_AMOUNT_OF_FILES):
             with _swallow():
                 cfg.max_files = int(v)
 
@@ -79,12 +87,11 @@ class LogConfig:
 
     @classmethod
     def from_app_config(cls, app_config) -> "LogConfig":
-        """Fallback for early boot before DB is ready."""
         cfg = cls()
-        cfg.level     = getattr(app_config, "log_level", "INFO").upper()
-        cfg.file_path = getattr(app_config, "log_file", "logs/novelcast.log") or "logs/novelcast.log"
+        cfg.level = getattr(app_config, "log_level", _schema_default(LOGGING_LEVEL)).upper()
+        cfg.file_path = getattr(app_config, "log_file", _schema_default(LOGGING_FILE)) or _schema_default(LOGGING_FILE)
         return cfg
-    
+
     @classmethod
     def console_only(cls) -> "LogConfig":
         cfg = cls()
@@ -92,19 +99,21 @@ class LogConfig:
         return cfg
 
 
-def _get(svc, category: str, key: str) -> str | None:
+def _get(svc, dotted_key: str, default=None) -> str | None:
     try:
-        return svc.get(category, key) or None
+        value = svc.get(dotted_key, default=default).value
     except Exception:
         return None
+    return value if value not in (None, "") else None
+
 
 class JsonFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         log: dict = {
-            "timestamp":  datetime.utcnow().isoformat(),
-            "level":      record.levelname,
-            "logger":     record.name,
-            "message":    redact(record.getMessage()),
+            "timestamp": datetime.utcnow().isoformat(),
+            "level": record.levelname,
+            "logger": record.name,
+            "message": redact(record.getMessage()),
             "request_id": request_id_ctx.get(),
         }
 
@@ -117,15 +126,15 @@ class JsonFormatter(logging.Formatter):
 
         return json.dumps(log, ensure_ascii=False)
 
-class _SizeRollingFileHandler(RotatingFileHandler):
 
+class _SizeRollingFileHandler(RotatingFileHandler):
     def doRollover(self) -> None:
         if self.stream:
             self.stream.close()
             self.stream = None
 
         base = Path(self.baseFilename)
-        
+
         if base.exists():
             ts = datetime.utcnow().strftime("%Y-%m-%d_%H-%M-%S")
             archived = base.with_name(f"{base.stem}_{ts}{base.suffix}")
@@ -135,15 +144,13 @@ class _SizeRollingFileHandler(RotatingFileHandler):
 
         self.stream = self._open()
 
-    
 
 class InMemoryLogBuffer(logging.Handler):
-
     def __init__(self, maxlen: int = 500) -> None:
         super().__init__()
-        self._buf:  Deque[str] = deque(maxlen=maxlen)
-        self._lock  = Lock()
-        self._fmt   = JsonFormatter()
+        self._buf: Deque[str] = deque(maxlen=maxlen)
+        self._lock = Lock()
+        self._fmt = JsonFormatter()
 
     def emit(self, record: logging.LogRecord) -> None:
         try:
@@ -165,7 +172,9 @@ class InMemoryLogBuffer(logging.Handler):
         with self._lock:
             self._buf = deque(self._buf, maxlen=maxlen)
 
+
 log_buffer = InMemoryLogBuffer()
+
 
 def setup_logging(cfg: LogConfig | None = None) -> None:
     if cfg is None:
@@ -184,16 +193,16 @@ def setup_logging(cfg: LogConfig | None = None) -> None:
         base = Path(cfg.file_path)
         log_path = _timestamped_path(cfg.file_path)
         log_path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         _cleanup_old_logs(base, cfg.max_files)
-        
+
         fh = _SizeRollingFileHandler(
             filename=str(log_path),
             maxBytes=cfg.max_bytes,
             backupCount=0,
             encoding="utf-8",
         )
-        
+
         fh.setFormatter(JsonFormatter())
         handlers.append(fh)
 
@@ -216,7 +225,7 @@ def setup_logging(cfg: LogConfig | None = None) -> None:
 
 def _timestamped_path(file_path: str) -> Path:
     base = Path(file_path)
-    ts   = datetime.utcnow().strftime("%Y-%m-%d_%H-%M-%S")
+    ts = datetime.utcnow().strftime("%Y-%m-%d_%H-%M-%S")
     return base.with_name(f"{base.stem}_{ts}{base.suffix}")
 
 

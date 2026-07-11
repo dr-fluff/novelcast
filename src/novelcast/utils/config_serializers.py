@@ -1,6 +1,6 @@
 # novelcast/utils/config_serializers.py
-from typing import Any
 from hashlib import sha256
+from typing import Any
 
 
 def format_value(value: Any) -> str:

@@ -2,16 +2,15 @@
 
 from datetime import datetime, timezone
 
-from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy import select
+from sqlalchemy.dialects.sqlite import insert
 
 from novelcast.db.models.chapter import Chapter, ChapterProgress
-from novelcast.db.repositories.base import BaseRepository
 from novelcast.db.models.progress import ReadingProgress
+from novelcast.db.repositories.base import BaseRepository
 
 
 class ProgressRepository(BaseRepository):
-
     def get_progress(self, user_id: int, story_id: int) -> dict | None:
         with self.session_no_commit() as db:
             row = db.get(ReadingProgress, (user_id, story_id))
@@ -24,10 +23,7 @@ class ProgressRepository(BaseRepository):
                 .outerjoin(Chapter, Chapter.id == ReadingProgress.last_chapter_id)
                 .where(ReadingProgress.user_id == user_id)
             ).all()
-            return [
-                _progress_to_dict(row, last_chapter_number=chapter_number)
-                for row, chapter_number in rows
-            ]
+            return [_progress_to_dict(row, last_chapter_number=chapter_number) for row, chapter_number in rows]
 
     def set_progress(
         self,
@@ -50,14 +46,12 @@ class ProgressRepository(BaseRepository):
                     index_elements=["user_id", "story_id"],
                     set_={
                         "last_chapter_id": last_chapter_id,
-                        "last_position":   last_position,
-                        "updated_at":      datetime.now(timezone.utc),
+                        "last_position": last_position,
+                        "updated_at": datetime.now(timezone.utc),
                     },
                 )
             )
             db.execute(stmt)
-            
-            
 
     def get_chapter_page(self, user_id: int, chapter_id: int) -> dict | None:
         with self.session_no_commit() as db:
@@ -78,10 +72,15 @@ class ProgressRepository(BaseRepository):
                 .values(user_id=user_id, chapter_id=chapter_id, page=page, anchor=anchor)
                 .on_conflict_do_update(
                     index_elements=["user_id", "chapter_id"],
-                    set_={"page": page, "anchor": anchor, "updated_at": datetime.now(timezone.utc),},
+                    set_={
+                        "page": page,
+                        "anchor": anchor,
+                        "updated_at": datetime.now(timezone.utc),
+                    },
                 )
             )
             db.execute(stmt)
+
 
 def _progress_to_dict(
     row: ReadingProgress | None,
@@ -90,10 +89,10 @@ def _progress_to_dict(
     if row is None:
         return None
     return {
-        "user_id":         row.user_id,
-        "story_id":        row.story_id,
+        "user_id": row.user_id,
+        "story_id": row.story_id,
         "last_chapter_id": row.last_chapter_id,
         "last_chapter_number": last_chapter_number,
-        "last_position":   row.last_position,
-        "updated_at":      row.updated_at,
+        "last_position": row.last_position,
+        "updated_at": row.updated_at,
     }

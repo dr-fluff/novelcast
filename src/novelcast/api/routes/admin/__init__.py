@@ -4,26 +4,30 @@ from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
 
-from novelcast.api.deps import get_current_user, get_users, get_chapter_filter, get_health_check, get_library_sync
+from novelcast.api.deps import (
+    get_chapter_filter,
+    get_current_user,
+    get_health_check,
+    get_library_sync,
+    get_users,
+)
+from novelcast.api.routes.utils import require_admin
 from novelcast.services import HealthCheckService, LibrarySyncService, UserService
 from novelcast.services.chapter_filter_service import ChapterFilterService
-from novelcast.api.routes.utils import require_admin
-from .telegram import router as telegram_router 
-from .patreon import router as patreon_router
+
 from .log_tail import router as log_tail_router
+from .patreon import router as patreon_router
+from .telegram import router as telegram_router
 
 router = APIRouter()
 
 router.include_router(telegram_router, prefix="/telegram")
 router.include_router(patreon_router, prefix="/patreon")
-router.include_router(
-    log_tail_router,
-    prefix="/logs",
-    tags=["admin"]
-)
+router.include_router(log_tail_router, prefix="/logs", tags=["admin"])
 
 
 # ── Users ─────────────────────────────────────────────────────────────────
+
 
 @router.post("/users/{user_id}/promote")
 def promote_user(
@@ -69,14 +73,17 @@ def edit_user(
 
 # ── Chapter patterns ──────────────────────────────────────────────────────
 
+
 class PatternCreate(BaseModel):
     pattern: str
     description: str = ""
+
 
 class PatternPatch(BaseModel):
     enabled: bool | None = None
     pattern: str | None = None
     description: str | None = None
+
 
 class PatternTest(BaseModel):
     pattern: str
@@ -150,6 +157,7 @@ def test_pattern(
 
 
 # ── Health ────────────────────────────────────────────────────────────────
+
 
 @router.get("/health")
 def health_check(

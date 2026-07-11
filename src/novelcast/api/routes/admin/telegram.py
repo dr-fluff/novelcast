@@ -4,6 +4,7 @@ from fastapi import APIRouter, Request
 
 router = APIRouter()
 
+
 @router.post("/test")
 async def test_telegram(request: Request):
     telegram = request.app.state.telegram
@@ -12,10 +13,4 @@ async def test_telegram(request: Request):
     icon = "fa-circle-check" if ok else "fa-circle-xmark"
     color = "text-green-500" if ok else "text-red-500"
 
-    return (
-        f"<div class='{color} flex items-center gap-2'>"
-        f"<i class='fa-solid {icon}'></i>"
-        f"<span>{msg}</span>"
-        f"</div>"
-    )
-
+    return f"<div class='{color} flex items-center gap-2'><i class='fa-solid {icon}'></i><span>{msg}</span></div>"

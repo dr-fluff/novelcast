@@ -4,7 +4,6 @@ from novelcast.parser.base import BaseParser, Story
 
 
 class FanFicFareParser(BaseParser):
-
     def parse(self, data: dict) -> Story:
         raw = data.get("raw") if isinstance(data.get("raw"), dict) else data
         chapters = raw.get("chapters") or []
@@ -18,12 +17,14 @@ class FanFicFareParser(BaseParser):
             title = metadata.get("title") or raw_title or f"Chapter {chapter_number}"
             url = metadata.get("url")
 
-            normalized.append({
-                "number": chapter_number,
-                "title": title,
-                "url": url,
-                "content": ch.get("content", ""),
-            })
+            normalized.append(
+                {
+                    "number": chapter_number,
+                    "title": title,
+                    "url": url,
+                    "content": ch.get("content", ""),
+                }
+            )
 
         return {
             "title": data.get("title", raw.get("title", "Unknown")),
@@ -38,12 +39,7 @@ class FanFicFareParser(BaseParser):
 
         result: dict[int, dict] = {}
         for item in zchapters_raw:
-            if (
-                isinstance(item, list)
-                and len(item) == 2
-                and isinstance(item[0], int)
-                and isinstance(item[1], dict)
-            ):
+            if isinstance(item, list) and len(item) == 2 and isinstance(item[0], int) and isinstance(item[1], dict):
                 index = item[0]
                 meta = item[1]
                 title = meta.get("title")

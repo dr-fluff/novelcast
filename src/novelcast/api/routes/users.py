@@ -1,8 +1,7 @@
 from fastapi import APIRouter, Depends
 
-from novelcast.api.deps import get_users, get_auth
+from novelcast.api.deps import get_users
 from novelcast.services import UserService
-from novelcast.services import AuthService
 
 router = APIRouter(prefix="/users", tags=["users"])
 

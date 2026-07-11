@@ -1,23 +1,20 @@
 # novelcast/db/repositories/rss_entry_repository.py
 from sqlalchemy import select
 
-from novelcast.db.repositories.base import BaseRepository
 from novelcast.db.models import RssEntry
+from novelcast.db.repositories.base import BaseRepository
 
 
 class RssEntryRepository(BaseRepository):
-
     def exists(self, source: str, guid: str) -> bool:
         with self.session_no_commit() as db:
             return (
                 db.scalars(
-                    select(RssEntry)
-                    .where(
+                    select(RssEntry).where(
                         RssEntry.source == source,
                         RssEntry.guid == guid,
                     )
-                )
-                .first()
+                ).first()
                 is not None
             )
 

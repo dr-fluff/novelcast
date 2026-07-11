@@ -5,11 +5,11 @@ from novelcast.db.repositories.chapters_repository import ChaptersRepository
 from novelcast.db.repositories.files_repository import FilesRepository
 from novelcast.db.repositories.password_reset_repository import PasswordResetRepository
 from novelcast.db.repositories.progress_repository import ProgressRepository
+from novelcast.db.repositories.rss_entry_repository import RssEntryRepository
 from novelcast.db.repositories.settings_repository import SettingsRepository
 from novelcast.db.repositories.stories_repository import StoriesRepository
 from novelcast.db.repositories.sync_repository import SyncRepository
 from novelcast.db.repositories.users_repository import UsersRepository
-from novelcast.db.repositories.rss_entry_repository import RssEntryRepository
 
 __all__ = [
     "AuthRepository",

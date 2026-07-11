@@ -1,20 +1,24 @@
 # novelcast/api/router/chapter.py
-from fastapi import Depends, Header, HTTPException, Request
-from fastapi.templating import Jinja2Templates
-from fastapi.responses import JSONResponse
-from starlette.requests import ClientDisconnect
-
 import logging
 
-from novelcast.api.deps import get_chapters, get_current_user, get_progress, get_stories, get_templates, get_settings
-from novelcast.services import ChaptersService, ProgressService, StoryService
-from novelcast.services import SettingsService
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
+from fastapi.templating import Jinja2Templates
+from starlette.requests import ClientDisconnect
 
-from fastapi import APIRouter
+from novelcast.api.deps import (
+    get_chapters,
+    get_current_user,
+    get_progress,
+    get_settings,
+    get_stories,
+    get_templates,
+)
+from novelcast.services import ChaptersService, ProgressService, SettingsService, StoryService
 
 router = APIRouter()
 
 logger = logging.getLogger(__name__)
+
 
 @router.get("/chapter")
 def chapter(
@@ -58,28 +62,29 @@ def chapter(
             last = prog["last_chapter_id"]
             read_chapters = {c["id"] for c in chapter_list if c["id"] <= last}
 
-    first_unread = next(
-        (c["id"] for c in chapter_list if c["id"] not in read_chapters), None
-    )
+    first_unread = next((c["id"] for c in chapter_list if c["id"] not in read_chapters), None)
     hide_author_notes = story.get("hide_author_notes", True)
 
     reading_settings_schema = settings_service.get_reading_settings_schema()
 
-    return templates.TemplateResponse("pages/chapter.html", {
-        "request": request,
-        "title": story.get("title"),
-        "story_link": story.get("source_url"),
-        "author": story.get("author"),
-        "chapter": chapter.get("title") or f"Chapter {chapter.get('chapter_number')}",
-        "content": content,
-        "story_id": story_id,
-        "chapter_id": chapter_id,
-        "prev_chapter_id": prev_id,
-        "next_chapter_id": next_id,
-        "first_unread_chapter_id": first_unread,
-        "hide_author_notes": hide_author_notes,
-        "reading_settings_schema": reading_settings_schema,
-    })
+    return templates.TemplateResponse(
+        "pages/chapter.html",
+        {
+            "request": request,
+            "title": story.get("title"),
+            "story_link": story.get("source_url"),
+            "author": story.get("author"),
+            "chapter": chapter.get("title") or f"Chapter {chapter.get('chapter_number')}",
+            "content": content,
+            "story_id": story_id,
+            "chapter_id": chapter_id,
+            "prev_chapter_id": prev_id,
+            "next_chapter_id": next_id,
+            "first_unread_chapter_id": first_unread,
+            "hide_author_notes": hide_author_notes,
+            "reading_settings_schema": reading_settings_schema,
+        },
+    )
 
 
 @router.get("/api/chapter-settings")
@@ -93,9 +98,7 @@ async def get_chapter_settings(
         raise HTTPException(status_code=401, detail="Authentication required")
 
     try:
-        chapter_settings = settings_service.get_chapter_reading_settings(
-            current_user["id"], device_id=x_device_id
-        )
+        chapter_settings = settings_service.get_chapter_reading_settings(current_user["id"], device_id=x_device_id)
         return {"settings": chapter_settings}
     except Exception as e:
         logger.error(f"Error fetching chapter settings for user {current_user['id']}: {e}")
@@ -153,8 +156,6 @@ async def update_chapter_settings(
         raise HTTPException(status_code=500, detail="Failed to save settings")
 
 
-from starlette.requests import ClientDisconnect
-
 @router.post("/api/chapter-progress")
 async def save_chapter_progress(
     request: Request,
@@ -169,11 +170,11 @@ async def save_chapter_progress(
     except ClientDisconnect:
         return {"ok": True}
 
-    chapter_id  = body.get("chapter_id")
-    story_id    = body.get("story_id")
-    page        = body.get("page", 0)
+    chapter_id = body.get("chapter_id")
+    story_id = body.get("story_id")
+    page = body.get("page", 0)
     total_pages = body.get("total_pages", 1)
-    anchor      = body.get("anchor", 0)
+    anchor = body.get("anchor", 0)
 
     if not chapter_id or not story_id:
         raise HTTPException(status_code=400, detail="chapter_id and story_id required")

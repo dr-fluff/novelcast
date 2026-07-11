@@ -1,16 +1,16 @@
 from urllib.parse import quote
 
-from fastapi import Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from novelcast.api.deps import get_current_user, get_settings, get_templates, get_users
 from novelcast.services import SettingsService, UserService
+
 from .helpers import parse_settings_form
 
-from fastapi import APIRouter
-
 router = APIRouter()
+
 
 @router.get("/settings")
 def settings(
@@ -31,14 +31,17 @@ def settings(
         server_settings = settings.get_scoped_server_settings()
         all_users = users.get_all_users()
 
-    return templates.TemplateResponse("pages/settings.html", {
-        "request":         request,
-        "user":            current_user,
-        "schema":          settings.schema,
-        "user_settings":   user_settings,
-        "server_settings": server_settings,
-        "users":           all_users,
-    })
+    return templates.TemplateResponse(
+        "pages/settings.html",
+        {
+            "request": request,
+            "user": current_user,
+            "schema": settings.schema,
+            "user_settings": user_settings,
+            "server_settings": server_settings,
+            "users": all_users,
+        },
+    )
 
 
 @router.post("/settings")
@@ -64,12 +67,12 @@ async def save_settings(
                 # Temporarily apply updates for validation
                 for key, value in fields.items():
                     settings.set_server_setting(f"{section}.{key}", value)
-        
+
         if patreon_updated:
             # Validate Patreon settings
             ctx = request.app.state.ctx
             patreon_config_service = ctx.engines_config.get("patreon", {}).get("writer")
-            if patreon_config_service and hasattr(patreon_config_service, 'validate_settings'):
+            if patreon_config_service and hasattr(patreon_config_service, "validate_settings"):
                 is_valid, error_msg = patreon_config_service.validate_settings()
                 if not is_valid:
                     active_tab = form.get("_active_tab", "")
@@ -77,7 +80,7 @@ async def save_settings(
                     if active_tab:
                         redirect_url = f"{redirect_url}#{quote(active_tab, safe='')}"
                     return RedirectResponse(redirect_url, status_code=303)
-        
+
         # Save all settings
         for section, fields in server_updates.items():
             for key, value in fields.items():

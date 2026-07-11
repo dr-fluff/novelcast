@@ -3,20 +3,17 @@
 from sqlalchemy import select
 from sqlalchemy.dialects.sqlite import insert
 
-from novelcast.db.repositories.base import BaseRepository
 from novelcast.db.models.chapter import Chapter, ChapterFile
+from novelcast.db.repositories.base import BaseRepository
 
 
 class ChaptersRepository(BaseRepository):
-
     # ── reads ─────────────────────────────────────────────────────────────
 
     def get_by_story(self, story_id: int) -> list[dict]:
         with self.session_no_commit() as db:
             rows = db.scalars(
-                select(Chapter)
-                .where(Chapter.story_id == story_id)
-                .order_by(Chapter.chapter_number)
+                select(Chapter).where(Chapter.story_id == story_id).order_by(Chapter.chapter_number)
             ).all()
             return [_to_dict(c) for c in rows]
 
@@ -40,7 +37,7 @@ class ChaptersRepository(BaseRepository):
                 select(Chapter)
                 .where(
                     Chapter.story_id == story_id,
-                    Chapter.is_downloaded == True,
+                    Chapter.is_downloaded,
                 )
                 .order_by(Chapter.chapter_number)
             ).all()
@@ -50,22 +47,18 @@ class ChaptersRepository(BaseRepository):
         with self.session_no_commit() as db:
             return list(
                 db.scalars(
-                    select(Chapter.id).where(
+                    select(Chapter.id)
+                    .where(
                         Chapter.story_id == story_id,
-                        Chapter.is_downloaded == True,
-                    ).order_by(Chapter.chapter_number)
+                        Chapter.is_downloaded,
+                    )
+                    .order_by(Chapter.chapter_number)
                 ).all()
             )
 
     def get_chapter_numbers(self, story_id: int) -> set[int]:
         with self.session_no_commit() as db:
-            return set(
-                db.scalars(
-                    select(Chapter.chapter_number).where(
-                        Chapter.story_id == story_id
-                    )
-                ).all()
-            )
+            return set(db.scalars(select(Chapter.chapter_number).where(Chapter.story_id == story_id)).all())
 
     def get_downloaded_numbers(self, story_id: int) -> set[int]:
         with self.session_no_commit() as db:
@@ -73,7 +66,7 @@ class ChaptersRepository(BaseRepository):
                 db.scalars(
                     select(Chapter.chapter_number).where(
                         Chapter.story_id == story_id,
-                        Chapter.is_downloaded == True,
+                        Chapter.is_downloaded,
                     )
                 ).all()
             )
@@ -122,7 +115,6 @@ class ChaptersRepository(BaseRepository):
         is_downloaded: int = 0,
     ) -> None:
         with self.session() as db:
-
             stmt = (
                 insert(Chapter)
                 .values(
@@ -147,9 +139,7 @@ class ChaptersRepository(BaseRepository):
 
             # If we have file_path, attach it separately
             if file_path:
-                chapter = db.scalars(
-                    select(Chapter).where(Chapter.url == url)
-                ).first()
+                chapter = db.scalars(select(Chapter).where(Chapter.url == url)).first()
 
                 if chapter:
                     # optionally clear previous canonical file
@@ -211,6 +201,7 @@ class ChaptersRepository(BaseRepository):
 
 
 # ── helper ────────────────────────────────────────────────────────────────
+
 
 def _to_dict(chapter: Chapter | None) -> dict | None:
     if chapter is None:

@@ -1,10 +1,11 @@
 # novelcast/db/repositories/chapter_pattern_repository.py
 
 import re
+
 from sqlalchemy import select
 
-from novelcast.db.repositories.base import BaseRepository
 from novelcast.db.models.chapter_pattern import ChapterPattern
+from novelcast.db.repositories.base import BaseRepository
 
 
 class ChapterPatternRepository(BaseRepository):
@@ -29,7 +30,7 @@ class ChapterPatternRepository(BaseRepository):
         """Return only enabled patterns as regex strings (for EpubParser)."""
         with self.session_no_commit() as db:
             rows = db.scalars(
-                select(ChapterPattern).where(ChapterPattern.enabled == True).order_by(ChapterPattern.id)
+                select(ChapterPattern).where(ChapterPattern.enabled).order_by(ChapterPattern.id)
             ).all()
             return [row.pattern for row in rows]
 
@@ -67,11 +68,11 @@ class ChapterPatternRepository(BaseRepository):
             row = db.get(ChapterPattern, pattern_id)
             if not row:
                 return None
-            
+
             row.pattern = pattern
             row.description = description
             db.flush()
-            
+
             return {
                 "id": row.id,
                 "pattern": row.pattern,
@@ -96,11 +97,7 @@ class ChapterPatternRepository(BaseRepository):
 
     def seed_defaults(self, default_patterns: dict[str, str]) -> None:
         with self.session() as db:
-            existing_patterns = set(
-                db.scalars(
-                    select(ChapterPattern.pattern)
-                ).all()
-            )
+            existing_patterns = set(db.scalars(select(ChapterPattern.pattern)).all())
             added = 0
             for pattern, description in default_patterns.items():
                 if pattern in existing_patterns:
@@ -116,12 +113,12 @@ class ChapterPatternRepository(BaseRepository):
                 added += 1
 
             return added
-        
+
     def test_pattern(self, pattern: str, samples: list[str]) -> list[dict]:
         """
         Test a regex pattern against sample titles.
         Safe — does not touch the DB.
-        
+
         Returns: list of {sample, matched}
         """
         try:
@@ -132,9 +129,11 @@ class ChapterPatternRepository(BaseRepository):
         results = []
         for sample in samples:
             match = compiled.search(sample)
-            results.append({
-                "sample": sample,
-                "matched": bool(match),
-                "groups": match.groups() if match else None,
-            })
+            results.append(
+                {
+                    "sample": sample,
+                    "matched": bool(match),
+                    "groups": match.groups() if match else None,
+                }
+            )
         return results

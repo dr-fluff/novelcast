@@ -3,6 +3,7 @@
 from typing import Optional
 from urllib.parse import parse_qs, urlparse
 
+
 def extract_creator(raw: str) -> Optional[str]:
     parsed = urlparse(raw)
     hostname = (parsed.hostname or "").lower()

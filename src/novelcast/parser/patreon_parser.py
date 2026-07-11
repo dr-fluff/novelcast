@@ -6,24 +6,27 @@ import os
 import re
 from pathlib import Path
 from typing import Dict, List, Optional
-from ebooklib import epub, ITEM_DOCUMENT
 
 from bs4 import BeautifulSoup
+from ebooklib import ITEM_DOCUMENT, epub
 
 from novelcast.parser.base import BaseParser, Story
 
 logger = logging.getLogger(__name__)
 
 _IMAGE_MIME = {
-    "jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png",
-    "gif": "image/gif", "webp": "image/webp", "bmp": "image/bmp",
+    "jpg": "image/jpeg",
+    "jpeg": "image/jpeg",
+    "png": "image/png",
+    "gif": "image/gif",
+    "webp": "image/webp",
+    "bmp": "image/bmp",
 }
 
 _EPUB_SKIP_MARKERS = ("cover", "nav", "toc", "titlepage", "title_page")
 
 
 class PatreonParser(BaseParser):
-
     def parse(self, data: dict, settings: Optional[dict] = None) -> Story:
         raw = data.get("raw", {})
         post_records = raw.get("post_records", [])
@@ -60,17 +63,18 @@ class PatreonParser(BaseParser):
             chapters = []
             for f in doc_files:
                 content = (
-                    self._extract_epub_text(f["path"]) if f["type"] == "epub"
-                    else self._extract_pdf_text(f["path"])
+                    self._extract_epub_text(f["path"]) if f["type"] == "epub" else self._extract_pdf_text(f["path"])
                 )
                 if not content.strip():
                     continue
                 num, title = self._extract_number_title_from_filename(f["filename"], filename_pattern)
-                chapters.append({
-                    "number": num if num is not None else self._extract_chapter_number_from_title(post_title),
-                    "title": title or post_title,
-                    "content": content,
-                })
+                chapters.append(
+                    {
+                        "number": num if num is not None else self._extract_chapter_number_from_title(post_title),
+                        "title": title or post_title,
+                        "content": content,
+                    }
+                )
 
             if not chapters:
                 # Files existed but all failed to parse — fall back to post text
@@ -216,6 +220,7 @@ class PatreonParser(BaseParser):
             return ""
         try:
             import PyPDF2
+
             with open(file_path, "rb") as f:
                 pdf = PyPDF2.PdfReader(f)
                 paragraphs = []
@@ -234,8 +239,6 @@ class PatreonParser(BaseParser):
         if not file_path or not os.path.exists(file_path):
             return ""
         try:
-            
-
             book = epub.read_epub(file_path)
             parts = []
             for item in book.get_items():
@@ -254,11 +257,7 @@ class PatreonParser(BaseParser):
             return ""
 
     def _escape(self, text: str) -> str:
-        return (
-            text.replace("&", "&amp;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
-        )
+        return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
     # ── filename → chapter number/title ──────────────────────────────
 

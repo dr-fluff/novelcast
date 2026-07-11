@@ -1,8 +1,8 @@
-# novelcast/db/models/settings.py 
+# novelcast/db/models/settings.py
 #
 # Add UniqueConstraint to UserSetting so the upsert in SettingsRepository works.
 
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -10,8 +10,8 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from novelcast.db.base import Base
 
 if TYPE_CHECKING:
-    from novelcast.db.models.user import User
     from novelcast.db.models.story import Story
+    from novelcast.db.models.user import User
 
 
 class ServerSetting(Base):
@@ -28,9 +28,7 @@ class ServerSetting(Base):
 
 class UserSetting(Base):
     __tablename__ = "user_settings"
-    __table_args__ = (
-        UniqueConstraint("user_id", "name", name="uq_user_settings_user_name"),
-    )
+    __table_args__ = (UniqueConstraint("user_id", "name", name="uq_user_settings_user_name"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(
@@ -52,7 +50,10 @@ class StorySetting(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     story_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("stories.id", ondelete="CASCADE"), nullable=False, index=True
+        Integer,
+        ForeignKey("stories.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     name: Mapped[str] = mapped_column(String, nullable=False)
     value: Mapped[str] = mapped_column(String, nullable=False)

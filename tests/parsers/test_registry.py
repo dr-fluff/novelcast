@@ -1,9 +1,9 @@
 import pytest
 
 from novelcast.parser import (
+    HtmlParser,
     ParserRegistry,
     PatreonParser,
-    HtmlParser,
 )
 
 

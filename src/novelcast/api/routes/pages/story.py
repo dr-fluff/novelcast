@@ -1,12 +1,11 @@
 # novelcast/api/routes/pages/story.py
 
-from fastapi import Depends, HTTPException, Request
-from fastapi.templating import Jinja2Templates
 import logging
 
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.templating import Jinja2Templates
 
 from novelcast.api.deps import (
-    get_chapter_filter,
     get_chapters,
     get_current_user,
     get_progress,
@@ -14,16 +13,20 @@ from novelcast.api.deps import (
     get_stories,
     get_templates,
 )
-from novelcast.services import ChaptersService, ProgressService, SettingsService, StoryService
-from novelcast.services.chapter_filter_service import ChapterFilterService
+from novelcast.services import (
+    ChaptersService,
+    ProgressService,
+    SettingsService,
+    StoryService,
+)
+
 from .helpers import resolve_progress
 from .preferences import device_preference_key
-
-from fastapi import APIRouter
 
 router = APIRouter()
 
 logger = logging.getLogger(__name__)
+
 
 @router.get("/story")
 def story(
@@ -44,17 +47,15 @@ def story(
         raise HTTPException(status_code=404, detail="Story not found")
     try:
         story_authors = stories.get_story_authors(story_id)
-        #extra_patterns = get_chapter_filter(request).get_enabled_regexes()
+        # extra_patterns = get_chapter_filter(request).get_enabled_regexes()
         chapter_list = chapters.list_by_story_filtered(story_id)
         story_files = stories.get_story_files(story_id)
-        
+
         read_chapters, last_chapter_id, last_read_title = resolve_progress(
             current_user, story_id, chapter_list, progress, chapters
         )
 
-        first_unread = next(
-            (c["id"] for c in chapter_list if c["id"] not in read_chapters), None
-        )
+        first_unread = next((c["id"] for c in chapter_list if c["id"] not in read_chapters), None)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -72,18 +73,20 @@ def story(
             story_preferences["chapter_sort"] = chapter_sort
         if file_sort in ("asc", "desc"):
             story_preferences["file_sort"] = file_sort
-    
 
-    return templates.TemplateResponse("pages/story.html", {
-        "request": request,
-        "current_user": current_user,
-        "story": story,
-        "story_authors": story_authors,
-        "chapters": chapter_list,
-        "story_files": story_files,
-        "read_chapters": read_chapters,
-        "last_chapter_id": last_chapter_id,
-        "last_read_title": last_read_title,
-        "first_unread_chapter_id": first_unread,
-        "story_preferences": story_preferences,
-    })
+    return templates.TemplateResponse(
+        "pages/story.html",
+        {
+            "request": request,
+            "current_user": current_user,
+            "story": story,
+            "story_authors": story_authors,
+            "chapters": chapter_list,
+            "story_files": story_files,
+            "read_chapters": read_chapters,
+            "last_chapter_id": last_chapter_id,
+            "last_read_title": last_read_title,
+            "first_unread_chapter_id": first_unread,
+            "story_preferences": story_preferences,
+        },
+    )

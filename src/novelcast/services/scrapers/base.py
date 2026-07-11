@@ -7,7 +7,7 @@ from typing import Optional
 @dataclass
 class ScrapedResult:
     site: str
-    kind: str                  # "fiction" | "author"
+    kind: str  # "fiction" | "author"
     title: str
     author: Optional[str] = None
     cover_url: Optional[str] = None

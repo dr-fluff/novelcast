@@ -1,19 +1,20 @@
 # novelcast/services/story_service.py
 
+import logging
+import re
 from pathlib import Path
 from urllib.parse import quote
-import re
-import logging
 
+from novelcast.db.models import Story
+from novelcast.db.repositories import AuthorRepository
 from novelcast.utils.url import get_site_from_url
 
-from novelcast.db.repositories import AuthorRepository
-from novelcast.db.models import Story
-
 logger = logging.getLogger(__name__)
+
+
 class StoryService:
     def __init__(self, repo, author_repo: AuthorRepository | None = None):
-        self.repo        = repo
+        self.repo = repo
         self.author_repo = author_repo
 
     # ── path helper ────────────────────────────────────────────────────────
@@ -37,6 +38,7 @@ class StoryService:
         if cover_path.startswith(("http://", "https://", "/static/")):
             return cover_path
         return f"/covers?path={quote(cover_path)}"
+
     def _parse_comma_separated(self, raw: str | None) -> list[str]:
         if not raw:
             return []
@@ -56,6 +58,7 @@ class StoryService:
         for existing_author in existing:
             if existing_author["name"] not in requested:
                 self.author_repo.unlink_from_story(existing_author["id"], story_id)
+
     # ── story reads ────────────────────────────────────────────────────────
 
     def get_all_stories(self):
@@ -65,7 +68,7 @@ class StoryService:
         data = self.repo.get_by_id(story_id)
         if not data:
             return None
-        
+
         # resolve cover URL for templates
         data["cover_url"] = self._cover_url(data.get("cover_path"))
         return data
@@ -90,14 +93,16 @@ class StoryService:
             if not file_path.is_file():
                 continue
             stat = file_path.stat()
-            files.append({
-                "name": file_path.name,
-                "relative_path": str(file_path.relative_to(path)),
-                "path": str(file_path),
-                "size": human_readable_size(stat.st_size),
-                "size_bytes": stat.st_size,
-                "modified_at": stat.st_mtime,
-            })
+            files.append(
+                {
+                    "name": file_path.name,
+                    "relative_path": str(file_path.relative_to(path)),
+                    "path": str(file_path),
+                    "size": human_readable_size(stat.st_size),
+                    "size_bytes": stat.st_size,
+                    "modified_at": stat.st_mtime,
+                }
+            )
 
         return files
 
@@ -113,7 +118,7 @@ class StoryService:
         story = self.get_story(story_id)
         if not story:
             return False
-        
+
         title = story.get("title") or "Unknown"
 
         local_path = story.get("local_path")
@@ -121,6 +126,7 @@ class StoryService:
             path = self._resolve_path(local_path)
             if path.is_dir():
                 import shutil
+
                 shutil.rmtree(path, ignore_errors=True)
             elif path.exists():
                 path.unlink()
@@ -137,11 +143,11 @@ class StoryService:
                 cover_file.unlink()
 
         self.repo.delete_with_relations(story_id)
-        
+
         telegram = getattr(self, "telegram", None)
         if telegram:
             telegram.notify_story_deleted(title)
-            
+
         return True
 
     def update_story_metadata(
@@ -178,15 +184,19 @@ class StoryService:
             self._sync_story_authors(story_id, names)
         if updated and auto_update is not None:
             self.repo.set_story_setting(
-                story_id, "auto_update",
+                story_id,
+                "auto_update",
                 "1" if bool(auto_update) else "0",
-                category="story", type="bool",
+                category="story",
+                type="bool",
             )
         if updated and hide_author_notes is not None:  # ← ADD
             self.repo.set_story_setting(
-                story_id, "hide_author_notes",
+                story_id,
+                "hide_author_notes",
                 "1" if bool(hide_author_notes) else "0",
-                category="story", type="bool",
+                category="story",
+                type="bool",
             )
         return updated
 
@@ -195,21 +205,13 @@ class StoryService:
     def get_stories_by_site(self, site: str) -> list[dict]:
         stories = self.repo.get_all()
 
-        return [
-            story
-            for story in stories
-            if get_site_from_url(story.get("source_url")) == site
-        ]
+        return [story for story in stories if get_site_from_url(story.get("source_url")) == site]
 
     def get_auto_update_stories_by_site(self, site: str) -> list[dict]:
         """Same as get_stories_by_site, but restricted to stories with the
         auto_update story setting enabled. Used by RSS readers so stories
         the user hasn't opted into auto-updating aren't polled/downloaded."""
-        return [
-            story
-            for story in self.get_stories_by_site(site)
-            if story.get("auto_update")
-        ]
+        return [story for story in self.get_stories_by_site(site) if story.get("auto_update")]
 
     def get_story_by_site_id(self, site: str, site_id: str | None) -> dict | None:
         """Find a story by its external site + site_id (e.g. RoyalRoad's
@@ -222,7 +224,7 @@ class StoryService:
                 return story
 
         return None
-    
+
     def get_all_authors(self, query: str = "", sort: str = "name") -> list[dict]:
         if not self.author_repo:
             return []
@@ -282,12 +284,12 @@ class StoryService:
     # In novelcast/repositories/story_repository.py
 
     def count_pending_syncs(self) -> int:
-        
+
         from sqlalchemy import func
 
         return (
             self._db.query(func.count(Story.id))
-            .filter(Story.sync_status == "pending")   # adjust field/value
+            .filter(Story.sync_status == "pending")  # adjust field/value
             .scalar()
             or 0
         )

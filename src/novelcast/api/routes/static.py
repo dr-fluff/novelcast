@@ -2,10 +2,8 @@
 
 from pathlib import Path
 
-from fastapi import HTTPException
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
-
-from fastapi import APIRouter
 
 router = APIRouter()
 

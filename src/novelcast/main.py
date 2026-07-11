@@ -1,6 +1,5 @@
 # novelcast/main.py
 
-import logging
 import uvicorn
 
 from novelcast.app.factory import create_app
@@ -28,4 +27,3 @@ if __name__ == "__main__":
         log_level=config.log_level,
         ws="websockets",
     )
-    

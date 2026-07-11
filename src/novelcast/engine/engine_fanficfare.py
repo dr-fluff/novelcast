@@ -2,8 +2,6 @@ import json
 import logging
 import subprocess
 import sys
-import selectors
-import time
 from urllib.parse import urlparse
 
 from .base import StoryEngine
@@ -16,7 +14,6 @@ IDLE_TIMEOUT_SECONDS = 300
 
 
 class FanFicFareEngine(StoryEngine):
-
     FLAG_CONFIG = "--config"
     FLAG_METADATA = "--json-meta"
     FLAG_META_ONLY = "--meta-only"
@@ -84,7 +81,6 @@ class FanFicFareEngine(StoryEngine):
             try:
                 # ✔️ YOUR REAL FORMAT: [number, {title: ...}]
                 if isinstance(item, (list, tuple)) and len(item) >= 2:
-
                     # number
                     if isinstance(item[0], int):
                         num = item[0]
@@ -100,12 +96,14 @@ class FanFicFareEngine(StoryEngine):
                 elif isinstance(item, str):
                     title = item
 
-                chapters.append({
-                    "number": num,
-                    "title": title,
-                    "selected": True,
-                    "raw": item,
-                })
+                chapters.append(
+                    {
+                        "number": num,
+                        "title": title,
+                        "selected": True,
+                        "raw": item,
+                    }
+                )
 
             except Exception:
                 logger.warning("Skipping bad chapter: %s", item)
@@ -119,7 +117,8 @@ class FanFicFareEngine(StoryEngine):
             "fanficfare.cli",
             self.FLAG_METADATA,
             self.FLAG_NON_INTERACTIVE,
-            self.FLAG_CONFIG, config_path,
+            self.FLAG_CONFIG,
+            config_path,
         ]
 
         if extra_flags:
@@ -235,6 +234,7 @@ class FanFicFareEngine(StoryEngine):
 
     def _clean_html(self, text: str) -> str:
         import re
+
         return re.sub(r"<.*?>", "", text)
 
     def _extract_epub_path(self, raw: dict) -> str:
@@ -255,17 +255,18 @@ class FanFicFareEngine(StoryEngine):
             progress_callback("Processing", value)
 
         return value
-    
+
     def _extract_story_site_id(self, url: str, raw: dict) -> str | None:
         import re
+
         # Prefer clean numeric ID from URL
-        match = re.search(r'/fiction/(\d+)', url)
+        match = re.search(r"/fiction/(\d+)", url)
         if match:
             return match.group(1)
 
         # Fallback: strip prefix from output_filename
         output_filename = raw.get("output_filename") or ""
-        match = re.search(r'-([a-z]+_(\d+))\.epub$', output_filename)
+        match = re.search(r"-([a-z]+_(\d+))\.epub$", output_filename)
         if match:
             return match.group(2)  # just the number
 

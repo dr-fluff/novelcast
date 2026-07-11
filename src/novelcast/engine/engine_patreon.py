@@ -4,9 +4,9 @@ import logging
 import os
 import re
 import tempfile
-from urllib.parse import urlparse, parse_qs
 from pathlib import Path
-from typing import Optional, Dict, List, Any
+from typing import Dict, List, Optional
+from urllib.parse import parse_qs, urlparse
 
 import requests
 
@@ -27,7 +27,6 @@ _IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"}
 
 
 class PatreonEngine:
-
     ROOT = "https://www.patreon.com"
 
     def __init__(self, settings_repo, settings_service):
@@ -69,7 +68,10 @@ class PatreonEngine:
                     allow_redirects=True,
                 )
                 if "/login" in resp.url:
-                    return False, "Session cookie is expired or invalid — log into patreon.com again and re-copy 'session_id'."
+                    return (
+                        False,
+                        "Session cookie is expired or invalid — log into patreon.com again and re-copy 'session_id'.",
+                    )
                 resp.raise_for_status()
             except requests.RequestException as e:
                 return False, f"Connection error: {e}"
@@ -124,7 +126,7 @@ class PatreonEngine:
                     "post_count": len(posts),
                     "viewable_count": len(viewable),
                     "locked_count": locked_count,
-                }
+                },
             }
 
         except Exception as e:
@@ -160,11 +162,8 @@ class PatreonEngine:
             "url": url,
             "raw": {
                 "campaign_id": campaign_id,
-                "latest_posts": [
-                    {"title": p.get("title"), "published_at": p.get("published_at")}
-                    for p in posts
-                ]
-            }
+                "latest_posts": [{"title": p.get("title"), "published_at": p.get("published_at")} for p in posts],
+            },
         }
 
     def _extract_creator_from_url(self, url: str) -> Optional[str]:
@@ -294,7 +293,11 @@ class PatreonEngine:
         try:
             pattern = re.compile(story_match, re.I)
         except re.error as e:
-            logger.info("story_match %r isn't valid regex, falling back to literal match: %s", story_match, e)
+            logger.info(
+                "story_match %r isn't valid regex, falling back to literal match: %s",
+                story_match,
+                e,
+            )
             pattern = re.compile(re.escape(story_match), re.I)
         return [p for p in posts if pattern.search(p.get("title", ""))]
 
@@ -405,21 +408,27 @@ class PatreonEngine:
                     elif ext in _IMAGE_EXTENSIONS:
                         file_type = "image"
                     else:
-                        logger.info("Skipping unsupported attachment type %r on post %s", filename, post_id)
+                        logger.info(
+                            "Skipping unsupported attachment type %r on post %s",
+                            filename,
+                            post_id,
+                        )
                         continue
 
                     file_path = os.path.join(output_dir, f"{post_id}_{filename}")
                     if self._download_file(download_url, file_path):
                         files.append({"type": file_type, "path": file_path, "filename": filename})
 
-                post_records.append({
-                    "post_id": post_id,
-                    "title": post_title,
-                    "raw_content": raw_content,
-                    "content_format": content_format,
-                    "inline_images": inline_images,
-                    "files": files,
-                })
+                post_records.append(
+                    {
+                        "post_id": post_id,
+                        "title": post_title,
+                        "raw_content": raw_content,
+                        "content_format": content_format,
+                        "inline_images": inline_images,
+                        "files": files,
+                    }
+                )
 
             except Exception as e:
                 logger.error("Failed to download post %s: %s", post.get("id"), e)
@@ -449,12 +458,14 @@ class PatreonEngine:
 
         result_posts = []
         for idx, p in enumerate(posts, start=1):
-            result_posts.append({
-                "number": idx,
-                "title": p.get("title") or f"Post {idx}",
-                "locked": not p.get("current_user_can_view", False),
-                "published_at": p.get("published_at"),
-            })
+            result_posts.append(
+                {
+                    "number": idx,
+                    "title": p.get("title") or f"Post {idx}",
+                    "locked": not p.get("current_user_can_view", False),
+                    "published_at": p.get("published_at"),
+                }
+            )
 
         return {
             "creator": creator_name,

@@ -12,10 +12,10 @@ if False:
 class AuthorLink(Base):
     __tablename__ = "author_links"
 
-    id:        Mapped[int]        = mapped_column(Integer, primary_key=True, autoincrement=True)
-    author_id: Mapped[int]        = mapped_column(Integer, ForeignKey("authors.id", ondelete="CASCADE"), nullable=False)
-    label:     Mapped[str]        = mapped_column(String, nullable=False)   
-    url:       Mapped[str]        = mapped_column(String, nullable=False)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    author_id: Mapped[int] = mapped_column(Integer, ForeignKey("authors.id", ondelete="CASCADE"), nullable=False)
+    label: Mapped[str] = mapped_column(String, nullable=False)
+    url: Mapped[str] = mapped_column(String, nullable=False)
 
     author: Mapped["Author"] = relationship("Author", back_populates="links")
 

@@ -1,19 +1,13 @@
+import sys
 from logging.config import fileConfig
+from pathlib import Path
 
-from sqlalchemy import engine_from_config
-from sqlalchemy import create_engine
-from sqlalchemy import pool
+from sqlalchemy import create_engine, pool
 
 from alembic import context
-import sys
-from pathlib import Path
 from novelcast.db.base import Base
 
 # Register all models on Base.metadata for autogenerate
-import novelcast.db.models.chapter   # Chapter, ChapterFile, ChapterProgress
-import novelcast.db.models.progress  # ReadingProgress
-import novelcast.db.models.story
-import novelcast.db.models.user
 
 sys.path.append(str(Path(__file__).resolve().parents[1] / "src"))
 db_path = Path(__file__).resolve().parents[1] / "data" / "novelcast.db"
@@ -78,9 +72,7 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection, target_metadata=target_metadata
-        )
+        context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():
             context.run_migrations()

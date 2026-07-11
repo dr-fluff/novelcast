@@ -2,7 +2,6 @@
 
 import inspect
 import logging
-
 from typing import Optional
 
 logger = logging.getLogger(__name__)
@@ -31,4 +30,3 @@ class StoryDownloadOrchestrator:
             kwargs["story_match"] = story_match
 
         return engine.check_updates(url, **kwargs)
-    

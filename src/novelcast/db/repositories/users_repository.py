@@ -1,13 +1,12 @@
 # novelcast/db/repositories/users_repository.py
 
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 
-from novelcast.db.repositories.base import BaseRepository
 from novelcast.db.models.user import User
+from novelcast.db.repositories.base import BaseRepository
 
 
 class UsersRepository(BaseRepository):
-
     def get_by_id(self, user_id: int) -> dict | None:
         with self.session_no_commit() as db:
             user = db.get(User, user_id)
@@ -15,9 +14,7 @@ class UsersRepository(BaseRepository):
 
     def get_by_username(self, username: str) -> dict | None:
         with self.session_no_commit() as db:
-            user = db.scalars(
-                select(User).where(User.username == username)
-            ).first()
+            user = db.scalars(select(User).where(User.username == username)).first()
             return _to_dict(user)
 
     def list(self) -> list[dict]:
@@ -37,7 +34,7 @@ class UsersRepository(BaseRepository):
                 is_root=bool(is_root),
             )
             db.add(user)
-            db.flush()          # populates user.id before commit
+            db.flush()  # populates user.id before commit
             return user.id
 
     def set_root(self, user_id: int) -> None:
@@ -77,6 +74,7 @@ class UsersRepository(BaseRepository):
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 
+
 def _to_dict(user: User | None) -> dict | None:
     """
     Convert ORM object → plain dict so services don't import ORM models.
@@ -85,9 +83,9 @@ def _to_dict(user: User | None) -> dict | None:
     if user is None:
         return None
     return {
-        "id":            user.id,
-        "username":      user.username,
+        "id": user.id,
+        "username": user.username,
         "password_hash": user.password_hash,
-        "is_root":       int(user.is_root),
-        "created_at":    user.created_at,
+        "is_root": int(user.is_root),
+        "created_at": user.created_at,
     }

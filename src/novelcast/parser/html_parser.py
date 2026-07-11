@@ -4,9 +4,8 @@ from novelcast.parser.base import BaseParser, Story
 
 
 class HtmlParser(BaseParser):
-
     def parse(self, data: dict) -> Story:
-        html_path = data.get("file_path")
+        # html_path = data.get("file_path")
 
         # TODO: parse HTML into chapters
         chapters = []
@@ -14,5 +13,5 @@ class HtmlParser(BaseParser):
         return {
             "title": data.get("title", "Unknown"),
             "author": data.get("author"),
-            "chapters": chapters
+            "chapters": chapters,
         }

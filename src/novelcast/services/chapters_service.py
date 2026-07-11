@@ -37,7 +37,7 @@ class ChaptersService:
             return None
 
         return path.read_text(encoding="utf-8", errors="ignore")
-    
+
     def list_by_story_filtered(self, story_id: int) -> list[dict]:
         """
         Return chapters that match enabled chapter detection patterns from DB.
@@ -46,18 +46,15 @@ class ChaptersService:
         if not self.chapter_filter:
             # Fallback: return all chapters if no filter service
             return self.list_by_story(story_id)
-        
+
         chapters = self.list_by_story(story_id)
         patterns = self.chapter_filter.get_enabled_regexes()
-        
+
         if not patterns:
             return []
-        
+
         # Compile patterns once
         compiled = [re.compile(p, re.IGNORECASE) for p in patterns]
-        
+
         # Return chapters that match any pattern
-        return [
-            ch for ch in chapters 
-            if any(r.search(ch.get("title", "")) for r in compiled)
-        ]
+        return [ch for ch in chapters if any(r.search(ch.get("title", "")) for r in compiled)]

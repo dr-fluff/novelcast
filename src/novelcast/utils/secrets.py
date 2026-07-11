@@ -3,7 +3,6 @@ import hashlib
 import hmac
 import os
 
-
 PREFIX = "ncsec:v1:"
 
 
@@ -32,7 +31,7 @@ def decrypt_secret(value: str, secret_key: str) -> str:
         return value
 
     try:
-        payload = base64.urlsafe_b64decode(value[len(PREFIX):].encode("ascii"))
+        payload = base64.urlsafe_b64decode(value[len(PREFIX) :].encode("ascii"))
     except Exception as exc:
         raise ValueError("Invalid encrypted secret") from exc
 

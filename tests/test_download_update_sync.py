@@ -5,10 +5,10 @@ from unittest.mock import MagicMock
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src")))
 
+from novelcast.app.lifespan import _run_auto_check
 from novelcast.services.story_download_service import StoryDownloadService
 from novelcast.services.story_service import StoryService
 from novelcast.services.sync_service import LibrarySyncService
-from novelcast.app.lifespan import _run_auto_check
 
 
 class FakePipeline:
@@ -50,11 +50,14 @@ class TestStoryDownloadService(unittest.TestCase):
 
         self.assertEqual(story_id, 123)
         self.orchestrator.download.assert_not_called()
-        self.notifier.assert_any_call("download_finished", {
-            "download_id": unittest.mock.ANY,
-            "story_id": 123,
-            "title": "Existing Story",
-        })
+        self.notifier.assert_any_call(
+            "download_finished",
+            {
+                "download_id": unittest.mock.ANY,
+                "story_id": 123,
+                "title": "Existing Story",
+            },
+        )
 
     def test_add_story_persists_downloaded_story(self):
         raw = {

@@ -1,6 +1,8 @@
 # novelcast/services/chapter_filter_service.py
 
-from novelcast.db.repositories.chapter_pattern_repository import ChapterPatternRepository
+from novelcast.db.repositories.chapter_pattern_repository import (
+    ChapterPatternRepository,
+)
 
 
 class ChapterFilterService:

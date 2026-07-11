@@ -1,6 +1,6 @@
 import asyncio
-import uuid
 import logging
+import uuid
 
 logger = logging.getLogger(__name__)
 
@@ -36,17 +36,12 @@ async def _run_auto_check(ctx):
 
     job_id = f"auto-sync-{uuid.uuid4().hex[:6]}"
 
-        
     try:
         sync_svc = ctx.library_sync
         stories_svc = ctx.stories
         logger.info("Auto-sync check starting", extra={"job_id": job_id})
 
-        auto_stories = [
-            s["id"]
-            for s in stories_svc.get_all_stories()
-            if s.get("auto_update")
-        ]
+        auto_stories = [s["id"] for s in stories_svc.get_all_stories() if s.get("auto_update")]
 
         if not auto_stories:
             await asyncio.to_thread(sync_svc.check_updates)

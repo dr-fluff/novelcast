@@ -1,4 +1,3 @@
-
 class ProgressService:
     def __init__(self, repo):
         self.repo = repo
@@ -14,6 +13,6 @@ class ProgressService:
 
     def set_chapter_page(self, user_id: int, chapter_id: int, page: int, anchor: int = 0) -> None:
         self.repo.set_chapter_page(user_id, chapter_id, page, anchor)
-    
+
     def set_progress(self, user_id: int, story_id: int, chapter_id: int, last_position: int) -> None:
         self.repo.set_progress(user_id, story_id, chapter_id, last_position)

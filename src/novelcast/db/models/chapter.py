@@ -2,13 +2,20 @@
 
 
 from datetime import datetime
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, func, UniqueConstraint
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from novelcast.db.base import Base
-
 
 if TYPE_CHECKING:
     from novelcast.db.models.story import Story
@@ -18,13 +25,11 @@ class Chapter(Base):
     __tablename__ = "chapters"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    story_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("stories.id", ondelete="CASCADE"), nullable=False
-    )
+    story_id: Mapped[int] = mapped_column(Integer, ForeignKey("stories.id", ondelete="CASCADE"), nullable=False)
 
     chapter_number: Mapped[int] = mapped_column(Integer, nullable=False)  # online index (1..N)
     title: Mapped[Optional[str]] = mapped_column(String)
-    url: Mapped[Optional[str]] = mapped_column(String, unique=True)       # stable scrape key
+    url: Mapped[Optional[str]] = mapped_column(String, unique=True)  # stable scrape key
 
     # True once at least one ChapterFile exists and the canonical HTML is ready
     is_downloaded: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -32,7 +37,11 @@ class Chapter(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
     story: Mapped["Story"] = relationship("Story", back_populates="chapters")
-    files: Mapped[list["ChapterFile"]] = relationship("ChapterFile",back_populates="chapter",cascade="all, delete-orphan",)
+    files: Mapped[list["ChapterFile"]] = relationship(
+        "ChapterFile",
+        back_populates="chapter",
+        cascade="all, delete-orphan",
+    )
 
     @property
     def html_file(self) -> Optional["ChapterFile"]:
@@ -52,13 +61,14 @@ class ChapterFile(Base):
     A chapter can have multiple files (original download + converted HTML, etc.).
     Exactly one should have is_canonical=True — the HTML used for reading.
     """
+
     __tablename__ = "chapter_files"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     chapter_id: Mapped[int] = mapped_column(Integer, ForeignKey("chapters.id", ondelete="CASCADE"), nullable=False)
 
     file_path: Mapped[str] = mapped_column(String, nullable=False)
-    format: Mapped[str] = mapped_column(String, nullable=False)   # "html", "epub", "txt", etc.
+    format: Mapped[str] = mapped_column(String, nullable=False)  # "html", "epub", "txt", etc.
     is_canonical: Mapped[bool] = mapped_column(Boolean, default=False)  # the HTML for reading
 
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
@@ -79,8 +89,4 @@ class ChapterProgress(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
     anchor: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
-
-    __table_args__ = (
-        UniqueConstraint("user_id", "chapter_id", name="uq_chapter_progress_user_chapter"),
-    )
-    
+    __table_args__ = (UniqueConstraint("user_id", "chapter_id", name="uq_chapter_progress_user_chapter"),)

@@ -3,9 +3,9 @@
 from fastapi import APIRouter, Depends, Request
 from fastapi.templating import Jinja2Templates
 
-from novelcast.api.deps import get_current_user, get_templates, get_settings
-from novelcast.services.search_service import SearchService
+from novelcast.api.deps import get_current_user, get_settings, get_templates
 from novelcast.services.scrapers import scrape_all, scrape_details
+from novelcast.services.search_service import SearchService
 from novelcast.services.settings_service import SettingsService
 
 router = APIRouter()
@@ -17,10 +17,13 @@ def search_page(
     current_user: dict | None = Depends(get_current_user),
     templates: Jinja2Templates = Depends(get_templates),
 ):
-    return templates.TemplateResponse("pages/search.html", {
-        "request": request,
-        "current_user": current_user,
-    })
+    return templates.TemplateResponse(
+        "pages/search.html",
+        {
+            "request": request,
+            "current_user": current_user,
+        },
+    )
 
 
 @router.get("/search/results")
@@ -33,13 +36,16 @@ async def search_results(
     q = q.strip()
 
     if not q:
-        return templates.TemplateResponse("partials/search_results.html", {
-            "request": request,
-            "query": None,
-            "parsed": None,
-            "results": [],
-            "error": None,
-        })
+        return templates.TemplateResponse(
+            "partials/search_results.html",
+            {
+                "request": request,
+                "query": None,
+                "parsed": None,
+                "results": [],
+                "error": None,
+            },
+        )
 
     search_service = SearchService(settings_service=settings_service)
 
@@ -47,7 +53,10 @@ async def search_results(
         parsed = search_service.parse_query(q)
         search_urls = search_service.build_search_urls(parsed)
 
-        if parsed.target in ("fiction", "author") and parsed.lookup_type in ("id", "url"):
+        if parsed.target in ("fiction", "author") and parsed.lookup_type in (
+            "id",
+            "url",
+        ):
             results = await scrape_details(search_urls, settings_service=settings_service)
         else:
             results = await scrape_all(search_urls, settings_service=settings_service)
@@ -59,11 +68,14 @@ async def search_results(
         results = []
         error = str(e)
 
-    return templates.TemplateResponse("partials/search_results.html", {
-        "request": request,
-        "query": q,
-        "parsed": parsed,
-        "search_urls": search_urls,
-        "results": results,
-        "error": error,
-    })
+    return templates.TemplateResponse(
+        "partials/search_results.html",
+        {
+            "request": request,
+            "query": q,
+            "parsed": parsed,
+            "search_urls": search_urls,
+            "results": results,
+            "error": error,
+        },
+    )

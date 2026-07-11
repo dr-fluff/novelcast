@@ -6,10 +6,11 @@ import logging
 from sqlalchemy import select
 from sqlalchemy.dialects.sqlite import insert
 
-from novelcast.db.repositories.base import BaseRepository
 from novelcast.db.models.settings import ServerSetting, UserSetting
+from novelcast.db.repositories.base import BaseRepository
 
 logger = logging.getLogger(__name__)
+
 
 def _storage_type_for(spec: dict) -> str:
     """Derive the UserSetting.type column value from a schema spec."""
@@ -54,11 +55,7 @@ class SettingsRepository(BaseRepository):
         """Return {full_key: value} for every key starting with *prefix*."""
         with self.session_no_commit() as db:
             rows = db.scalars(select(ServerSetting)).all()
-            return {
-                row.key: _deserialize(row.value)
-                for row in rows
-                if row.key.startswith(prefix)
-            }
+            return {row.key: _deserialize(row.value) for row in rows if row.key.startswith(prefix)}
 
     def set_server_setting(self, key: str, value) -> None:
         with self.session() as db:
@@ -88,9 +85,7 @@ class SettingsRepository(BaseRepository):
 
     def get_user_settings(self, user_id: int, device_id: str | None = None) -> dict | None:
         with self.session_no_commit() as db:
-            rows = db.scalars(
-                select(UserSetting).where(UserSetting.user_id == user_id)
-            ).all()
+            rows = db.scalars(select(UserSetting).where(UserSetting.user_id == user_id)).all()
 
             if not rows:
                 return None
@@ -102,7 +97,7 @@ class SettingsRepository(BaseRepository):
             for row in rows:
                 if row.name.startswith(self.DEVICE_PREFIX):
                     if device_prefix and row.name.startswith(device_prefix):
-                        device_overrides[row.name[len(device_prefix):]] = _deserialize(row.value)
+                        device_overrides[row.name[len(device_prefix) :]] = _deserialize(row.value)
                     # rows belonging to a *different* device are ignored
                     continue
                 result[row.name] = _deserialize(row.value)
@@ -122,7 +117,8 @@ class SettingsRepository(BaseRepository):
                 if category == "reading" and not device_id:
                     logger.warning(
                         "Skipping save of reading setting %r for user %s: no device_id provided",
-                        name, user_id,
+                        name,
+                        user_id,
                     )
                     continue
 
@@ -188,6 +184,7 @@ class SettingsRepository(BaseRepository):
 
 
 # ── helpers ───────────────────────────────────────────────────────────────
+
 
 def _deserialize(value: str):
     """Deserialize JSON string to Python value."""

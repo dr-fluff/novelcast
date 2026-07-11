@@ -46,7 +46,10 @@ def test_patreon_preview_uses_creator_page_posts_for_chapter_count(monkeypatch):
     </body></html>
     """
 
-    monkeypatch.setattr("novelcast.api.routes.add_story.httpx.AsyncClient", lambda *args, **kwargs: FakeAsyncClient(html))
+    monkeypatch.setattr(
+        "novelcast.api.routes.add_story.httpx.AsyncClient",
+        lambda *args, **kwargs: FakeAsyncClient(html),
+    )
 
     request = AddStoryRequest(url="https://www.patreon.com/c/MarvinKnight/home?vanity=MarvinKnight")
     result = asyncio.run(preview_story_metadata(request, download=DummyDownload()))
@@ -54,4 +57,7 @@ def test_patreon_preview_uses_creator_page_posts_for_chapter_count(monkeypatch):
     assert result.title == "Patreon: MarvinKnight"
     assert result.author == "MarvinKnight"
     assert result.chapter_count == 2
-    assert [chapter.title for chapter in result.chapters] == ["First Post", "Second Post"]
+    assert [chapter.title for chapter in result.chapters] == [
+        "First Post",
+        "Second Post",
+    ]

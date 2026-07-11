@@ -19,11 +19,16 @@ class HealthResult:
     meta: dict = field(default_factory=dict)
 
     def as_dict(self) -> dict:
-        return {"name": self.name, "status": self.status, "detail": self.detail, "meta": self.meta}
+        return {
+            "name": self.name,
+            "status": self.status,
+            "detail": self.detail,
+            "meta": self.meta,
+        }
 
 
 class HealthCheckService:
-    DISK_WARNING_PCT  = 80
+    DISK_WARNING_PCT = 80
     DISK_CRITICAL_PCT = 90
 
     def __init__(
@@ -54,11 +59,11 @@ class HealthCheckService:
     def check_disk(self) -> HealthResult:
         path = self._stories_dir or "/"
         try:
-            usage   = shutil.disk_usage(path)
-            pct     = int(usage.used / usage.total * 100)
-            free_gb = round(usage.free / (1024 ** 3), 1)
-            meta    = {"used_pct": pct, "free_gb": free_gb}
-            label   = f"{pct}% used — {free_gb} GB free"
+            usage = shutil.disk_usage(path)
+            pct = int(usage.used / usage.total * 100)
+            free_gb = round(usage.free / (1024**3), 1)
+            meta = {"used_pct": pct, "free_gb": free_gb}
+            label = f"{pct}% used — {free_gb} GB free"
             if pct >= self.DISK_CRITICAL_PCT:
                 return HealthResult("Disk Storage", "not_healthy", label, meta)
             if pct >= self.DISK_WARNING_PCT:
@@ -74,18 +79,38 @@ class HealthCheckService:
             return HealthResult("Sync Worker", "not_configured", "Heartbeat not configured")
         age = time.time() - self._worker_last_ping_ts
         if age < 120:
-            return HealthResult("Sync Worker", "healthy",     f"Active (last ping {int(age)}s ago)",      {"last_ping_age_s": int(age)})
+            return HealthResult(
+                "Sync Worker",
+                "healthy",
+                f"Active (last ping {int(age)}s ago)",
+                {"last_ping_age_s": int(age)},
+            )
         if age < 600:
-            return HealthResult("Sync Worker", "warning",     f"Slow — last ping {int(age // 60)}m ago", {"last_ping_age_s": int(age)})
-        return     HealthResult("Sync Worker", "not_healthy", f"No response — {int(age // 60)}m ago",    {"last_ping_age_s": int(age)})
+            return HealthResult(
+                "Sync Worker",
+                "warning",
+                f"Slow — last ping {int(age // 60)}m ago",
+                {"last_ping_age_s": int(age)},
+            )
+        return HealthResult(
+            "Sync Worker",
+            "not_healthy",
+            f"No response — {int(age // 60)}m ago",
+            {"last_ping_age_s": int(age)},
+        )
 
     def check_pending_syncs(self, pending: int) -> HealthResult:
         meta = {"count": pending}
         if pending == 0:
-            return HealthResult("Pending Syncs", "healthy",     "All stories up to date", meta)
+            return HealthResult("Pending Syncs", "healthy", "All stories up to date", meta)
         if pending < 10:
-            return HealthResult("Pending Syncs", "warning",     f"{pending} stor{'y' if pending == 1 else 'ies'} need syncing", meta)
-        return     HealthResult("Pending Syncs", "not_healthy", f"{pending} stories need syncing", meta)
+            return HealthResult(
+                "Pending Syncs",
+                "warning",
+                f"{pending} stor{'y' if pending == 1 else 'ies'} need syncing",
+                meta,
+            )
+        return HealthResult("Pending Syncs", "not_healthy", f"{pending} stories need syncing", meta)
 
     # ── Run all ─────────────────────────────────────────────────────────────
 

@@ -1,10 +1,10 @@
 # novelcast/api/middleware.py
 
-import uuid
 import logging
+import uuid
 from http.cookies import SimpleCookie
 
-from starlette.responses import RedirectResponse, JSONResponse
+from starlette.responses import JSONResponse, RedirectResponse
 
 from novelcast.auth.session import decode_session_token
 from novelcast.core.logging import request_id_ctx

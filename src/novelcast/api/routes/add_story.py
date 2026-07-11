@@ -1,20 +1,19 @@
 # novelcast/api/routes/add_story.py
 
+import asyncio
 import hashlib
 import logging
 import uuid
-import asyncio
+from typing import Optional
 from urllib.parse import parse_qs, urlparse
 
-import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
-from typing import Optional
 
-from novelcast.api.deps import get_download, get_stories_service, get_patreon_engine
+from novelcast.api.deps import get_download, get_patreon_engine, get_stories_service
 from novelcast.api.ws.notifications import manager
-from novelcast.services import StoryService, StoryDownloadService
 from novelcast.engine.engine_patreon import PatreonEngine
+from novelcast.services import StoryDownloadService, StoryService
 
 router = APIRouter(tags=["stories"])
 logger = logging.getLogger(__name__)
@@ -41,8 +40,8 @@ class AddStoryRequest(BaseModel):
     auto_update: bool = False
     selected_chapters: list[int] | None = None
     chapter_regex: str | None = None
-    content_source: str | None = None      # "file" or "text" — Patreon only
-    filename_pattern: str | None = None    # regex with (?P<number>) (?P<title>) — Patreon only
+    content_source: str | None = None  # "file" or "text" — Patreon only
+    filename_pattern: str | None = None  # regex with (?P<number>) (?P<title>) — Patreon only
 
 
 class MetadataPreview(BaseModel):
@@ -237,7 +236,10 @@ async def _download_story(
         existing = download.stories_repo.get_by_url(download_url)
         if existing:
             async with manager.job(job_id, f"Patreon: {creator}") as job:
-                await job.update(f"{creator}'s Patreon page (this filter) already added", progress=100)
+                await job.update(
+                    f"{creator}'s Patreon page (this filter) already added",
+                    progress=100,
+                )
             return
 
     async with manager.job(job_id, f"Adding '{title_hint}'") as job:

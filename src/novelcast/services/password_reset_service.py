@@ -23,9 +23,7 @@ class PasswordResetService:
             return None
 
         token = generate_reset_token()
-        expires_at = (
-            datetime.now(timezone.utc) + timedelta(hours=self.TOKEN_TTL_HOURS)
-        ).strftime("%Y-%m-%d %H:%M:%S")
+        expires_at = (datetime.now(timezone.utc) + timedelta(hours=self.TOKEN_TTL_HOURS)).strftime("%Y-%m-%d %H:%M:%S")
 
         self.repo.create_token(user["id"], token, expires_at)
 

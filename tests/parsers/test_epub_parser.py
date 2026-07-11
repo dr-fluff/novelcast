@@ -47,7 +47,8 @@ def test_parse_chapter_html():
 
     assert title == "Chapter 1"
     assert "Hello World" in content
-    
+
+
 def test_parse_real_epub(sample_epub):
     parser = EpubParser(patterns=[r"chapter\s+(\d+)"])
 

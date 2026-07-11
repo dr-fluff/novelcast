@@ -3,7 +3,6 @@ from abc import ABC, abstractmethod
 
 
 class StoryEngine(ABC):
-
     @abstractmethod
     def can_handle(self, url: str) -> bool:
         pass
@@ -24,5 +23,3 @@ class StoryEngine(ABC):
 
     def check_updates(self, url: str) -> dict:
         raise NotImplementedError(f"{self.__class__.__name__} does not support update checks")
-
-    

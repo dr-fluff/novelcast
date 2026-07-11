@@ -1,3 +1,6 @@
+from starlette.requests import Request
+
+
 def build_global_context(request: Request) -> dict:
     return {
         "app_name": "NovelCast",
@@ -12,4 +15,3 @@ def build_global_context(request: Request) -> dict:
             {"key": "reverse", "label": "Reverse"},
         ],
     }
-    

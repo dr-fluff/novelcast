@@ -23,10 +23,22 @@ class LibrarySyncService:
         }
 
     def auto_sync_enabled(self) -> bool:
-        return self._library_setting("auto_update", True) in (True, 1, "1", "true", "True")
+        return self._library_setting("auto_update", True) in (
+            True,
+            1,
+            "1",
+            "true",
+            "True",
+        )
 
     def update_on_startup_enabled(self) -> bool:
-        return self._library_setting("update_on_startup", True) in (True, 1, "1", "true", "True")
+        return self._library_setting("update_on_startup", True) in (
+            True,
+            1,
+            "1",
+            "true",
+            "True",
+        )
 
     def interval_seconds(self) -> int:
         try:
@@ -76,7 +88,12 @@ class LibrarySyncService:
 
     def update_all(self, story_ids=None) -> dict:
         if not self._lock.acquire(blocking=False):
-            return {"status": "already_running", "stories_checked": 0, "stories_updated": 0, "new_chapters": 0}
+            return {
+                "status": "already_running",
+                "stories_checked": 0,
+                "stories_updated": 0,
+                "new_chapters": 0,
+            }
 
         try:
             stories = self._filter_stories(story_ids)
@@ -103,23 +120,32 @@ class LibrarySyncService:
                         getattr(story, "title", None),
                         getattr(story, "file_path", None),
                     )
-                    self._emit("sync_story_failed", {"story_id": story.get("id"), "title": title})
+                    self._emit(
+                        "sync_story_failed",
+                        {"story_id": story.get("id"), "title": title},
+                    )
                     continue
 
                 count = int(result.get("new_chapters", 0) or 0)
                 if count:
                     updated += 1
                     new_chapters += count
-                    self._emit("sync_story_updated", {
-                        "story_id": story.get("id"),
-                        "title": title,
-                        "new_chapters": count,
-                    })
+                    self._emit(
+                        "sync_story_updated",
+                        {
+                            "story_id": story.get("id"),
+                            "title": title,
+                            "new_chapters": count,
+                        },
+                    )
                 else:
-                    self._emit("sync_story_no_changes", {
-                        "story_id": story.get("id"),
-                        "title": title,
-                    })
+                    self._emit(
+                        "sync_story_no_changes",
+                        {
+                            "story_id": story.get("id"),
+                            "title": title,
+                        },
+                    )
 
             payload = {
                 "status": "finished",

@@ -1,7 +1,9 @@
 # tests/parsers/conftest.py
 
-import pytest
 from pathlib import Path
+
+import pytest
+
 
 def assert_valid_story(story):
     assert isinstance(story, dict)

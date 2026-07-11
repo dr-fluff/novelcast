@@ -11,9 +11,7 @@ class StoryLink(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
-    story_id: Mapped[int] = mapped_column(
-        ForeignKey("stories.id", ondelete="CASCADE")
-    )
+    story_id: Mapped[int] = mapped_column(ForeignKey("stories.id", ondelete="CASCADE"))
 
     label: Mapped[str] = mapped_column(String)
     url: Mapped[str] = mapped_column(String)

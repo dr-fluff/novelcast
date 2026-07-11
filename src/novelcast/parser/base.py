@@ -1,7 +1,7 @@
 # novelcast/parser/base.py
 
 from abc import ABC, abstractmethod
-from typing import TypedDict, List, Optional
+from typing import List, Optional, TypedDict
 
 
 class Chapter(TypedDict):
@@ -17,7 +17,6 @@ class Story(TypedDict):
 
 
 class BaseParser(ABC):
-
     @abstractmethod
     def parse(self, data: dict) -> Story:
         """

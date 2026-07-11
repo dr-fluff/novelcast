@@ -1,7 +1,7 @@
 # novelcast/db/models/story.py
 
 from datetime import datetime
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import DateTime, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -11,14 +11,13 @@ from novelcast.db.base import Base
 if TYPE_CHECKING:
     from novelcast.db.models.author import Author
     from novelcast.db.models.chapter import Chapter
-    from novelcast.db.models.group import StoryPermission
-    from novelcast.db.models.progress import ReadingProgress
-    from novelcast.db.models.settings import StorySetting
-    from novelcast.db.models.jobs import UpdateJob
-
-    from novelcast.db.models.tag import Tag
     from novelcast.db.models.genre import Genre
+    from novelcast.db.models.group import StoryPermission
+    from novelcast.db.models.jobs import UpdateJob
+    from novelcast.db.models.progress import ReadingProgress
     from novelcast.db.models.series import Series
+    from novelcast.db.models.settings import StorySetting
+    from novelcast.db.models.tag import Tag
 
 
 class Story(Base):
@@ -55,10 +54,7 @@ class Story(Base):
 
     # ── timestamps ────────────────────────────────────────────────────────
     last_updated: Mapped[Optional[datetime]] = mapped_column(DateTime)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime,
-        server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
     # ── relationships ──────────────────────────────────────────────────────
 

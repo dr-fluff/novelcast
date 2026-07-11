@@ -2,30 +2,30 @@ import re
 from dataclasses import dataclass
 from typing import Optional
 
-from novelcast.services.site_adapters import registry
 from novelcast.services.site_adapters import patreon as patreon_adapter
-
+from novelcast.services.site_adapters import registry
 
 # ---------------------------------------------------------------------------
 # Data model
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class ParsedQuery:
-    target: str            # fiction | author | auto | patreon
+    target: str  # fiction | author | auto | patreon
     identifier: str
-    lookup_type: str       # id | text | url | patreon_url
+    lookup_type: str  # id | text | url | patreon_url
     site: Optional[str] = None
     resolved_url: Optional[str] = None
     patreon_creator: Optional[str] = None
-    patreon_route: Optional[str] = None 
+    patreon_route: Optional[str] = None
     resolved_urls: Optional[list[str]] = None
 
 
 @dataclass
 class SearchResult:
     site: str
-    kind: str   # fiction_search | author_search | fiction_detail | author_profile
+    kind: str  # fiction_search | author_search | fiction_detail | author_profile
     url: str
     label: Optional[str] = None
     patreon_url: Optional[str] = None
@@ -36,8 +36,8 @@ class SearchResult:
 # Parser / URL builder
 # ---------------------------------------------------------------------------
 
-class SearchService:
 
+class SearchService:
     def __init__(self, settings_service=None):
         """`settings_service` is optional — pass your SettingsService
         instance to make disabled sites invisible to search. Without it,
@@ -65,7 +65,7 @@ class SearchService:
                     lookup_type="patreon_url",
                     site="patreon",
                     patreon_creator=creator,
-                    resolved_urls=self.build_patreon_urls(creator)
+                    resolved_urls=self.build_patreon_urls(creator),
                 )
 
             m = re.match(r"^patreon\s*:\s*(.+)$", raw, re.I)
@@ -193,43 +193,55 @@ class SearchService:
 
             if q.target == "author":
                 if q.lookup_type == "id":
-                    results.append(SearchResult(
-                        site=site,
-                        kind="author_profile",
-                        url=adapter.author_url(q.identifier),
-                    ))
+                    results.append(
+                        SearchResult(
+                            site=site,
+                            kind="author_profile",
+                            url=adapter.author_url(q.identifier),
+                        )
+                    )
                 else:
-                    results.append(SearchResult(
-                        site=site,
-                        kind="author_search",
-                        url=adapter.author_search_url(qtext),
-                    ))
+                    results.append(
+                        SearchResult(
+                            site=site,
+                            kind="author_search",
+                            url=adapter.author_search_url(qtext),
+                        )
+                    )
 
             elif q.target == "fiction":
                 if q.lookup_type == "id":
-                    results.append(SearchResult(
-                        site=site,
-                        kind="fiction_detail",
-                        url=adapter.fiction_url(q.identifier),
-                    ))
+                    results.append(
+                        SearchResult(
+                            site=site,
+                            kind="fiction_detail",
+                            url=adapter.fiction_url(q.identifier),
+                        )
+                    )
                 else:
-                    results.append(SearchResult(
+                    results.append(
+                        SearchResult(
+                            site=site,
+                            kind="fiction_search",
+                            url=adapter.fiction_search_url(qtext),
+                        )
+                    )
+
+            else:  # auto
+                results.append(
+                    SearchResult(
                         site=site,
                         kind="fiction_search",
                         url=adapter.fiction_search_url(qtext),
-                    ))
-
-            else:  # auto
-                results.append(SearchResult(
-                    site=site,
-                    kind="fiction_search",
-                    url=adapter.fiction_search_url(qtext),
-                ))
-                results.append(SearchResult(
-                    site=site,
-                    kind="author_search",
-                    url=adapter.author_search_url(qtext),
-                ))
+                    )
+                )
+                results.append(
+                    SearchResult(
+                        site=site,
+                        kind="author_search",
+                        url=adapter.author_search_url(qtext),
+                    )
+                )
 
         return results
 

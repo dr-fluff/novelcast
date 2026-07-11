@@ -1,6 +1,6 @@
 import re
 
-from fastapi import Depends, HTTPException, Request, APIRouter
+from fastapi import APIRouter, Depends, HTTPException, Request
 
 from novelcast.api.deps import get_current_user, get_settings
 from novelcast.services import SettingsService

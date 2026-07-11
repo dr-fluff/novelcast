@@ -1,1 +1,1 @@
-from .middleware import RequestIDMiddleware, AuthMiddleware, PermissionMiddleware
+from .middleware import AuthMiddleware, PermissionMiddleware, RequestIDMiddleware

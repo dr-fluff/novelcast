@@ -1,8 +1,7 @@
-
 # /novelcast/api/routers/utils.py
-from novelcast.api.deps import get_current_user
-
 from fastapi import Depends, HTTPException
+
+from novelcast.api.deps import get_current_user
 
 
 def require_admin(current_user: dict | None = Depends(get_current_user)) -> dict:

@@ -42,7 +42,14 @@ async def sync_story(
     if not story:
         raise HTTPException(status_code=404, detail="Story not found")
     job_id = f"sync-{story_id}-{uuid.uuid4().hex[:6]}"
-    asyncio.create_task(_tracked(job_id, f"Checking '{story['title']}' for updates", library_sync.check_updates, [story_id]))
+    asyncio.create_task(
+        _tracked(
+            job_id,
+            f"Checking '{story['title']}' for updates",
+            library_sync.check_updates,
+            [story_id],
+        )
+    )
     return {"status": "started", "job_id": job_id}
 
 
@@ -61,8 +68,16 @@ async def update_selected(
     library_sync: LibrarySyncService = Depends(get_library_sync_service),
 ):
     job_id = f"update-selected-{uuid.uuid4().hex[:6]}"
-    asyncio.create_task(_tracked(job_id, f"Updating {len(selection.story_ids)} stories", library_sync.update_all, selection.story_ids))
+    asyncio.create_task(
+        _tracked(
+            job_id,
+            f"Updating {len(selection.story_ids)} stories",
+            library_sync.update_all,
+            selection.story_ids,
+        )
+    )
     return {"status": "started", "job_id": job_id}
+
 
 @router.post("/update/story/{story_id}")
 async def update_story(

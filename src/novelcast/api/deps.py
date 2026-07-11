@@ -2,28 +2,28 @@
 from fastapi import Request
 
 from novelcast.engine import PatreonEngine
-
 from novelcast.services import (
     AuthService,
-    UserService,
+    ChapterFilterService,
     ChaptersService,
     FileService,
+    HealthCheckService,
+    LibrarySyncService,
+    LoggingService,
+    NotifierService,
+    PasswordResetService,
     ProgressService,
     SettingsService,
     StoryDownloadService,
     StoryService,
-    LibrarySyncService,
-    NotifierService,
-    PasswordResetService,
-    HealthCheckService,
-    ChapterFilterService,
     TelegramService,
-    LoggingService,
+    UserService,
 )
 
 # ─────────────────────────────
 # CORE SERVICES (direct app.state)
 # ─────────────────────────────
+
 
 def get_auth(request: Request) -> AuthService:
     return request.app.state.auth
@@ -52,6 +52,7 @@ def get_templates(request: Request):
 # ─────────────────────────────
 # CONTEXT SERVICES (ctx-based)
 # ─────────────────────────────
+
 
 def get_stories(request: Request) -> StoryService:
     return request.app.state.ctx.stories
@@ -96,15 +97,18 @@ def get_health_check(request: Request) -> HealthCheckService:
 def get_telegram(request: Request) -> TelegramService:
     return request.app.state.ctx.telegram
 
+
 def get_library_sync_service(request: Request) -> LibrarySyncService:
     return request.app.state.ctx.library_sync
+
 
 def get_stories_service(request: Request) -> StoryService:
     return request.app.state.ctx.stories
 
+
 def get_logs(request: Request) -> LoggingService:
     return request.app.state.ctx.logs
 
+
 def get_patreon_engine(request: Request) -> PatreonEngine:
     return request.app.state.ctx.patreon_engine
-

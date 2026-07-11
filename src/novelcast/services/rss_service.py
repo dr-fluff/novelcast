@@ -3,18 +3,18 @@ import re
 import threading
 import time
 
-from novelcast.services import SettingsService, StoryService, StoryDownloadService
+from novelcast.core import setting_keys
 from novelcast.db.repositories.rss_entry_repository import RssEntryRepository
-from novelcast.services.chapter_filter_service import ChapterFilterService
-
 from novelcast.rss import RoyalRoadRss
-
+from novelcast.services.chapter_filter_service import ChapterFilterService
+from novelcast.services.settings_service import SettingsService
+from novelcast.services.story_download_service import StoryDownloadService
+from novelcast.services.story_service import StoryService
 
 logger = logging.getLogger(__name__)
 
 
 class RssService:
-
     def __init__(
         self,
         settings: SettingsService,
@@ -34,30 +34,19 @@ class RssService:
         self._running = False
         self._thread = None
 
-
-    def _get_settings(self):
-        return self.settings.get_resolved_server_settings()
-
-
     def start(self):
         if self._running:
             return
 
-        settings = self._get_settings()
-
-        if not self._is_enabled(
-            settings.get("rss", {}).get("enabled")
-        ):
+        if not self.settings.get(setting_keys.RSS_SETTINGS.ENABLED, default=False).value:
             logger.info("RSS service disabled")
             return
-
 
         self.readers = self.create_readers()
 
         if not self.readers:
             logger.info("No RSS readers enabled")
             return
-
 
         self._running = True
 
@@ -71,12 +60,8 @@ class RssService:
 
         logger.info(
             "RSS service started readers=%s",
-            [
-                r.__class__.__name__
-                for r in self.readers
-            ],
+            [r.__class__.__name__ for r in self.readers],
         )
-
 
     def stop(self):
         self._running = False
@@ -84,58 +69,32 @@ class RssService:
         if self._thread:
             self._thread.join(timeout=5)
 
-
     def run(self):
 
         while self._running:
-
             try:
                 self.check_feeds()
 
             except Exception:
-                logger.exception(
-                    "RSS polling failed"
-                )
+                logger.exception("RSS polling failed")
 
-
-            interval = int(
-                self._get_settings()
-                .get("rss", {})
-                .get("interval", 10)
-            )
+            interval = int(self.settings.get(setting_keys.RSS_SETTINGS.INTERVAL, default=10).value)
 
             time.sleep(interval * 60)
 
-
-
     def create_readers(self):
-
-        rss = self._get_settings().get(
-            "rss",
-            {}
-        )
 
         readers = []
 
-        if self._is_enabled(
-            rss.get("royalroad")
-        ):
-            readers.append(
-                RoyalRoadRss(self.story_service)
-            )
-
+        if self.settings.get(setting_keys.RSS_SETTINGS.ROYALROAD, default=False).value:
+            readers.append(RoyalRoadRss(self.story_service))
 
         logger.info(
             "Created RSS readers=%s",
-            [
-                r.__class__.__name__
-                for r in readers
-            ],
+            [r.__class__.__name__ for r in readers],
         )
 
         return readers
-
-
 
     # Minimum spacing between consecutive feed fetches to a single reader's
     # source (e.g. RoyalRoad), so tracking many auto-update stories doesn't
@@ -145,7 +104,6 @@ class RssService:
     def check_feeds(self):
 
         for reader in self.readers:
-
             try:
                 feed_urls = reader.get_feed_urls()
 
@@ -160,7 +118,6 @@ class RssService:
                 continue
 
             for index, (story_site_id, url) in enumerate(feed_urls):
-
                 if index > 0:
                     time.sleep(self.FEED_FETCH_DELAY_SECONDS)
 
@@ -170,9 +127,7 @@ class RssService:
                     if not xml:
                         continue
 
-
                     entries = reader.parse(xml, story_site_id)
-
 
                     logger.debug(
                         "%s returned %s entries for story_site_id=%s",
@@ -181,9 +136,7 @@ class RssService:
                         story_site_id,
                     )
 
-
                     self.process_entries(entries)
-
 
                 except Exception:
                     logger.exception(
@@ -192,14 +145,11 @@ class RssService:
                         story_site_id,
                     )
 
-
-
     def process_entries(self, entries):
         entries_by_story = {}
         story_by_key = {}
 
         for entry in entries:
-
             guid = entry.get("guid")
 
             if not guid:
@@ -219,12 +169,10 @@ class RssService:
                 )
                 continue
 
-
             logger.info(
                 "New RSS entry: %s",
                 entry.get("title"),
             )
-
 
             rss_entry = self.rss_repo.create(entry)
 
@@ -236,12 +184,10 @@ class RssService:
                 self.rss_repo.mark_processed(rss_entry["id"])
                 continue
 
-
             story = self.story_service.get_story_by_site_id(
                 entry["source"],
                 entry.get("story_site_id"),
             )
-
 
             if not story:
                 logger.warning(
@@ -252,9 +198,7 @@ class RssService:
 
             story_key = story["id"]
             story_by_key[story_key] = story
-            entries_by_story.setdefault(story_key, []).append(
-                (rss_entry["id"], entry)
-            )
+            entries_by_story.setdefault(story_key, []).append((rss_entry["id"], entry))
 
         # One update_story call per unique story in this batch, no matter
         # how many new RSS entries it had (e.g. a bulk chapter release
@@ -273,9 +217,7 @@ class RssService:
                 continue
 
             try:
-                result = self.download_service.update_story(
-                    story
-                )
+                result = self.download_service.update_story(story)
 
                 logger.info(
                     "RSS update finished story=%s new_chapters=%s",
@@ -292,7 +234,6 @@ class RssService:
                     story["title"],
                 )
 
-
     def _already_synced_locally(self, story, id_entry_pairs) -> bool:
         """Local check to avoid a redundant download when the story's last
         successful sync already covers every entry in this batch. This
@@ -307,11 +248,7 @@ class RssService:
             # the actual update_story call decide than to guess.
             return False
 
-        published_dates = [
-            entry.get("published")
-            for _, entry in id_entry_pairs
-            if entry.get("published")
-        ]
+        published_dates = [entry.get("published") for _, entry in id_entry_pairs if entry.get("published")]
 
         if not published_dates:
             return False
@@ -329,33 +266,25 @@ class RssService:
             )
             return False
 
-
-
     def handle_new_entry(self, entry):
 
-        story_id = entry.get(
-            "story_site_id"
-        )
+        story_id = entry.get("story_site_id")
 
         if not story_id:
             return
-
 
         story = self.story_service.get_story_by_site_id(
             entry["source"],
             story_id,
         )
 
-
         if not story:
-
             logger.debug(
                 "RSS entry does not match library: %s",
                 story_id,
             )
 
             return
-
 
         logger.info(
             "RSS update for story: %s",
@@ -364,8 +293,6 @@ class RssService:
 
         # Later:
         # self.sync_service.update_story(story["id"])
-
-
 
     def _is_chapter_entry(self, entry) -> bool:
         """Return True if this RSS entry's title looks like an actual
@@ -391,11 +318,7 @@ class RssService:
 
         title = entry.get("title") or ""
 
-        return any(
-            re.search(pattern, title, re.IGNORECASE)
-            for pattern in patterns
-        )
-
+        return any(re.search(pattern, title, re.IGNORECASE) for pattern in patterns)
 
     @staticmethod
     def _is_enabled(value):

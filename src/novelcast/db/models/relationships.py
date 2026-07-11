@@ -5,7 +5,6 @@ from sqlalchemy import Column, ForeignKey, Table
 
 from novelcast.db.base import Base
 
-
 # Many-to-many: stories ↔ authors
 story_author = Table(
     "story_author",

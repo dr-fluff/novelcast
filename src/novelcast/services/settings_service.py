@@ -1,6 +1,7 @@
 # novelcast/services/settings_service.py
 
 import logging
+from typing import Any, NamedTuple
 
 from novelcast.utils.secrets import decrypt_secret, encrypt_secret, is_encrypted_secret
 
@@ -19,8 +20,23 @@ _READING_KEY_MAP = {
 }
 
 
+class SettingValue(NamedTuple):
+    key: str
+    value: Any
+    type: str
+    description: str | None
+    label: str | None
+
+
 class SettingsService:
-    def __init__(self, repo, settings_schema=None, user_settings_schema=None, required_user_settings=None, secret_key: str = ""):
+    def __init__(
+        self,
+        repo,
+        settings_schema=None,
+        user_settings_schema=None,
+        required_user_settings=None,
+        secret_key: str = "",
+    ):
 
         if required_user_settings is None:
             raise ValueError("required_user_settings must be provided")
@@ -102,6 +118,37 @@ class SettingsService:
     def get_field_meta(self, section: str, key: str) -> dict:
         return self.schema.get(section, {}).get(key, {})
 
+    def get(self, dotted_key: str, default=None) -> SettingValue:
+        section, _, field = dotted_key.partition(".")
+        meta = self.schema.get(section, {}).get(field)
+
+        if meta is None:
+            logger.warning("Unknown setting key requested: %s", dotted_key)
+            return SettingValue(
+                key=dotted_key,
+                value=default,
+                type="unknown",
+                description=None,
+                label=None,
+            )
+
+        value = self.repo.get_server_setting(dotted_key)
+        if value is None and meta.get("legacy_key"):
+            value = self.repo.get_server_setting(meta["legacy_key"])
+        if value is None:
+            value = meta.get("default", default)
+
+        if meta.get("type") == "secret":
+            value = self._decrypt_secret_value(value)
+
+        return SettingValue(
+            key=dotted_key,
+            value=value,
+            type=meta.get("type", "unknown"),
+            description=meta.get("description"),
+            label=meta.get("label"),
+        )
+
     def migrate_server_secrets(self):
         db_values = self.get_server_settings()
 
@@ -134,11 +181,7 @@ class SettingsService:
                 if self._is_secret_key(full_key):
                     resolved.setdefault(section, {})[key] = bool(
                         self.repo.get_server_setting(full_key)
-                        or (
-                            self.repo.get_server_setting(meta["legacy_key"])
-                            if meta.get("legacy_key")
-                            else None
-                        )
+                        or (self.repo.get_server_setting(meta["legacy_key"]) if meta.get("legacy_key") else None)
                     )
 
         return resolved
@@ -176,19 +219,13 @@ class SettingsService:
 
     def get_site_overrides(self) -> dict[str, dict]:
         schema_defaults: dict[str, dict] = (
-            self.schema
-            .get("fanficfare", {})
-            .get("site_overrides", {})
-            .get("default", {})
+            self.schema.get("fanficfare", {}).get("site_overrides", {}).get("default", {})
         )
-        sites: dict[str, dict] = {
-            domain: dict(fields)
-            for domain, fields in schema_defaults.items()
-        }
+        sites: dict[str, dict] = {domain: dict(fields) for domain, fields in schema_defaults.items()}
 
         raw = self.repo.get_server_settings_by_prefix(_SITE_PREFIX)
         for full_key, value in raw.items():
-            remainder = full_key[len(_SITE_PREFIX):]
+            remainder = full_key[len(_SITE_PREFIX) :]
             domain, sep, field = remainder.rpartition(".")
             if not sep or not domain or not field:
                 logger.warning("Malformed site override key: %s", full_key)
@@ -224,12 +261,7 @@ class SettingsService:
                 self.repo.delete_server_setting(key)
 
     def _is_secret_site_field(self, field: str) -> bool:
-        fields = (
-            self.schema
-            .get("fanficfare", {})
-            .get("site_overrides", {})
-            .get("fields", {})
-        )
+        fields = self.schema.get("fanficfare", {}).get("site_overrides", {}).get("fields", {})
         return fields.get(field, {}).get("type") == "secret"
 
     # ─────────────────────────────
@@ -289,7 +321,7 @@ class SettingsService:
         self.repo.delete_user_setting(user_id, key)
 
     def save_user_settings(self, user_id: int, device_id: str | None = None, **kwargs):
-        
+
         current = self.get_user_settings(user_id, device_id=device_id)
         sanitized = {}
 
@@ -320,7 +352,4 @@ class SettingsService:
         }
 
     def get_reading_settings_schema(self) -> dict:
-        return {
-            js_key: self.user_settings_schema[schema_key]
-            for schema_key, js_key in _READING_KEY_MAP.items()
-        }
+        return {js_key: self.user_settings_schema[schema_key] for schema_key, js_key in _READING_KEY_MAP.items()}

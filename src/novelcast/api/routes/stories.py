@@ -5,12 +5,14 @@ from pydantic import BaseModel
 
 from novelcast.api.deps import get_stories
 from novelcast.services import StoryService
+
 from .utils import require_admin
 
 router = APIRouter(tags=["stories"])
 
 
 # ── schemas ────────────────────────────────────────────────────────────────
+
 
 class StoryMetadataUpdate(BaseModel):
     title: str
@@ -25,7 +27,8 @@ class StoryMetadataUpdate(BaseModel):
     source_url: str | None = None
     auto_update: bool | None = None
     hide_author_notes: bool | None = None
-    
+
+
 class AuthorUpdate(BaseModel):
     name: str
     bio: str | None = None
@@ -38,8 +41,6 @@ class AuthorLinkItem(BaseModel):
 
 class AuthorLinksUpdate(BaseModel):
     links: list[AuthorLinkItem]
-
-
 
 
 @router.patch("/{story_id}/metadata")
@@ -71,9 +72,10 @@ def update_story_metadata(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
     return {"status": "ok", "story": updated}
- 
+
 
 # ── story endpoints ────────────────────────────────────────────────────────
+
 
 @router.get("/{story_id}")
 def get_story(
@@ -104,6 +106,7 @@ def delete_story(
 
 
 # ── author endpoints ───────────────────────────────────────────────────────
+
 
 @router.get("/{story_id}/authors")
 def get_story_authors(
@@ -150,4 +153,3 @@ def set_author_links(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
     return {"status": "ok", "links": saved}
-

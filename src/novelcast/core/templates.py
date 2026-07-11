@@ -1,8 +1,8 @@
 # novelcast/core/templates.py
 
-from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse
 from fastapi import Request
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
 
 
 class AppTemplates(Jinja2Templates):

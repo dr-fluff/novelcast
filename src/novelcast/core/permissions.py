@@ -1,23 +1,18 @@
 from fastapi import Depends, HTTPException
-from novelcast.auth.dependencies import get_current_user
+
 from novelcast.api.deps import require_user
+
 
 class PermissionManager:
     def __init__(self, qm):
         self.qm = qm
 
     def get_user_groups(self, user_id):
-        rows = self.qm.fetchall(
-            "SELECT group_id FROM user_groups WHERE user_id = ?",
-            (user_id,)
-        )
+        rows = self.qm.fetchall("SELECT group_id FROM user_groups WHERE user_id = ?", (user_id,))
         return {r["group_id"] for r in rows}
 
     def get_file_groups(self, file_id):
-        rows = self.qm.fetchall(
-            "SELECT group_id FROM file_permissions WHERE file_id = ?",
-            (file_id,)
-        )
+        rows = self.qm.fetchall("SELECT group_id FROM file_permissions WHERE file_id = ?", (file_id,))
         return {r["group_id"] for r in rows}
 
     def can_access_file(self, user_id, file_id):

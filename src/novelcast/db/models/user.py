@@ -3,7 +3,7 @@ novelcast/db/models/user.py
 """
 
 from datetime import datetime
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -12,8 +12,8 @@ from novelcast.db.base import Base
 
 if TYPE_CHECKING:
     from novelcast.db.models.group import Group
-    from novelcast.db.models.settings import UserSetting
     from novelcast.db.models.progress import ReadingProgress
+    from novelcast.db.models.settings import UserSetting
 
 
 class User(Base):
@@ -25,9 +25,7 @@ class User(Base):
     is_root: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
-    groups: Mapped[list["Group"]] = relationship(
-        "Group", secondary="user_groups", back_populates="members"
-    )
+    groups: Mapped[list["Group"]] = relationship("Group", secondary="user_groups", back_populates="members")
     settings: Mapped[list["UserSetting"]] = relationship(
         "UserSetting", back_populates="user", cascade="all, delete-orphan"
     )
@@ -46,9 +44,7 @@ class PasswordResetToken(Base):
     __tablename__ = "password_reset_tokens"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    user_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
-    )
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     token: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     used: Mapped[bool] = mapped_column(Boolean, default=False)

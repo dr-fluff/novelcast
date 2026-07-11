@@ -1,25 +1,22 @@
 # novelcast/app/lifespan.py
 
-import logging
 import asyncio
+import logging
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
-from novelcast.core.context import AppContext
 from novelcast.api.ws.notifications import manager as ws_manager
+from novelcast.core.context import AppContext
 from novelcast.core.defaults import DEFAULT_CHAPTER_PATTERNS
-
+from novelcast.core.logging import log_buffer
 from novelcast.db.repositories import PasswordResetRepository
-
 from novelcast.services import (
+    LoggingService,
+    NotifierService,
     PasswordResetService,
     TelegramService,
-    NotifierService,
-    LoggingService
 )
-
-from novelcast.core.logging import log_buffer 
-
 from novelcast.services.workers import auto_sync_worker
 
 logger = logging.getLogger(__name__)
@@ -51,15 +48,13 @@ async def lifespan(app: FastAPI):
         app.state.ctx = ctx
 
         logging_service = LoggingService(ctx.settings)
-        logging_service.apply() 
+        logging_service.apply()
         ctx.logging_service = logging_service
-        ctx.log_buffer      = log_buffer 
-        
+        ctx.log_buffer = log_buffer
+
         try:
             added = ctx.chapter_pattern_repo.seed_defaults(DEFAULT_CHAPTER_PATTERNS)
-            logger.info(
-                "Added %d missing chapter patterns" if added else "Chapter patterns already exist"
-            )
+            logger.info("Added %d missing chapter patterns" if added else "Chapter patterns already exist")
         except Exception:
             logger.exception("Failed to seed chapter patterns")
 
@@ -70,7 +65,7 @@ async def lifespan(app: FastAPI):
 
         event_queue = asyncio.Queue()
         app.state.event_queue = event_queue
-        
+
         app.state.loop = asyncio.get_running_loop()
         ctx.loop = app.state.loop
         ctx.notifier = NotifierService(ws_manager=ws_manager, loop=ctx.loop)
@@ -112,9 +107,7 @@ async def lifespan(app: FastAPI):
         sync_task = asyncio.create_task(auto_sync_worker(ctx))
 
         # ✅ STEP 4: dispatcher task (THIS WAS MISSING)
-        dispatcher_task = asyncio.create_task(
-            event_dispatcher(event_queue, ws_manager)
-        )
+        dispatcher_task = asyncio.create_task(event_dispatcher(event_queue, ws_manager))
         app.state.dispatcher_task = dispatcher_task
 
         logger.info("Application startup complete")

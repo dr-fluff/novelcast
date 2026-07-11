@@ -19,16 +19,20 @@ def test_hide_author_notes_defaults_to_true_when_unset():
 
 
 def test_hide_author_notes_respects_explicit_false():
-    story = make_story([
-        StorySetting(name="hide_author_notes", value="0"),
-    ])
+    story = make_story(
+        [
+            StorySetting(name="hide_author_notes", value="0"),
+        ]
+    )
 
     assert _to_dict(story)["hide_author_notes"] is False
 
 
 def test_hide_author_notes_respects_explicit_true():
-    story = make_story([
-        StorySetting(name="hide_author_notes", value="1"),
-    ])
+    story = make_story(
+        [
+            StorySetting(name="hide_author_notes", value="1"),
+        ]
+    )
 
     assert _to_dict(story)["hide_author_notes"] is True

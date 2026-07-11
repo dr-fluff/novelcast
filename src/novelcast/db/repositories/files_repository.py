@@ -11,7 +11,6 @@ from novelcast.db.repositories.base import BaseRepository
 
 
 class FilesRepository(BaseRepository):
-
     def get_by_id(self, file_id: int) -> dict | None:
         with self.session_no_commit() as db:
             row = db.get(ChapterFile, file_id)
@@ -27,10 +26,10 @@ def _file_to_dict(row: ChapterFile | None) -> dict | None:
     if row is None:
         return None
     return {
-        "id":           row.id,
-        "chapter_id":   row.chapter_id,
-        "file_path":    row.file_path,
-        "format":       row.format,
+        "id": row.id,
+        "chapter_id": row.chapter_id,
+        "file_path": row.file_path,
+        "format": row.format,
         "is_canonical": row.is_canonical,
-        "created_at":   row.created_at,
+        "created_at": row.created_at,
     }

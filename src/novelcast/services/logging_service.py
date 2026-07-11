@@ -34,13 +34,15 @@ class LoggingService:
 
         logger.info(
             "Logging reconfigured",
-            extra={"extra_data": {
-                "level":     cfg.level,
-                "file":      cfg.file_path or "(console only)",
-                "max_bytes": cfg.max_bytes,
-                "buf_size":  cfg.tail_buffer_size,
-                "max_amount_of_files": cfg.max_files,
-            }},
+            extra={
+                "extra_data": {
+                    "level": cfg.level,
+                    "file": cfg.file_path or "(console only)",
+                    "max_bytes": cfg.max_bytes,
+                    "buf_size": cfg.tail_buffer_size,
+                    "max_amount_of_files": cfg.max_files,
+                }
+            },
         )
         return cfg
 

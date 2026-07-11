@@ -1,6 +1,5 @@
 # novelcast/engine/engine_selector.py
 class EngineSelector:
-
     def __init__(self, engines):
         self.engines = engines
 

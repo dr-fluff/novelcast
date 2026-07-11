@@ -1,23 +1,19 @@
 import logging
-import requests
 import xml.etree.ElementTree as ET
-
 from email.utils import parsedate_to_datetime
+
+import requests
 
 logger = logging.getLogger(__name__)
 
 
 class RoyalRoadRss:
-
     site = "royalroad"
 
     def __init__(self, rss_service):
         self.rss_service = rss_service
 
-        self.base_rss_url = (
-            "https://www.royalroad.com/fiction/syndication/"
-        )
-
+        self.base_rss_url = "https://www.royalroad.com/fiction/syndication/"
 
     # ------------------------------------------------------------------
 
@@ -37,21 +33,13 @@ class RoyalRoadRss:
         """
         stories = self.rss_service.get_auto_update_stories_by_site(self.site)
 
-        ids = sorted({
-            str(story["story_site_id"])
-            for story in stories
-            if story.get("story_site_id")
-        })
+        ids = sorted({str(story["story_site_id"]) for story in stories if story.get("story_site_id")})
 
         if not ids:
             logger.debug("No RoyalRoad stories configured")
             return []
 
-        return [
-            (story_id, f"{self.base_rss_url}{story_id}")
-            for story_id in ids
-        ]
-
+        return [(story_id, f"{self.base_rss_url}{story_id}") for story_id in ids]
 
     # ------------------------------------------------------------------
 
@@ -82,36 +70,25 @@ class RoyalRoadRss:
 
             r.raise_for_status()
 
-            return r.content.decode(
-                "utf-8-sig"
-            )
+            return r.content.decode("utf-8-sig")
 
         except requests.exceptions.HTTPError as e:
             status = e.response.status_code if e.response is not None else None
 
             if status == 429:
-                retry_after = (
-                    e.response.headers.get("Retry-After")
-                    if e.response is not None
-                    else None
-                )
+                retry_after = e.response.headers.get("Retry-After") if e.response is not None else None
                 logger.warning(
                     "RoyalRoad rate-limited (429) | url=%s retry_after=%s",
                     url,
                     retry_after,
                 )
             else:
-                logger.exception(
-                    "RoyalRoad RSS fetch failed"
-                )
+                logger.exception("RoyalRoad RSS fetch failed")
             return ""
 
         except Exception:
-            logger.exception(
-                "RoyalRoad RSS fetch failed"
-            )
+            logger.exception("RoyalRoad RSS fetch failed")
             return ""
-
 
     # ------------------------------------------------------------------
 
@@ -125,14 +102,10 @@ class RoyalRoadRss:
             return []
 
         # Remove UTF-8 BOM and whitespace
-        xml_text = xml_text.lstrip(
-            "\ufeff\r\n\t "
-        )
+        xml_text = xml_text.lstrip("\ufeff\r\n\t ")
 
         try:
-            root = ET.fromstring(
-                xml_text
-            )
+            root = ET.fromstring(xml_text)
 
         except ET.ParseError:
             logger.exception(
@@ -141,26 +114,18 @@ class RoyalRoadRss:
             )
             return []
 
-
         items = []
 
         for item in root.findall(".//item"):
+            link = item.findtext("link")
 
-            link = item.findtext(
-                "link"
-            )
-
-            published_raw = item.findtext(
-                "pubDate"
-            )
+            published_raw = item.findtext("pubDate")
 
             published = None
 
             if published_raw:
                 try:
-                    published = parsedate_to_datetime(
-                        published_raw
-                    )
+                    published = parsedate_to_datetime(published_raw)
 
                 except Exception:
                     logger.warning(
@@ -178,7 +143,6 @@ class RoyalRoadRss:
             }
 
             items.append(entry)
-
 
         logger.debug(
             "RoyalRoad parsed items=%d for story_site_id=%s",

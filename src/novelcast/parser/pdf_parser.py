@@ -4,9 +4,8 @@ from novelcast.parser.base import BaseParser, Story
 
 
 class PdfParser(BaseParser):
-
     def parse(self, data: dict) -> Story:
-        pdf_path = data.get("file_path")
+        # pdf_path = data.get("file_path")
 
         # TODO: extract PDF text into chapters
         chapters = []
@@ -14,5 +13,5 @@ class PdfParser(BaseParser):
         return {
             "title": data.get("title", "Unknown"),
             "author": data.get("author"),
-            "chapters": chapters
+            "chapters": chapters,
         }

@@ -1,6 +1,6 @@
 # novelcast/auth/routes.py
 
-from fastapi import APIRouter, Request, Form
+from fastapi import APIRouter, Form, Request
 from fastapi.responses import RedirectResponse
 
 from .session import create_session_token

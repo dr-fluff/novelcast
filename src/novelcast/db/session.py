@@ -1,8 +1,8 @@
 # novelcast/db/session.py
 
-from sqlalchemy.orm import sessionmaker, Session
-from .engine import engine
+from sqlalchemy.orm import Session, sessionmaker
 
+from .engine import engine
 
 SessionLocal = sessionmaker(
     bind=engine,

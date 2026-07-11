@@ -1,6 +1,7 @@
 from fastapi import Request
-from novelcast.services.user_service import UserService
+
 from novelcast.services.auth_service import AuthService
+from novelcast.services.user_service import UserService
 
 
 def get_user_service(request: Request) -> UserService:

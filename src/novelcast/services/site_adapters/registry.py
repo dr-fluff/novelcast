@@ -3,6 +3,7 @@
 from typing import Optional
 
 from novelcast.core.defaults import SETTINGS
+
 from .base import SiteAdapter
 from .royalroad import RoyalRoadAdapter
 from .scribblehub import ScribbleHubAdapter
@@ -20,8 +21,8 @@ ALIAS_MAP = {
 }
 
 _ENABLED_SETTING = {
-    "patreon":     ("scrapers", "patreon_enabled"),
-    "royalroad":   ("scrapers", "royalroad_enabled"),
+    "patreon": ("scrapers", "patreon_enabled"),
+    "royalroad": ("scrapers", "royalroad_enabled"),
     "scribblehub": ("scrapers", "scribblehub_enabled"),
 }
 

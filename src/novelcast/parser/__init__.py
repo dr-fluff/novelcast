@@ -1,10 +1,10 @@
-from .base import BaseParser, Story, Chapter
-from .story_parser import StoryParser
+from .base import BaseParser, Chapter, Story
 from .epub_parser import EpubParser
 from .fanficfare_parser import FanFicFareParser
-from .patreon_parser import PatreonParser
 from .html_parser import HtmlParser
+from .patreon_parser import PatreonParser
 from .registry import ParserRegistry
+from .story_parser import StoryParser
 
 __all__ = [
     "BaseParser",
