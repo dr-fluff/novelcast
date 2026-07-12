@@ -348,9 +348,9 @@ class StoryDownloadService:
                 },
             )
             try:
-                settings = self._load_patreon_settings(story_id)  # NEW
-                raw = self._download_raw(source_url, story_match=settings.get("chapter_regex"))  # CHANGED
-                parsed = self._parse_raw(raw, settings=settings)  # CHANGED
+                settings = self._load_patreon_settings(story_id) 
+                raw = self._download_raw(source_url, story_match=settings.get("chapter_regex"))
+                parsed = self._parse_raw(raw, settings=settings)
                 self._update_story_metadata(story_id, raw, parsed)
                 self.pipeline.persist(story_id, parsed)
                 self._refresh_metadata_from_json(story_id)

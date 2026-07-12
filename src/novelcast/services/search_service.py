@@ -2,7 +2,6 @@ import re
 from dataclasses import dataclass
 from typing import Optional
 
-from novelcast.services.site_adapters import patreon as patreon_adapter
 from novelcast.services.site_adapters import registry
 
 # ---------------------------------------------------------------------------
@@ -12,14 +11,11 @@ from novelcast.services.site_adapters import registry
 
 @dataclass
 class ParsedQuery:
-    target: str  # fiction | author | auto | patreon
+    target: str  # fiction | author | auto
     identifier: str
-    lookup_type: str  # id | text | url | patreon_url
+    lookup_type: str  # id | text | url
     site: Optional[str] = None
     resolved_url: Optional[str] = None
-    patreon_creator: Optional[str] = None
-    patreon_route: Optional[str] = None
-    resolved_urls: Optional[list[str]] = None
 
 
 @dataclass
@@ -28,13 +24,14 @@ class SearchResult:
     kind: str  # fiction_search | author_search | fiction_detail | author_profile
     url: str
     label: Optional[str] = None
-    patreon_url: Optional[str] = None
-    patreon_creator: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------
 # Parser / URL builder
 # ---------------------------------------------------------------------------
+
+_GENERIC_FICTION_PREFIXES = {"story", "fiction", "fictions"}
+_GENERIC_AUTHOR_PREFIXES = {"author", "authur", "arthur", "profile"}
 
 
 class SearchService:
@@ -47,44 +44,50 @@ class SearchService:
     def _enabled_sites(self) -> list[str]:
         return registry.enabled_sites(self._settings_service)
 
-    def _patreon_enabled(self) -> bool:
-        return registry.is_enabled("patreon", self._settings_service)
-
     def parse_query(self, raw: str) -> ParsedQuery:
         raw = raw.strip()
 
         # -------------------------
-        # 1. PATREON URL / PREFIX
+        # 1. "prefix:identifier" pinned to whichever enabled site owns
+        #    that trigger word — the adapter decides what the remainder
+        #    means. Falls through untouched if the prefix isn't a site's
+        #    or a generic fiction/author word (e.g. "https://...").
         # -------------------------
-        if self._patreon_enabled():
-            creator = patreon_adapter.extract_creator(raw)
-            if creator:
+        m = re.match(r"^([a-zA-Z]+)\s*:\s*(.+)$", raw)
+        if m:
+            prefix, remainder = m.group(1).lower(), m.group(2).strip()
+
+            for site in self._enabled_sites():
+                adapter = registry.get_adapter(site)
+                if prefix in adapter.query_prefixes:
+                    match = adapter.parse_identifier(remainder)
+                    return ParsedQuery(
+                        target=match.target,
+                        identifier=match.identifier,
+                        lookup_type=match.lookup_type,
+                        site=site,
+                        resolved_url=match.resolved_url,
+                    )
+
+            if prefix in _GENERIC_FICTION_PREFIXES:
                 return ParsedQuery(
-                    target="patreon",
-                    identifier=creator,
-                    lookup_type="patreon_url",
-                    site="patreon",
-                    patreon_creator=creator,
-                    resolved_urls=self.build_patreon_urls(creator),
+                    target="fiction",
+                    identifier=remainder,
+                    lookup_type="id" if remainder.isdigit() else "text",
                 )
 
-            m = re.match(r"^patreon\s*:\s*(.+)$", raw, re.I)
-            if m:
-                creator = m.group(1).strip()
+            if prefix in _GENERIC_AUTHOR_PREFIXES:
                 return ParsedQuery(
-                    target="patreon",
-                    identifier=creator,
-                    lookup_type="text",
-                    site="patreon",
-                    patreon_creator=creator,
-                    resolved_urls=self.build_patreon_urls(creator),
+                    target="author",
+                    identifier=remainder,
+                    lookup_type="id" if remainder.isdigit() else "text",
                 )
 
         # -------------------------
-        # 2. SITE-SPECIFIC FICTION / AUTHOR URL
+        # 2. Direct URL recognized by any enabled site's own adapter.
+        #    Adding a new site only requires registering its adapter —
+        #    this loop never changes.
         # -------------------------
-        # Any adapter can recognize its own URLs here — adding a new site
-        # only requires registering its adapter, not editing this method.
         for site in self._enabled_sites():
             adapter = registry.get_adapter(site)
 
@@ -109,41 +112,21 @@ class SearchService:
                 )
 
         # -------------------------
-        # 3. EXPLICIT FICTION
+        # 3. Un-prefixed, non-URL shorthand a site recognizes on its own
+        #    (e.g. RoyalRoad/ScribbleHub's shared "{id}/{name}" or bare id).
         # -------------------------
-        m = re.match(r"^(story|fiction|fictions)\s*:\s*(.+)$", raw, re.I)
-        if m:
-            val = m.group(2).strip()
-            return ParsedQuery(
-                target="fiction",
-                identifier=val,
-                lookup_type="id" if val.isdigit() else "text",
-            )
+        for site in self._enabled_sites():
+            adapter = registry.get_adapter(site)
+            match = adapter.match_bare(raw)
+            if match:
+                return ParsedQuery(
+                    target=match.target,
+                    identifier=match.identifier,
+                    lookup_type=match.lookup_type,
+                )
 
         # -------------------------
-        # 4. EXPLICIT AUTHOR (including typos)
-        # -------------------------
-        m = re.match(r"^(author|authur|arthur|profile)\s*:\s*(.+)$", raw, re.I)
-        if m:
-            val = m.group(2).strip()
-            return ParsedQuery(
-                target="author",
-                identifier=val,
-                lookup_type="id" if val.isdigit() else "text",
-            )
-
-        # -------------------------
-        # 5. NUMERIC ONLY (default = fiction)
-        # -------------------------
-        if raw.isdigit():
-            return ParsedQuery(
-                target="fiction",
-                identifier=raw,
-                lookup_type="id",
-            )
-
-        # -------------------------
-        # 6. DEFAULT = AUTO (SEARCH BOTH FICTION & AUTHOR)
+        # 4. Default = free-text search across every enabled site.
         # -------------------------
         return ParsedQuery(
             target="auto",
@@ -157,29 +140,13 @@ class SearchService:
 
     def build_search_urls(self, q: ParsedQuery):
         results = []
+        seen_urls = set()
 
-        if q.target == "patreon":
-            if not self._patreon_enabled():
-                return results
-            creator = q.patreon_creator or q.identifier
-
-            urls = [
-                f"https://www.patreon.com/c/{creator}",
-                f"https://www.patreon.com/cw/{creator}",
-            ]
-
-            results.extend(
-                SearchResult(
-                    site="patreon",
-                    kind="author_profile",
-                    url=url,
-                    label=creator,
-                    patreon_creator=creator,
-                    patreon_url=url,
-                )
-                for url in urls
-            )
-            return results
+        def _add(result: SearchResult):
+            if result.url in seen_urls:
+                return
+            seen_urls.add(result.url)
+            results.append(result)
 
         enabled = set(self._enabled_sites())
         if q.site:
@@ -193,60 +160,18 @@ class SearchService:
 
             if q.target == "author":
                 if q.lookup_type == "id":
-                    results.append(
-                        SearchResult(
-                            site=site,
-                            kind="author_profile",
-                            url=adapter.author_url(q.identifier),
-                        )
-                    )
+                    _add(SearchResult(site=site, kind="author_profile", url=adapter.author_url(q.identifier)))
                 else:
-                    results.append(
-                        SearchResult(
-                            site=site,
-                            kind="author_search",
-                            url=adapter.author_search_url(qtext),
-                        )
-                    )
+                    _add(SearchResult(site=site, kind="author_search", url=adapter.author_search_url(qtext)))
 
             elif q.target == "fiction":
                 if q.lookup_type == "id":
-                    results.append(
-                        SearchResult(
-                            site=site,
-                            kind="fiction_detail",
-                            url=adapter.fiction_url(q.identifier),
-                        )
-                    )
+                    _add(SearchResult(site=site, kind="fiction_detail", url=adapter.fiction_url(q.identifier)))
                 else:
-                    results.append(
-                        SearchResult(
-                            site=site,
-                            kind="fiction_search",
-                            url=adapter.fiction_search_url(qtext),
-                        )
-                    )
+                    _add(SearchResult(site=site, kind="fiction_search", url=adapter.fiction_search_url(qtext)))
 
             else:  # auto
-                results.append(
-                    SearchResult(
-                        site=site,
-                        kind="fiction_search",
-                        url=adapter.fiction_search_url(qtext),
-                    )
-                )
-                results.append(
-                    SearchResult(
-                        site=site,
-                        kind="author_search",
-                        url=adapter.author_search_url(qtext),
-                    )
-                )
+                _add(SearchResult(site=site, kind="fiction_search", url=adapter.fiction_search_url(qtext)))
+                _add(SearchResult(site=site, kind="author_search", url=adapter.author_search_url(qtext)))
 
         return results
-
-    def build_patreon_urls(self, creator: str):
-        return [
-            f"https://www.patreon.com/c/{creator}",
-            f"https://www.patreon.com/cw/{creator}",
-        ]

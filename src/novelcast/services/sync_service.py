@@ -4,6 +4,8 @@ import logging
 from datetime import datetime, time, timedelta
 from threading import Lock
 
+from novelcast.core import setting_keys
+
 logger = logging.getLogger(__name__)
 
 
@@ -23,26 +25,16 @@ class LibrarySyncService:
         }
 
     def auto_sync_enabled(self) -> bool:
-        return self._library_setting("auto_update", True) in (
-            True,
-            1,
-            "1",
-            "true",
-            "True",
-        )
+        value = self.settings.get(setting_keys.LIBRARY_SETTINGS.AUTO_UPDATE, default=True).value
+        return value in (True, 1, "1", "true", "True")
 
     def update_on_startup_enabled(self) -> bool:
-        return self._library_setting("update_on_startup", True) in (
-            True,
-            1,
-            "1",
-            "true",
-            "True",
-        )
+        value = self.settings.get(setting_keys.LIBRARY_SETTINGS.UPDATE_ON_STARTUP, default=True).value
+        return value in (True, 1, "1", "true", "True")
 
     def interval_seconds(self) -> int:
         try:
-            hours = int(self._library_setting("update_interval_hours", 24))
+            hours = int(self.settings.get(setting_keys.LIBRARY_SETTINGS.UPDATE_INTERVAL_HOURS, default=24).value)
         except (TypeError, ValueError):
             hours = 24
 
@@ -50,11 +42,15 @@ class LibrarySyncService:
 
     def next_check_delay_seconds(self) -> int:
         try:
-            interval_hours = max(1, int(self._library_setting("update_interval_hours", 24)))
+            interval_hours = max(
+                1,
+                int(self.settings.get(setting_keys.LIBRARY_SETTINGS.UPDATE_INTERVAL_HOURS, default=24).value),
+            )
         except (TypeError, ValueError):
             interval_hours = 24
 
-        update_time_value = self._parse_update_time(self._library_setting("update_time", "02:00"))
+        update_time_raw = self.settings.get(setting_keys.LIBRARY_SETTINGS.UPDATE_TIME, default="02:00").value
+        update_time_value = self._parse_update_time(update_time_raw)
         now = datetime.now()
         next_run = datetime.combine(now.date(), update_time_value)
 
@@ -211,9 +207,6 @@ class LibrarySyncService:
 
     def last_update_check(self) -> dict:
         return dict(self._last_update_check)
-
-    def _library_setting(self, key: str, default=None):
-        return self.settings.get_resolved_server_settings().get("library", {}).get(key, default)
 
     def _emit(self, event_type: str, payload: dict):
         if self.notifier:

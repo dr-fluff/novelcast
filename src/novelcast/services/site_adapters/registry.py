@@ -2,16 +2,21 @@
 
 from typing import Optional
 
+from novelcast.core import setting_keys
 from novelcast.core.defaults import SETTINGS
 
 from .base import SiteAdapter
 from .royalroad import RoyalRoadAdapter
 from .scribblehub import ScribbleHubAdapter
+from .patreon import PatreonAdapter
+
 
 _ADAPTERS: dict[str, SiteAdapter] = {
     "royalroad": RoyalRoadAdapter(),
     "scribblehub": ScribbleHubAdapter(),
+    "patreon": PatreonAdapter(),
 }
+
 
 ALIAS_MAP = {
     "rr": "royalroad",
@@ -21,9 +26,9 @@ ALIAS_MAP = {
 }
 
 _ENABLED_SETTING = {
-    "patreon": ("scrapers", "patreon_enabled"),
-    "royalroad": ("scrapers", "royalroad_enabled"),
-    "scribblehub": ("scrapers", "scribblehub_enabled"),
+    "patreon":     setting_keys.SCRAPERS_SETTINGS.PATREON_ENABLED,
+    "royalroad":   setting_keys.SCRAPERS_SETTINGS.ROYALROAD_ENABLED,
+    "scribblehub": setting_keys.SCRAPERS_SETTINGS.SCRIBBLEHUB_ENABLED,
 }
 
 
@@ -39,9 +44,10 @@ def resolve_alias(token: str) -> Optional[str]:
     return ALIAS_MAP.get(token.lower())
 
 
-def _schema_default(section: str, key: str) -> bool:
+def _schema_default(dotted_key: str) -> bool:
     """Fallback used when no settings_service is available — reads the
     schema's own declared default instead of blindly assuming True."""
+    section, _, key = dotted_key.partition(".")
     return bool(SETTINGS.get(section, {}).get(key, {}).get("default", True))
 
 
@@ -49,19 +55,16 @@ def is_enabled(site: str, settings_service=None) -> bool:
     """Whether `site` (including 'patreon') is currently enabled,
     per the SETTINGS schema in defaults.py.
     """
-    mapping = _ENABLED_SETTING.get(site)
-    if mapping is None:
+    dotted_key = _ENABLED_SETTING.get(site)
+    if dotted_key is None:
         return True
-
-    section, key = mapping
 
     if settings_service is None:
         # Not wired at this call site — fall back to schema default
         # rather than assuming enabled (Patreon defaults to False).
-        return _schema_default(section, key)
+        return _schema_default(dotted_key)
 
-    resolved = settings_service.get_resolved_server_settings()
-    return bool(resolved.get(section, {}).get(key, _schema_default(section, key)))
+    return bool(settings_service.get(dotted_key, default=_schema_default(dotted_key)).value)
 
 
 def enabled_sites(settings_service=None) -> list[str]:

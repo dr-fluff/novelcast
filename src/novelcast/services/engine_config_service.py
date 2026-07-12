@@ -5,6 +5,8 @@ import logging
 from collections import OrderedDict
 from pathlib import Path
 
+from novelcast.core.defaults import SECTION_FANFICFARE, FFF_CONFIG_PATH
+
 logger = logging.getLogger(__name__)
 
 
@@ -86,11 +88,6 @@ class BaseEngineConfigService:
     # -------------------------
 
     def _format_value(self, key: str, value) -> str:
-        # meta = self.settings_service.get_field_meta(self.section_key(), key)
-
-        # # if meta.get("type") == "secret":
-        # #     return "${SECRET}"
-
         if isinstance(value, bool):
             return "true" if value else "false"
 
@@ -101,8 +98,7 @@ class BaseEngineConfigService:
     # -------------------------
 
     def _get_settings(self) -> dict:
-        resolved = self.settings_service.get_resolved_server_settings()
-        return resolved.get(self.section_key(), {})
+        return self.settings_service.get_section(self.section_key())
 
     def _get_meta(self, key: str) -> dict:
         return self.settings_service.get_field_meta(self.section_key(), key)
@@ -116,7 +112,7 @@ class BaseEngineConfigService:
         builder = IniBuilder()
 
         for key, value in settings.items():
-            if key == "config_path":
+            if key == FFF_CONFIG_PATH:
                 continue
 
             meta = self._get_meta(key)
@@ -158,9 +154,9 @@ class BaseEngineConfigService:
     def write_config(self, force: bool = False) -> str:
         settings = self._get_settings()
 
-        path = settings.get("config_path")
+        path = settings.get(FFF_CONFIG_PATH)
         if not path:
-            raise RuntimeError(f"{self.section_key()}.config_path not set")
+            raise RuntimeError(f"{self.section_key()}.{FFF_CONFIG_PATH} not set")
 
         lines = self.build_lines()
         new_hash = self._compute_hash(lines)
@@ -188,7 +184,7 @@ class FanFicFareConfigService(BaseEngineConfigService):
     SECTION_ORDER = ["defaults", "epub"]
 
     def section_key(self) -> str:
-        return "fanficfare"
+        return SECTION_FANFICFARE
 
     def section_order(self) -> list[str]:
         order = list(self.SECTION_ORDER)

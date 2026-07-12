@@ -9,6 +9,8 @@ import httpx
 
 from novelcast.services.search_service import SearchResult
 from novelcast.services.site_adapters import registry
+from novelcast.services.site_adapters.patreon import extract_creator as extract_patreon_creator
+from novelcast.core import setting_keys
 
 from . import patreon, royalroad, scribblehub
 from .base import ScrapedResult
@@ -19,33 +21,34 @@ _SCRAPERS = {
     "scribblehub": scribblehub,
 }
 
-# SearchResult.kind -> scraper module method name
 _KIND_METHOD = {
     "fiction_search": "scrape_fiction_search",
     "author_search": "scrape_author_search",
     "fiction_detail": "scrape_fiction_detail",
     "author_profile": "scrape_author_detail",
-    # used by scrape_details() below
     "fiction": "scrape_fiction_detail",
     "author": "scrape_author_detail",
 }
 
 
+
+
 def _build_task(client: httpx.AsyncClient, sr, settings_service=None):
-    """Return a coroutine for `sr`, or None if it should be skipped
-    (site disabled, unknown site, or unknown kind)."""
     if not registry.is_enabled(sr.site, settings_service):
         return None
 
     if sr.site == "patreon":
-        creator = getattr(sr, "patreon_creator", None)
+        creator = extract_patreon_creator(sr.url)
         if not creator:
-            creator = sr.url.rstrip("/").split("/")[-1]
-        # Detail-page requests (scrape_details) hit a specific post URL;
-        # search/profile requests want the creator's page.
-        if sr.kind in ("fiction", "fiction_detail") and "/posts/" in sr.url:
-            return patreon.scrape_patreon_post(client, sr.url)
-        return patreon.scrape_patreon_creator(client, creator)
+            return None
+
+        session_cookie = None
+        if settings_service:
+            session_cookie = settings_service.get(
+                setting_keys.PATREON_SETTINGS.SESSION_COOKIE, default=None
+            ).value
+
+        return patreon.scrape_patreon_creator(client, creator, session_cookie=session_cookie)
 
     scraper = _SCRAPERS.get(sr.site)
     if scraper is None:
