@@ -7,6 +7,18 @@ from typing import Optional
 
 import httpx
 
+from novelcast.services.telegram_commands import (
+    DOWNLOAD_KEY,
+    HELP_KEY,
+    STATUS_KEY,
+    STORIES_KEY,
+    UPDATE_KEY,
+    COMMAND_KEYS_BY_TEXT,
+    TELEGRAM_COMMANDS,
+    build_bot_commands_payload,
+    build_help_text,
+)
+
 logger = logging.getLogger(__name__)
 
 TELEGRAM_API = "https://api.telegram.org/bot{token}/{method}"
@@ -16,10 +28,15 @@ _OFFLINE_RETRY_INTERVAL = 60
 
 
 class TelegramService:
-    def __init__(self, settings_service, story_service, download_service):
+    requires_event_loop = True
+
+    def __init__(self, settings_service, story_service, download_service, sync_service=None):
         self.settings = settings_service
         self.stories = story_service
         self.downloads = download_service
+        self.sync = sync_service 
+        
+
 
         self._task: Optional[asyncio.Task] = None
         self._loop: Optional[asyncio.AbstractEventLoop] = None
@@ -27,6 +44,16 @@ class TelegramService:
 
         self._disabled = False  # permanent auth failure
         self._consecutive_failures = 0
+
+        # ← CHANGED: dispatch table, command key -> bound handler.
+        # Built in __init__ so handlers can be plain instance methods.
+        self._command_handlers = {
+            STATUS_KEY: self._cmd_status,
+            STORIES_KEY: self._cmd_stories,
+            DOWNLOAD_KEY: self._cmd_download,
+            UPDATE_KEY: self._cmd_update,
+            HELP_KEY: self._cmd_help,
+        }
 
     # ── settings helpers ──────────────────────────────────────────────────
 
@@ -100,12 +127,14 @@ class TelegramService:
     async def _poll_loop(self):
         async with httpx.AsyncClient(
             timeout=httpx.Timeout(
-                connect=5.0,  # ← CHANGED: was 10s; fail fast when offline
+                connect=5.0,  # fail fast when offline
                 read=35.0,  # long-poll read must exceed Telegram's timeout param
-                write=5.0,  # ← CHANGED: was 10s
-                pool=5.0,  # ← CHANGED: was 10s
+                write=5.0,
+                pool=5.0,
             )
         ) as client:
+            await self._register_commands(client)  # ← CHANGED: one-shot menu registration
+
             while True:
                 try:
                     await self._poll_once(client)
@@ -127,7 +156,7 @@ class TelegramService:
                     if self._consecutive_failures < _MAX_FAILURES:
                         # Normal transient error — short backoff, keep logging
                         backoff = min(_MAX_BACKOFF, 2**self._consecutive_failures)
-                        logger.warning(  # ← CHANGED: was logger.exception (huge traceback every time)
+                        logger.warning(
                             "Telegram poll failed (%d/%d), retrying in %ds",
                             self._consecutive_failures,
                             _MAX_FAILURES,
@@ -136,7 +165,6 @@ class TelegramService:
                         await asyncio.sleep(backoff)
 
                     else:
-                        # ← CHANGED: was `self._disabled = True; break`
                         # Don't die permanently — just go quiet and retry slowly.
                         # This way Telegram recovers automatically when internet returns.
                         if self._consecutive_failures == _MAX_FAILURES:
@@ -147,9 +175,26 @@ class TelegramService:
                             )
                         await asyncio.sleep(_OFFLINE_RETRY_INTERVAL)
 
+    async def _register_commands(self, client: httpx.AsyncClient):
+        """Push the command list to Telegram's setMyCommands so it shows up
+        in the '/' autocomplete menu. Best-effort — a failure here shouldn't
+        stop polling from starting."""
+        try:
+            r = await client.post(
+                self._url("setMyCommands"),
+                json={"commands": build_bot_commands_payload()},
+            )
+            data = r.json()
+            if not data.get("ok"):
+                logger.warning("Telegram setMyCommands rejected: %s", data)
+            else:
+                logger.info("Telegram command menu registered (%d commands)", len(TELEGRAM_COMMANDS))
+        except Exception:
+            logger.exception("Failed to register Telegram command menu")
+
     async def _poll_once(self, client: httpx.AsyncClient):
         if not self._enabled():
-            await asyncio.sleep(5)  # ← CHANGED: avoid tight spin if disabled mid-run
+            await asyncio.sleep(5)  # avoid tight spin if disabled mid-run
             return
 
         r = await client.get(
@@ -201,6 +246,8 @@ class TelegramService:
         except Exception:
             logger.exception("Failed to schedule Telegram notification")
 
+    # ── command handling ─────────────────────────────────────────────────
+
     async def _handle_update(self, update: dict):
         msg = update.get("message", {})
         text = msg.get("text", "").strip()
@@ -209,14 +256,77 @@ class TelegramService:
         if chat_id != self._chat_id():
             return
 
-        if text.startswith("/status"):
-            await self.send_message("✅ NovelCast is running.")
-        elif text.startswith("/stories"):
-            stories = await self.stories.list_stories(limit=10)
-            lines = [f"📚 {s.title} — {s.chapter_count}" for s in stories]
-            await self.send_message("\n".join(lines) or "No stories")
-        else:
-            await self.send_message("Commands: /status /stories /download <url>")
+        if not text:
+            return
+
+        parts = text.split(maxsplit=1)
+        command_text = parts[0].lower()
+        args = parts[1] if len(parts) > 1 else ""
+
+        key = COMMAND_KEYS_BY_TEXT.get(command_text)
+        handler = self._command_handlers.get(key)
+
+        if handler is None:
+            logger.warning(
+                "Telegram received unrecognized command %r from chat_id=%s",
+                command_text,
+                chat_id,
+            )
+            await self._cmd_help(args)
+            return
+
+        await handler(args)
+
+    async def _cmd_status(self, args: str):
+        await self.send_message("✅ NovelCast is running.")
+        
+    async def _cmd_help(self, args: str):
+        await self.send_message(build_help_text())
+
+    async def _cmd_stories(self, args: str):
+        stories = await self.stories.list_stories(limit=10)
+        lines = [f"📚 {s.title} — {s.chapter_count}" for s in stories]
+        await self.send_message("\n".join(lines) or "No stories")
+
+    async def _cmd_download(self, args: str):
+        url = args.strip()
+        if not url:
+            await self.send_message("Usage: /download <url>")
+            return
+
+        await self.send_message(f"⏳ Starting download: {url}")
+        loop = asyncio.get_running_loop()
+        try:
+            # add_story is blocking (network + DB + EPUB parsing) — run off the event loop
+            # so it doesn't stall the Telegram poll loop.
+            story_id = await loop.run_in_executor(None, self.downloads.add_story, url)
+            await self.send_message(f"✅ Download complete (story_id={story_id})")
+        except Exception as e:
+            logger.exception("Telegram /download failed for %s", url)
+            await self.send_message(f"❌ Download failed: {e}")
+
+    async def _cmd_update(self, args: str):
+        if self.sync is None:
+            await self.send_message("⚠️ Update service not configured.")
+            return
+
+        await self.send_message("⏳ Checking for updates…")
+        loop = asyncio.get_running_loop()
+        try:
+            # update_all is blocking and takes a non-reentrant lock — run off the event loop.
+            result = await loop.run_in_executor(None, self.sync.update_all)
+
+            if result.get("status") == "already_running":
+                await self.send_message("⏳ An update check is already in progress.")
+                return
+
+            await self.send_message(
+                f"✅ Checked {result['stories_checked']} stories — "
+                f"{result['stories_updated']} updated, {result['new_chapters']} new chapters"
+            )
+        except Exception:
+            logger.exception("Telegram /update failed")
+            await self.send_message("❌ Update check failed — see logs.")
 
     async def send_message(self, text: str):
         logger.info("Telegram message: %s", text)
@@ -253,7 +363,6 @@ class TelegramService:
         try:
             async with httpx.AsyncClient(
                 timeout=httpx.Timeout(connect=5.0, read=10.0, write=5.0, pool=5.0)
-                # ← CHANGED: connect was 10s; test should fail fast
             ) as client:
                 r = await client.post(
                     self._url("sendMessage"),

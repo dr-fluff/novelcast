@@ -1,11 +1,14 @@
 # novelcast/core/context.py
 import logging
+import threading
 from queue import Queue
 
 from novelcast.core.defaults import (
     REQUIRED_USER_SETTINGS,
+    SECTION_TELEGRAM,
     SETTINGS,
     USER_SETTINGS_SCHEMA,
+    SECTION_RSS,
 )
 from novelcast.db.engine import engine
 from novelcast.db.init_db import init_db
@@ -52,11 +55,14 @@ from novelcast.services import (
     StoryDownloadService,
     StoryService,
     UserService,
+    TelegramService,
 )
 from novelcast.services.chapter_filter_service import ChapterFilterService
 from novelcast.utils.files import FileUtils
 
 logger = logging.getLogger(__name__)
+
+_RESTART_DEBOUNCE_SECONDS = 1.0
 
 
 class AppContext:
@@ -66,6 +72,17 @@ class AppContext:
         self.app_config = app_config
         self.event_queue = Queue()
         self.ws_manager = None
+
+        # ← CHANGED: filled in by lifespan.py once the FastAPI event loop is
+        # running (`ctx.loop = app.state.loop`). Stays None until then —
+        # _schedule_restart checks for that below rather than assuming it's
+        # always set, since AppContext itself is constructed before the
+        # loop exists.
+        self.loop = None
+
+        self.runtime_services = {}
+        self._restart_timers = {}
+        self._restart_lock = threading.Lock()
 
         self._init_database()
         self._init_repositories()
@@ -78,6 +95,7 @@ class AppContext:
         self._init_pipeline()
         self._init_orchestrator()
         self._init_service_layer()
+        self._init_telegram() 
         self._init_rss()
         self._validate()
 
@@ -146,8 +164,6 @@ class AppContext:
 
         self.chapter_filter = ChapterFilterService(self.chapter_pattern_repo)
 
-        # Resolve stories_dir from settings — adjust the key path to match
-        # wherever your storage path lives in your SETTINGS schema.
         server_settings = self.settings.get_resolved_server_settings()
         stories_dir: str | None = (
             server_settings.get("storage", {}).get("stories_dir")
@@ -166,8 +182,6 @@ class AppContext:
     def _init_engine_config(self):
         logger.info("Initializing engine config...")
 
-        # CHANGED: Patreon dropped — it's DB-only now, no ini to write.
-        # Only FanFicFare still needs a generated config file.
         self.engines_config = {
             "fanficfare": {
                 "prefix": "fanficfare.",
@@ -186,6 +200,60 @@ class AppContext:
                 cfg["writer"].write_config(force=False)
                 return
 
+        for prefix, service in self.runtime_services.items():
+            if key.startswith(f"{prefix}."):
+                self._schedule_restart(prefix, service, key)
+                return
+
+    def _schedule_restart(self, prefix: str, service, key: str):
+
+        def _do_restart():
+            logger.info("%s settings changed (%s); restarting", prefix, key)
+
+            if getattr(service, "requires_event_loop", False):
+                if not self.loop:
+                    logger.warning(
+                        "%s requires an event loop but none is set yet; skipping restart",
+                        prefix,
+                    )
+                else:
+                    self.loop.call_soon_threadsafe(service.stop)
+                    self.loop.call_soon_threadsafe(service.start)
+            else:
+                service.stop()
+                service.start()
+
+            with self._restart_lock:
+                self._restart_timers.pop(prefix, None)
+
+        with self._restart_lock:
+            existing = self._restart_timers.get(prefix)
+            if existing:
+                existing.cancel()
+
+            timer = threading.Timer(_RESTART_DEBOUNCE_SECONDS, _do_restart)
+            timer.daemon = True
+            self._restart_timers[prefix] = timer
+            timer.start()
+
+    # ─────────────────────────────
+    # TELEGRAM
+    # ─────────────────────────────
+    def _init_telegram(self):
+        logger.info("Initializing Telegram service...")
+
+        self.telegram = TelegramService(
+            self.settings,
+            self.stories,
+            self.story_download,
+            self.library_sync,
+        )
+
+        self.story_download.telegram = self.telegram
+        self.stories.telegram = self.telegram
+
+        self.runtime_services[SECTION_TELEGRAM] = self.telegram
+
     # ─────────────────────────────
     # UTILS
     # ─────────────────────────────
@@ -200,9 +268,12 @@ class AppContext:
             story_service=self.stories,
             download_service=self.story_download,
             rss_repo=self.rss_entry_repo,
+            chapter_filter=self.chapter_filter,
         )
 
         self.rss.start()
+
+        self.runtime_services[SECTION_RSS] = self.rss
 
     # ─────────────────────────────
     # ENGINE (fetch only)

@@ -33,9 +33,21 @@ class RssService:
 
         self._running = False
         self._thread = None
+        self._stop_event = threading.Event()
 
     def start(self):
         if self._running:
+            return
+
+        # ← CHANGED: hard guard against thread pileup. If a previous stop()
+        # timed out and the old thread is still alive, do NOT spin up a
+        # second one on top of it — that's how you get two threads both
+        # calling check_feeds() concurrently (duplicate downloads, doubled
+        # request rate against RoyalRoad).
+        if self._thread and self._thread.is_alive():
+            logger.error(
+                "RSS start() refused: previous thread is still shutting down"
+            )
             return
 
         if not self.settings.get(setting_keys.RSS_SETTINGS.ENABLED, default=False).value:
@@ -48,6 +60,7 @@ class RssService:
             logger.info("No RSS readers enabled")
             return
 
+        self._stop_event.clear()
         self._running = True
 
         self._thread = threading.Thread(
@@ -65,9 +78,20 @@ class RssService:
 
     def stop(self):
         self._running = False
+        self._stop_event.set()
 
         if self._thread:
             self._thread.join(timeout=5)
+            if self._thread.is_alive():
+                # ← CHANGED: leave self._thread set (don't clear it) so
+                # start()'s is_alive() guard above can see it and refuse
+                # to double up. It'll get cleared once we confirm it's
+                # actually dead.
+                logger.warning("RSS thread did not stop within timeout")
+                return
+
+        self._thread = None
+        self._stop_event.clear()
 
     def run(self):
 
@@ -80,7 +104,8 @@ class RssService:
 
             interval = int(self.settings.get(setting_keys.RSS_SETTINGS.INTERVAL, default=10).value)
 
-            time.sleep(interval * 60)
+            if self._stop_event.wait(timeout=interval * 60):
+                break
 
     def create_readers(self):
 
@@ -96,14 +121,15 @@ class RssService:
 
         return readers
 
-    # Minimum spacing between consecutive feed fetches to a single reader's
-    # source (e.g. RoyalRoad), so tracking many auto-update stories doesn't
-    # fire a burst of requests in the same instant and trip rate limiting.
     FEED_FETCH_DELAY_SECONDS = 2
 
     def check_feeds(self):
 
         for reader in self.readers:
+            # ← CHANGED: bail out between readers if stop() was called
+            if self._stop_event.is_set():
+                return
+
             try:
                 feed_urls = reader.get_feed_urls()
 
@@ -118,8 +144,16 @@ class RssService:
                 continue
 
             for index, (story_site_id, url) in enumerate(feed_urls):
+                # ← CHANGED: bail out between stories, not just between
+                # full check_feeds() calls. This is what actually lets
+                # stop() take effect within the 5s join timeout instead
+                # of waiting for every story in the batch to finish.
+                if self._stop_event.is_set():
+                    return
+
                 if index > 0:
-                    time.sleep(self.FEED_FETCH_DELAY_SECONDS)
+                    if self._stop_event.wait(timeout=self.FEED_FETCH_DELAY_SECONDS):
+                        return
 
                 try:
                     xml = reader.fetch(url)
@@ -200,9 +234,6 @@ class RssService:
             story_by_key[story_key] = story
             entries_by_story.setdefault(story_key, []).append((rss_entry["id"], entry))
 
-        # One update_story call per unique story in this batch, no matter
-        # how many new RSS entries it had (e.g. a bulk chapter release
-        # shouldn't trigger a full re-download per chapter).
         for story_key, id_entry_pairs in entries_by_story.items():
             story = story_by_key[story_key]
             entry_ids = [entry_id for entry_id, _ in id_entry_pairs]
@@ -235,17 +266,9 @@ class RssService:
                 )
 
     def _already_synced_locally(self, story, id_entry_pairs) -> bool:
-        """Local check to avoid a redundant download when the story's last
-        successful sync already covers every entry in this batch. This
-        matters most the first time a story's feed is polled after
-        auto_update is turned on: every RSS item looks "new" to rss_entries
-        (we've never seen its guid before), even if the story was already
-        fully up to date on disk before auto_update was ever enabled."""
         last_updated = story.get("last_updated")
 
         if not last_updated:
-            # No local sync timestamp to compare against — safer to let
-            # the actual update_story call decide than to guess.
             return False
 
         published_dates = [entry.get("published") for _, entry in id_entry_pairs if entry.get("published")]
@@ -258,8 +281,6 @@ class RssService:
         try:
             return newest_entry_published <= last_updated
         except TypeError:
-            # Naive vs. aware datetime mismatch or similar — don't skip,
-            # let update_story do the real check instead of guessing.
             logger.warning(
                 "Could not compare RSS entry date to story.last_updated for story=%s",
                 story.get("title"),
@@ -291,23 +312,7 @@ class RssService:
             story["title"],
         )
 
-        # Later:
-        # self.sync_service.update_story(story["id"])
-
     def _is_chapter_entry(self, entry) -> bool:
-        """Return True if this RSS entry's title looks like an actual
-        chapter release, using the same DB-stored regex patterns
-        ChaptersService uses to separate real chapters from author's
-        notes/announcements (e.g. "<Not a Chapter> Important Information
-        for Readers...").
-
-        Unlike ChaptersService.list_by_story_filtered, which returns an
-        empty list when no patterns are enabled (fine for a UI listing),
-        we default to treating every entry as a chapter when there's no
-        chapter_filter or no enabled patterns — silently skipping every
-        RSS entry because patterns happen to be unset would be a much
-        worse failure mode here than occasionally over-triggering.
-        """
         if not self.chapter_filter:
             return True
 

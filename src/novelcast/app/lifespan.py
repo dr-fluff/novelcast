@@ -15,7 +15,6 @@ from novelcast.services import (
     LoggingService,
     NotifierService,
     PasswordResetService,
-    TelegramService,
 )
 from novelcast.services.workers import auto_sync_worker
 
@@ -69,25 +68,11 @@ async def lifespan(app: FastAPI):
         app.state.loop = asyncio.get_running_loop()
         ctx.loop = app.state.loop
         ctx.notifier = NotifierService(ws_manager=ws_manager, loop=ctx.loop)
-
-        # ─────────────────────────────
-        # TELEGRAM
-        # ─────────────────────────────
-        telegram = TelegramService(
-            ctx.settings,
-            ctx.stories,
-            ctx.story_download,
-        )
-
+        
+        telegram = ctx.telegram
         telegram.start()
-
-        ctx.story_download.telegram = telegram
-        ctx.stories.telegram = telegram
         app.state.telegram = telegram
 
-        # ─────────────────────────────
-        # APP STATE EXPOSURE
-        # ─────────────────────────────
         app.state.db = ctx.SessionLocal
         app.state.users = ctx.users
         app.state.auth = ctx.auth
@@ -101,12 +86,8 @@ async def lifespan(app: FastAPI):
         )
         app.state.password_reset = ctx.password_reset
 
-        # ─────────────────────────────
-        # BACKGROUND WORKERS
-        # ─────────────────────────────
         sync_task = asyncio.create_task(auto_sync_worker(ctx))
 
-        # ✅ STEP 4: dispatcher task (THIS WAS MISSING)
         dispatcher_task = asyncio.create_task(event_dispatcher(event_queue, ws_manager))
         app.state.dispatcher_task = dispatcher_task
 

@@ -83,6 +83,13 @@ class SettingsService:
         if self._is_secret_key(key):
             if value == "":
                 return None
+
+            current_encrypted = self.repo.get_server_setting(key)
+            current_plain = self._decrypt_secret_value(current_encrypted) if current_encrypted else ""
+
+            if str(value) == str(current_plain):
+                return None
+
             value = encrypt_secret(str(value), self.secret_key)
 
         return self.repo.set_server_setting(key, value)
