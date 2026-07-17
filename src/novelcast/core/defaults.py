@@ -507,9 +507,6 @@ SETTINGS = {
     ----------- User settings -------------
 """
 
-# left as-is below (unchanged from your version) — say the word if you want
-# USER_SETTINGS_SCHEMA and DEFAULT_CHAPTER_PATTERNS constant-ified too, same pattern.
-
 # ─────────────────────────────
 # user settings — field-name constants
 # ─────────────────────────────

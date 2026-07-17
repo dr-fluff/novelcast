@@ -13,7 +13,6 @@ from novelcast.services.story_service import StoryService
 
 logger = logging.getLogger(__name__)
 
-
 class RssService:
     def __init__(
         self,
@@ -39,11 +38,6 @@ class RssService:
         if self._running:
             return
 
-        # ← CHANGED: hard guard against thread pileup. If a previous stop()
-        # timed out and the old thread is still alive, do NOT spin up a
-        # second one on top of it — that's how you get two threads both
-        # calling check_feeds() concurrently (duplicate downloads, doubled
-        # request rate against RoyalRoad).
         if self._thread and self._thread.is_alive():
             logger.error(
                 "RSS start() refused: previous thread is still shutting down"
@@ -83,10 +77,6 @@ class RssService:
         if self._thread:
             self._thread.join(timeout=5)
             if self._thread.is_alive():
-                # ← CHANGED: leave self._thread set (don't clear it) so
-                # start()'s is_alive() guard above can see it and refuse
-                # to double up. It'll get cleared once we confirm it's
-                # actually dead.
                 logger.warning("RSS thread did not stop within timeout")
                 return
 
@@ -94,11 +84,19 @@ class RssService:
         self._stop_event.clear()
 
     def run(self):
-
         while self._running:
+            if not self.settings.get(setting_keys.RSS_SETTINGS.ENABLED, default=False).value:
+                logger.info("RSS disabled, stopping polling loop")
+                break
+
+            self.readers = self.create_readers()
+
+            if not self.readers:
+                logger.info("No RSS readers enabled, stopping polling loop")
+                break
+
             try:
                 self.check_feeds()
-
             except Exception:
                 logger.exception("RSS polling failed")
 
@@ -106,6 +104,9 @@ class RssService:
 
             if self._stop_event.wait(timeout=interval * 60):
                 break
+
+        self._running = False
+        self._thread = None
 
     def create_readers(self):
 
@@ -144,10 +145,6 @@ class RssService:
                 continue
 
             for index, (story_site_id, url) in enumerate(feed_urls):
-                # ← CHANGED: bail out between stories, not just between
-                # full check_feeds() calls. This is what actually lets
-                # stop() take effect within the 5s join timeout instead
-                # of waiting for every story in the batch to finish.
                 if self._stop_event.is_set():
                     return
 

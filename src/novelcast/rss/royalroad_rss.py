@@ -18,19 +18,6 @@ class RoyalRoadRss:
     # ------------------------------------------------------------------
 
     def get_feed_urls(self) -> list[tuple[str, str]]:
-        """Return [(story_site_id, feed_url), ...] — one feed per tracked
-        RoyalRoad story, fetched individually rather than as one combined
-        comma-separated feed.
-
-        RoyalRoad's combined multi-id feed carries no reliable per-item
-        field tying a chapter back to its fiction id: the item <link> is
-        a bare chapter permalink with no fiction id in it, the <category>
-        is left blank by RoyalRoad even on combined feeds, and the item
-        title can't be trusted either since a story's title can change
-        over time while its story_site_id stays fixed. Fetching one feed
-        per known id sidesteps all of that — the id is known before the
-        request is even made.
-        """
         stories = self.rss_service.get_auto_update_stories_by_site(self.site)
 
         ids = sorted({str(story["story_site_id"]) for story in stories if story.get("story_site_id")})

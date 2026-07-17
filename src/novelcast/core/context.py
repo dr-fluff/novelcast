@@ -73,11 +73,6 @@ class AppContext:
         self.event_queue = Queue()
         self.ws_manager = None
 
-        # ← CHANGED: filled in by lifespan.py once the FastAPI event loop is
-        # running (`ctx.loop = app.state.loop`). Stays None until then —
-        # _schedule_restart checks for that below rather than assuming it's
-        # always set, since AppContext itself is constructed before the
-        # loop exists.
         self.loop = None
 
         self.runtime_services = {}
