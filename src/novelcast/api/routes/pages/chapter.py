@@ -93,7 +93,6 @@ async def get_chapter_settings(
     settings_service: SettingsService = Depends(get_settings),
     x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
 ):
-
     if not current_user:
         raise HTTPException(status_code=401, detail="Authentication required")
 
@@ -102,7 +101,6 @@ async def get_chapter_settings(
         return {"settings": chapter_settings}
     except Exception as e:
         logger.error(f"Error fetching chapter settings for user {current_user['id']}: {e}")
-        # Return defaults on error
         return {
             "settings": {
                 "theme": "light",
@@ -116,12 +114,14 @@ async def get_chapter_settings(
         }
 
 
+
+
 @router.post("/api/chapter-settings")
 async def update_chapter_settings(
     request: Request,
     current_user: dict | None = Depends(get_current_user),
     settings_service: SettingsService = Depends(get_settings),
-    x_device_id: str = Header(alias="X-Device-Id"),
+    x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
 ):
     if not current_user:
         raise HTTPException(status_code=401, detail="Authentication required")
@@ -142,7 +142,6 @@ async def update_chapter_settings(
             chapter_content_padding=data.get("contentPadding"),
         )
 
-        # Return the settings that were saved
         return {
             "settings": data,
             "message": "Chapter settings saved successfully",

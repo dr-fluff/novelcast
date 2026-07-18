@@ -47,6 +47,7 @@ def login(request: Request, username: str = Form(...), password: str = Form(...)
         value=token,
         httponly=True,
         samesite="lax",
+        max_age=60 * 60 * 24 * 30,
     )
     return response
 

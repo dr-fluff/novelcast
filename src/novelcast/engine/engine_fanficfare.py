@@ -1,6 +1,7 @@
 import json
 import logging
 import subprocess
+from pathlib import Path
 import sys
 from urllib.parse import urlparse
 
@@ -21,9 +22,11 @@ class FanFicFareEngine(StoryEngine):
     FLAG_NON_INTERACTIVE = "--non-interactive"
     FLAG_PROGRESS = "--progressbar"
 
-    def __init__(self, settings_repo, config_service):
+    def __init__(self, settings_repo, config_service, download_dir: str):
         self.settings_repo = settings_repo
         self.config_service = config_service
+        self.download_dir = Path(download_dir).resolve()
+        self.download_dir.mkdir(parents=True, exist_ok=True)
 
     def can_handle(self, url: str) -> bool:
         hostname = urlparse(url).hostname
@@ -110,7 +113,8 @@ class FanFicFareEngine(StoryEngine):
 
         return chapters
 
-    def _run_fanficfare(self, url: str, config_path: str, progress_callback=None, extra_flags=None) -> dict:
+    def _run_fanficfare(self, url, config_path, progress_callback=None, extra_flags=None):
+
         cmd = [
             sys.executable,
             "-m",
@@ -129,9 +133,10 @@ class FanFicFareEngine(StoryEngine):
         logger.info("FanFicFare CMD=%s", " ".join(cmd))
 
         process = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
+            cmd, 
+            stdout=subprocess.PIPE, 
             stderr=subprocess.PIPE,
+            cwd=str(self.download_dir),
         )
 
         stdout, stderr = process.communicate(timeout=300)
@@ -240,8 +245,7 @@ class FanFicFareEngine(StoryEngine):
     def _extract_epub_path(self, raw: dict) -> str:
         for key in ("output_filename", "outfile", "filename"):
             if raw.get(key):
-                return raw[key]
-
+                return str((self.download_dir / raw[key]).resolve())
         logger.error("No epub path in raw keys=%s", list(raw.keys()))
         raise RuntimeError("Missing epub output path")
 

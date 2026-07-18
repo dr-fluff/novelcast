@@ -377,10 +377,15 @@ class StoryPipeline:
     def _move_epub(self, source_path: str, base_dir: Path):
         source = Path(source_path)
         if not source.exists():
+            logger.error(
+                "Expected downloaded epub not found — file may have been "
+                "written to the wrong location (cwd mismatch): %s",
+                source,
+            )
             return
-
         dest = base_dir / self.file_utils.safe(source.name)
         shutil.move(str(source), str(dest))
+        logger.info("Moved epub %s -> %s", source, dest)
 
     def _write_cover(self, base_dir: Path, cover_bytes: bytes | None):
         if not cover_bytes:

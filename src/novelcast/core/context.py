@@ -3,6 +3,7 @@ import logging
 import threading
 from queue import Queue
 
+from novelcast.core import setting_keys
 from novelcast.core.defaults import (
     REQUIRED_USER_SETTINGS,
     SECTION_TELEGRAM,
@@ -10,6 +11,7 @@ from novelcast.core.defaults import (
     USER_SETTINGS_SCHEMA,
     SECTION_RSS,
 )
+
 from novelcast.db.engine import engine
 from novelcast.db.init_db import init_db
 from novelcast.db.repositories import (
@@ -276,9 +278,12 @@ class AppContext:
     def _init_engine(self):
         logger.info("Initializing engines...")
 
+        data_path = self.settings.get(setting_keys.LIBRARY_SETTINGS.DATA_PATH).value
+
         self.fanficfare_engine = FanFicFareEngine(
             self.settings_repo,
             self.engines_config["fanficfare"]["writer"],
+            download_dir=data_path,
         )
 
         self.patreon_engine = PatreonEngine(

@@ -69,18 +69,43 @@ class PaginatedEReader {
   }
 
   getDeviceId() {
+    // Try localStorage first (works in normal browsing, may be blocked
+    // under strict tracking protection or private browsing).
     try {
       let id = localStorage.getItem('nc_device_id');
-      if (!id) {
-        id = crypto.randomUUID();
-        localStorage.setItem('nc_device_id', id);
-      }
+      if (id) return id;
+    } catch (e) { /* localStorage blocked, fall through to cookie */ }
+
+    // Fallback: cookie-based device id, which tends to survive strict
+    // tracking protection since it's first-party storage on this origin.
+    const match = document.cookie.match(/(?:^|; )nc_device_id=([^;]+)/);
+    if (match) {
+      const id = decodeURIComponent(match[1]);
+      try { localStorage.setItem('nc_device_id', id); } catch (e) {}
       return id;
-    } catch (e) {
-      // localStorage unavailable (e.g. private mode) — settings just
-      // won't be device-scoped for this session.
-      return null;
     }
+
+    // Neither exists — mint a new id and persist wherever we can.
+    const id = this.generateUUID();
+    try { localStorage.setItem('nc_device_id', id); } catch (e) {}
+    try {
+      document.cookie = `nc_device_id=${encodeURIComponent(id)}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`;
+    } catch (e) {}
+    return id;
+  }
+
+  generateUUID() {
+    // crypto.randomUUID() only exists in secure contexts (HTTPS or
+    // localhost) — LAN IPs over plain HTTP are not secure contexts,
+    // so fall back to a manual RFC4122-ish generator there.
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      try { return crypto.randomUUID(); } catch (e) { /* fall through */ }
+    }
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+      const r = (Math.random() * 16) | 0;
+      const v = c === 'x' ? r : (r & 0x3) | 0x8;
+      return v.toString(16);
+    });
   }
 
   loadSchema() {
@@ -660,6 +685,11 @@ class PaginatedEReader {
       this.saveUserSettings();
     });
 
+    // Live-update the preview on every tick of the drag, but keep this
+    // cheap — no repagination, no saving. Fast drags on mobile were
+    // getting interrupted because buildIframe() (full doc.write + layout)
+    // was firing on every 'input' event, blocking the main thread long
+    // enough to drop the touch gesture mid-drag.
     container.addEventListener('input', e => {
       const slider = e.target.closest('.slider[data-setting-key]');
       if (!slider) return;
@@ -667,10 +697,16 @@ class PaginatedEReader {
       const key = slider.dataset.settingKey;
       this.settings[key] = Number(slider.value);
       this.updateSettingsUI();
-      this.repaginate(this.state.currentPage);
+    });
 
-      clearTimeout(this.sliderSaveTimer);
-      this.sliderSaveTimer = setTimeout(() => this.saveUserSettings(), 300);
+    // Only repaginate and save once the drag actually finishes — 'change'
+    // fires once when the user releases the slider/lifts their finger.
+    container.addEventListener('change', e => {
+      const slider = e.target.closest('.slider[data-setting-key]');
+      if (!slider) return;
+
+      this.repaginate(this.state.currentPage);
+      this.saveUserSettings();
     });
   }
 
