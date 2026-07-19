@@ -24,8 +24,10 @@ from novelcast.services import (
     UserService,
 )
 
-router = APIRouter()
+from novelcast.core import setting_keys
 
+
+router = APIRouter()
 
 @router.get("/admin")
 def admin_dashboard(
@@ -277,14 +279,16 @@ def logs(
 @router.get("/admin/logs/raw")
 def raw_logs(
     current_user: dict | None = Depends(get_current_user),
+    settings: SettingsService = Depends(get_settings),
 ):
     if not current_user or not current_user.get("is_root"):
         raise HTTPException(status_code=403, detail="Admin access required")
 
-    log_dir = Path("logs")
+    configured_path = settings.get(setting_keys.LOGGING_SETTINGS.FILE).value
+    log_dir = Path(configured_path).resolve().parent
 
     files = sorted(
-        log_dir.glob("novelcast_*.log"),
+        log_dir.glob("*.log"),
         key=lambda p: p.stat().st_mtime,
         reverse=True,
     )
@@ -296,8 +300,6 @@ def raw_logs(
         path=files[0],
         media_type="text/plain",
     )
-
-    # Tell browser: show it, don't download it
     response.headers["Content-Disposition"] = f'inline; filename="{files[0].name}"'
 
     return response

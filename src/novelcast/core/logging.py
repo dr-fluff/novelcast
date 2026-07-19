@@ -151,26 +151,42 @@ class InMemoryLogBuffer(logging.Handler):
         self._buf: Deque[str] = deque(maxlen=maxlen)
         self._lock = Lock()
         self._fmt = JsonFormatter()
+        self._total_emitted = 0  # monotonic count of every line ever emitted, never reset by eviction
 
     def emit(self, record: logging.LogRecord) -> None:
         try:
             line = self._fmt.format(record)
             with self._lock:
                 self._buf.append(line)
+                self._total_emitted += 1
         except Exception:
             self.handleError(record)
 
     def drain(self, since_index: int | None = None) -> tuple[list[str], int]:
         with self._lock:
             buf = list(self._buf)
-        total = len(buf)
-        if since_index is None or since_index >= total:
-            return buf, total
-        return buf[since_index:], total
+            total_emitted = self._total_emitted
+
+        # Index of buf[0] within the overall (unbounded) stream. As old
+        # entries get evicted by maxlen, this rises to reflect it.
+        buf_start = total_emitted - len(buf)
+
+        if since_index is None or since_index <= buf_start:
+            # First connection, or the client's cursor is older than
+            # anything we still have — send everything currently held.
+            return buf, total_emitted
+
+        offset = since_index - buf_start
+        if offset >= len(buf):
+            return [], total_emitted
+
+        return buf[offset:], total_emitted
 
     def resize(self, maxlen: int) -> None:
         with self._lock:
             self._buf = deque(self._buf, maxlen=maxlen)
+            # _total_emitted is untouched — buf_start recalculates correctly
+            # against it next drain() regardless of the resize.
 
 
 log_buffer = InMemoryLogBuffer()

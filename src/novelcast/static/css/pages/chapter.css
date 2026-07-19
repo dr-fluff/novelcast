@@ -1,46 +1,5 @@
 /* novelcast/static/css/pages/chapter.css - SETTINGS PANEL IMPROVEMENTS */
 
-:root {
-  /* Light theme (default) */
-  --bg-primary: #faf8f3;
-  --bg-secondary: #ffffff;
-  --text-primary: #2c2c2c;
-  --text-secondary: #666666;
-  --border-color: rgba(0, 0, 0, 0.08);
-  --accent-color: #3b82f6;
-  --accent-hover: #2563eb;
-
-  /* Typography */
-  --font-serif: Georgia, "Noto Serif", "Times New Roman", serif;
-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-size-base: 1.05rem;
-  --line-height: 1.85;
-  --font-weight: 400;
-  --paragraph-margin: 1.5rem;
-}
-
-/* Sepia theme */
-body[data-theme="sepia"] {
-  --bg-primary: #f4eee6;
-  --bg-secondary: #fef9f3;
-  --text-primary: #5c4033;
-  --text-secondary: #8d6e63;
-  --border-color: rgba(0, 0, 0, 0.06);
-  --accent-color: #8d6e63;
-  --accent-hover: #6d4c41;
-}
-
-/* Dark theme */
-body[data-theme="dark"] {
-  --bg-primary: #1a1a1a;
-  --bg-secondary: #242424;
-  --text-primary: #e8e8e8;
-  --text-secondary: #a8a8a8;
-  --border-color: rgba(255, 255, 255, 0.08);
-  --accent-color: #60a5fa;
-  --accent-hover: #3b82f6;
-}
-
 /* ────────────────────────────────────────────────────────────────
    BASE LAYOUT
    ──────────────────────────────────────────────────────────────── */
@@ -593,10 +552,6 @@ FLOATING NAVIGATION ARROWS
     margin: 2.5rem auto;
   }
 
-  :root {
-    --font-size-base: 1rem;
-  }
-
   .nav-arrow {
     width: 48px;
     height: 48px;
@@ -636,10 +591,6 @@ FLOATING NAVIGATION ARROWS
     display: none;
   }
 
-  :root {
-    --font-size-base: 0.95rem;
-  }
-
   .nav-arrow {
     width: 44px;
     height: 44px;
@@ -663,10 +614,6 @@ FLOATING NAVIGATION ARROWS
   .chapter-content {
     padding: 0 1rem;
     margin: 1.5rem auto;
-  }
-
-  :root {
-    --font-size-base: 0.9rem;
   }
 
   .chapter-title {
