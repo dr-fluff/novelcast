@@ -1,4 +1,3 @@
-# novelcast/engine/engine_patreon.py
 import json
 import logging
 import os
@@ -10,9 +9,52 @@ from urllib.parse import parse_qs, urlparse
 
 import requests
 
+from .base import FORMAT_PATREON, make_result
+
 logger = logging.getLogger(__name__)
 
 _USER_AGENT = "Patreon/126.9.0.15 (Android; Android 14; Scale/2.10)"
+
+# --- Patreon API's own JSON field names (their schema, not ours) ---
+# Kept as constants so a typo raises a clear "unknown name" at import/lint
+# time instead of silently returning None from post.get(...).
+PATREON_FIELD_ID = "id"
+PATREON_FIELD_TITLE = "title"
+PATREON_FIELD_CURRENT_USER_CAN_VIEW = "current_user_can_view"
+PATREON_FIELD_PUBLISHED_AT = "published_at"
+PATREON_FIELD_FILE_NAME = "file_name"
+PATREON_FIELD_DOWNLOAD_URL = "download_url"
+PATREON_FIELD_CONTENT = "content"
+PATREON_FIELD_CONTENT_JSON_STRING = "content_json_string"
+PATREON_FIELD_ATTACHMENTS = "attachments"
+PATREON_FIELD_ATTACHMENTS_MEDIA = "attachments_media"
+
+# --- File extensions ---
+EXT_PDF = ".pdf"
+EXT_EPUB = ".epub"
+EXT_MP4 = ".mp4"
+EXT_MOV = ".mov"
+EXT_AVI = ".avi"
+EXT_MKV = ".mkv"
+EXT_WEBM = ".webm"
+EXT_WMV = ".wmv"
+EXT_FLV = ".flv"
+EXT_M4V = ".m4v"
+EXT_JPG = ".jpg"
+EXT_JPEG = ".jpeg"
+EXT_PNG = ".png"
+EXT_GIF = ".gif"
+EXT_WEBP = ".webp"
+EXT_BMP = ".bmp"
+
+_VIDEO_EXTENSIONS = {EXT_MP4, EXT_MOV, EXT_AVI, EXT_MKV, EXT_WEBM, EXT_WMV, EXT_FLV, EXT_M4V}
+_IMAGE_EXTENSIONS = {EXT_JPG, EXT_JPEG, EXT_PNG, EXT_GIF, EXT_WEBP, EXT_BMP}
+
+# --- Our own per-attachment type labels (used in the "type" field of each
+# entry in post_records[...]['files']) ---
+FILE_TYPE_PDF = "pdf"
+FILE_TYPE_EPUB = "epub"
+FILE_TYPE_IMAGE = "image"
 
 _POST_FIELDS = (
     "&fields[post]=content,content_json_string,current_user_can_view,"
@@ -22,8 +64,11 @@ _POST_FIELDS = (
     "&fields[media]=id,download_url,file_name"
 )
 
-_VIDEO_EXTENSIONS = {".mp4", ".mov", ".avi", ".mkv", ".webm", ".wmv", ".flv", ".m4v"}
-_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"}
+# (connect timeout, read timeout). Read timeout is measured per socket read,
+# not for the whole transfer, so a slow-but-steady large file won't trip it —
+# only a stalled connection will.
+_DOWNLOAD_TIMEOUT = (10, 300)
+_DOWNLOAD_CHUNK_SIZE = 1024 * 256
 
 
 class PatreonEngine:
@@ -99,7 +144,7 @@ class PatreonEngine:
             self._emit_progress(f"Fetching posts from {creator_name}", progress_callback, 20)
             posts = self._fetch_all_posts(campaign_id)
 
-            viewable = [p for p in posts if p.get("current_user_can_view", True)]
+            viewable = [p for p in posts if p.get(PATREON_FIELD_CURRENT_USER_CAN_VIEW, True)]
             locked_count = len(posts) - len(viewable)
 
             if story_match:
@@ -114,30 +159,29 @@ class PatreonEngine:
 
             self._emit_progress("Done!", progress_callback, 100)
 
-            return {
-                "title": creator_name,
-                "author": creator_name,
-                "url": url,
-                "file_path": None,
-                "format": "patreon",
-                "raw": {
+            return make_result(
+                title=creator_name,
+                author=creator_name,
+                url=url,
+                format=FORMAT_PATREON,
+                raw={
                     "campaign_id": campaign_id,
                     "post_records": post_records,
                     "post_count": len(posts),
                     "viewable_count": len(viewable),
                     "locked_count": locked_count,
                 },
-            }
+            )
 
         except Exception as e:
-            logger.error("Patreon fetch failed: %s", e)
+            logger.error("Patreon fetch failed: %s", e, exc_info=True)
             raise RuntimeError(f"Failed to fetch from Patreon: {e}")
 
     def check_access(self, url: str) -> dict:
         campaign_id, creator_name = self._resolve_campaign(url)
         posts = self._fetch_all_posts(campaign_id, max_posts=25)
 
-        viewable = sum(1 for p in posts if p.get("current_user_can_view", True))
+        viewable = sum(1 for p in posts if p.get(PATREON_FIELD_CURRENT_USER_CAN_VIEW, True))
 
         return {
             "creator": creator_name,
@@ -151,20 +195,23 @@ class PatreonEngine:
     def check_updates(self, url: str, story_match: Optional[str] = None) -> dict:
         campaign_id, creator_name = self._resolve_campaign(url)
         posts = self._fetch_all_posts(campaign_id, max_posts=5)
-        posts = [p for p in posts if p.get("current_user_can_view", True)]
+        posts = [p for p in posts if p.get(PATREON_FIELD_CURRENT_USER_CAN_VIEW, True)]
 
         if story_match:
             posts = self._filter_posts_for_story(posts, story_match)
 
-        return {
-            "title": creator_name,
-            "author": creator_name,
-            "url": url,
-            "raw": {
+        return make_result(
+            title=creator_name,
+            author=creator_name,
+            url=url,
+            raw={
                 "campaign_id": campaign_id,
-                "latest_posts": [{"title": p.get("title"), "published_at": p.get("published_at")} for p in posts],
+                "latest_posts": [
+                    {"title": p.get(PATREON_FIELD_TITLE), "published_at": p.get(PATREON_FIELD_PUBLISHED_AT)}
+                    for p in posts
+                ],
             },
-        }
+        )
 
     def _extract_creator_from_url(self, url: str) -> Optional[str]:
         parsed = urlparse(url)
@@ -270,11 +317,13 @@ class PatreonEngine:
 
     def _flatten_post(self, raw_post: Dict, included: Dict[str, Dict]) -> Dict:
         attrs = dict(raw_post.get("attributes", {}))
-        attrs["id"] = raw_post.get("id")
+        attrs[PATREON_FIELD_ID] = raw_post.get("id")
 
         relationships = raw_post.get("relationships", {})
-        attrs["attachments"] = self._resolve_relationship(relationships, included, "attachments")
-        attrs["attachments_media"] = self._resolve_relationship(relationships, included, "attachments_media")
+        attrs[PATREON_FIELD_ATTACHMENTS] = self._resolve_relationship(relationships, included, PATREON_FIELD_ATTACHMENTS)
+        attrs[PATREON_FIELD_ATTACHMENTS_MEDIA] = self._resolve_relationship(
+            relationships, included, PATREON_FIELD_ATTACHMENTS_MEDIA
+        )
 
         return attrs
 
@@ -299,18 +348,31 @@ class PatreonEngine:
                 e,
             )
             pattern = re.compile(re.escape(story_match), re.I)
-        return [p for p in posts if pattern.search(p.get("title", ""))]
+        return [p for p in posts if pattern.search(p.get(PATREON_FIELD_TITLE, ""))]
 
     def _download_file(self, url: str, output_path: str) -> bool:
+        """Stream to disk instead of buffering the whole response in memory,
+        and use a generous per-chunk read timeout so large attachments don't
+        get killed by a flat 30s timeout. Any failure is logged with a full
+        traceback (exc_info) so it actually shows up in the log, not just as
+        a downstream notification with no detail."""
         try:
-            resp = self.session.get(url, headers=self._headers(), timeout=30, allow_redirects=True)
-            resp.raise_for_status()
-            os.makedirs(os.path.dirname(output_path), exist_ok=True)
-            with open(output_path, "wb") as f:
-                f.write(resp.content)
+            with self.session.get(
+                url,
+                headers=self._headers(),
+                timeout=_DOWNLOAD_TIMEOUT,
+                allow_redirects=True,
+                stream=True,
+            ) as resp:
+                resp.raise_for_status()
+                os.makedirs(os.path.dirname(output_path), exist_ok=True)
+                with open(output_path, "wb") as f:
+                    for chunk in resp.iter_content(chunk_size=_DOWNLOAD_CHUNK_SIZE):
+                        if chunk:
+                            f.write(chunk)
             return True
         except Exception as e:
-            logger.error("Failed to download file: %s", e)
+            logger.error("Failed to download file %s -> %s: %s", url, output_path, e, exc_info=True)
             return False
 
     def _dedupe_attachments(self, attachments: List[Dict]) -> List[Dict]:
@@ -318,7 +380,7 @@ class PatreonEngine:
         EPUB is preferred for better structure/formatting."""
         by_stem: Dict[str, List[tuple]] = {}
         for a in attachments:
-            filename = a.get("file_name") or ""
+            filename = a.get(PATREON_FIELD_FILE_NAME) or ""
             ext = Path(filename).suffix.lower()
             stem = Path(filename).stem.strip().lower()
             by_stem.setdefault(stem, []).append((ext, a))
@@ -326,17 +388,17 @@ class PatreonEngine:
         result = []
         for stem, items in by_stem.items():
             exts = {ext for ext, _ in items}
-            if ".pdf" in exts and ".epub" in exts:
-                result.extend(a for ext, a in items if ext != ".pdf")
+            if EXT_PDF in exts and EXT_EPUB in exts:
+                result.extend(a for ext, a in items if ext != EXT_PDF)
             else:
                 result.extend(a for _, a in items)
         return result
 
     def _get_raw_post_content(self, post: Dict) -> tuple[str, str]:
         """Returns (raw_content, format). No interpretation — parser handles it."""
-        if post.get("content"):
-            return post["content"], "html"
-        cjs = post.get("content_json_string")
+        if post.get(PATREON_FIELD_CONTENT):
+            return post[PATREON_FIELD_CONTENT], "html"
+        cjs = post.get(PATREON_FIELD_CONTENT_JSON_STRING)
         if cjs:
             return cjs, "tiptap_json"
         return "", "html"
@@ -372,8 +434,8 @@ class PatreonEngine:
 
         for post_idx, post in enumerate(posts):
             try:
-                post_id = post.get("id")
-                post_title = post.get("title", "Untitled")
+                post_id = post.get(PATREON_FIELD_ID)
+                post_title = post.get(PATREON_FIELD_TITLE, "Untitled")
                 progress = 40 + (post_idx / len(posts)) * 40
                 self._emit_progress(f"Downloading: {post_title}", progress_callback, int(progress))
 
@@ -382,18 +444,20 @@ class PatreonEngine:
                 inline_images: Dict[str, str] = {}
                 if content_format == "tiptap_json" and raw_content:
                     for idx, img_url in enumerate(self._extract_inline_image_urls(raw_content)):
-                        ext = Path(urlparse(img_url).path).suffix or ".jpg"
+                        ext = Path(urlparse(img_url).path).suffix or EXT_JPG
                         file_path = os.path.join(output_dir, f"{post_id}_inline_{idx}{ext}")
                         if self._download_file(img_url, file_path):
                             inline_images[img_url] = file_path
 
-                all_attachments = list(post.get("attachments_media", [])) + list(post.get("attachments", []))
+                all_attachments = list(post.get(PATREON_FIELD_ATTACHMENTS_MEDIA, [])) + list(
+                    post.get(PATREON_FIELD_ATTACHMENTS, [])
+                )
                 candidates = self._dedupe_attachments(all_attachments)
 
                 files = []
                 for attachment in candidates:
-                    download_url = attachment.get("download_url")
-                    filename = attachment.get("file_name") or "attachment"
+                    download_url = attachment.get(PATREON_FIELD_DOWNLOAD_URL)
+                    filename = attachment.get(PATREON_FIELD_FILE_NAME) or "attachment"
                     if not download_url:
                         continue
 
@@ -401,12 +465,12 @@ class PatreonEngine:
                     if ext in _VIDEO_EXTENSIONS:
                         continue
 
-                    if ext == ".pdf":
-                        file_type = "pdf"
-                    elif ext == ".epub":
-                        file_type = "epub"
+                    if ext == EXT_PDF:
+                        file_type = FILE_TYPE_PDF
+                    elif ext == EXT_EPUB:
+                        file_type = FILE_TYPE_EPUB
                     elif ext in _IMAGE_EXTENSIONS:
-                        file_type = "image"
+                        file_type = FILE_TYPE_IMAGE
                     else:
                         logger.info(
                             "Skipping unsupported attachment type %r on post %s",
@@ -431,7 +495,7 @@ class PatreonEngine:
                 )
 
             except Exception as e:
-                logger.error("Failed to download post %s: %s", post.get("id"), e)
+                logger.error("Failed to download post %s: %s", post.get(PATREON_FIELD_ID), e, exc_info=True)
                 continue
 
         return post_records
@@ -461,9 +525,9 @@ class PatreonEngine:
             result_posts.append(
                 {
                     "number": idx,
-                    "title": p.get("title") or f"Post {idx}",
-                    "locked": not p.get("current_user_can_view", False),
-                    "published_at": p.get("published_at"),
+                    "title": p.get(PATREON_FIELD_TITLE) or f"Post {idx}",
+                    "locked": not p.get(PATREON_FIELD_CURRENT_USER_CAN_VIEW, False),
+                    "published_at": p.get(PATREON_FIELD_PUBLISHED_AT),
                 }
             )
 
