@@ -1,6 +1,7 @@
 /* novelcast/static/js/notifications.js */
 
 const activeNotifications = new Map();
+const dismissedNotificationIds = new Set();
 let isIntentionalClose = false;
 
 function ensureNotificationContainer() {
@@ -19,7 +20,7 @@ function createNotificationContent(message) {
         <div class="notification-body">
             <div class="notification-content">${message}</div>
         </div>
-        <div class="notification-close">✕</div>
+        <button type="button" class="notification-close" aria-label="Dismiss notification">✕</button>
     `;
 }
 
@@ -48,17 +49,34 @@ function setNotificationProgress(notification, progress, indeterminate = false) 
     }
 }
 
-function removeNotification(notification, id) {
+function removeNotification(notification, id, dismissed = false) {
     if (!notification) return;
+    if (notification.dismissTimeout) {
+        clearTimeout(notification.dismissTimeout);
+    }
     notification.remove();
     if (id) {
         activeNotifications.delete(id);
+        if (dismissed) {
+            dismissedNotificationIds.add(id);
+        }
     }
 }
 
 function showNotification(message, type = "info", timeout = 7000, options = {}) {
     const container = ensureNotificationContainer();
     const id = options.id;
+
+    if (id && options.resetDismissal) {
+        dismissedNotificationIds.delete(id);
+    }
+    if (id && dismissedNotificationIds.has(id) && options.persistent) {
+        return null;
+    }
+    if (id && !options.persistent) {
+        dismissedNotificationIds.delete(id);
+    }
+
     let notif = id ? activeNotifications.get(id) : null;
 
     if (notif) {
@@ -67,11 +85,6 @@ function showNotification(message, type = "info", timeout = 7000, options = {}) 
 
         if (options.progress != null || options.indeterminate) {
             setNotificationProgress(notif, options.progress ?? 0, !!options.indeterminate);
-        }
-
-        if (options.persistent) {
-            const closeButton = notif.querySelector(".notification-close");
-            if (closeButton) closeButton.style.display = "none";
         }
 
         if (notif.dismissTimeout) {
@@ -91,10 +104,7 @@ function showNotification(message, type = "info", timeout = 7000, options = {}) 
     notif.innerHTML = createNotificationContent(message);
 
     const closeButton = notif.querySelector(".notification-close");
-    closeButton.onclick = () => removeNotification(notif, id);
-    if (options.persistent) {
-        closeButton.style.display = "none";
-    }
+    closeButton.onclick = () => removeNotification(notif, id, true);
 
     container.appendChild(notif);
     if (id) {
@@ -123,6 +133,7 @@ function buildNotification(payload) {
                     id: payload.payload.job_id,
                     persistent: true,
                     indeterminate: true,
+                    resetDismissal: true,
                 },
             };
         case "job:progress":
@@ -160,6 +171,7 @@ function buildNotification(payload) {
                     id: `download-${payload.download_id}`,
                     persistent: true,
                     progress: 0,
+                    resetDismissal: true,
                 },
             };
         case "download_progress":
@@ -207,6 +219,7 @@ function buildNotification(payload) {
                 options: {
                     id: `sync-${payload.story_id}`,
                     persistent: true,
+                    resetDismissal: true,
                 },
             };
         case "sync_no_changes":

@@ -1,9 +1,11 @@
 
 /* Root layout: fills the viewport so nav, header/buttons, and the log
 panel are all visible at once — only the log itself scrolls. */
+/*
 html, body {
     height: 100%;
 }
+    */
 
 .pg-admin {
     display: flex;

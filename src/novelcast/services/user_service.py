@@ -22,6 +22,9 @@ class UserService:
     def get_all_users(self):
         return self.repo.list()
 
+    def delete_user(self, user_id: int) -> None:
+        self.repo.delete(user_id)
+
     def promote_to_admin(self, user_id: int):
         return self.repo.set_root(user_id)
 

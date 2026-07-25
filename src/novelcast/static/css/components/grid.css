@@ -1,11 +1,14 @@
 .grid {
-  --grid-min-card-width: 10vw;
+  --grid-card-min-width: clamp(160px, 20vw, 260px);
+  --grid-card-max-width: 260px;
 
   display: grid;
   grid-template-columns: repeat(
-    auto-fit,
-    minmax(clamp(160px, 20vw, 260px), 1fr)
+    auto-fill,
+    minmax(var(--grid-card-min-width), var(--grid-card-max-width))
   );
+  justify-content: start;
+  align-items: start;
   gap: var(--grid-gap, 1.25rem);
   padding: var(--grid-padding, 2rem);
 }
@@ -13,7 +16,7 @@
 
 
 .grid-compact {
-  --grid-min-card-width: 160px;
+  --grid-card-min-width: 160px;
 }
 
 @media (max-width: 700px) {

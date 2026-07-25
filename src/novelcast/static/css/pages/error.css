@@ -4,7 +4,7 @@
     justify-content: center;
     align-items: center;
     padding: 4rem 1rem;
-    background: var(--bg);
+    background: var(--bg-primary);
 }
 
 .error-card {
@@ -76,7 +76,7 @@
 
 .error-log pre {
     margin: 0;
-    font-size: 0.85rem;
+    font-size: var(--font-size-base);
     color: var(--muted);
     line-height: 1.55;
     white-space: pre-wrap;
@@ -98,8 +98,8 @@
 }
 
 .error-actions .btn-primary {
-    background: #6366f1;
-    color: white;
+    background: var(--log-error);
+    color: #fff;
 }
 
 .error-actions .btn-primary:hover {

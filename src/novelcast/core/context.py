@@ -144,6 +144,9 @@ class AppContext:
         logger.info("Initializing services...")
 
         self.stories = StoryService(self.stories_repo, author_repo=self.authors_repo)
+        restored_covers = self.stories.restore_local_cover_paths()
+        if restored_covers:
+            logger.info("Restored cover paths for %d stories", restored_covers)
         self.users = UserService(self.users_repo)
         self.auth = AuthService(self.users_repo)
         self.files = FileService(self.files_repo)

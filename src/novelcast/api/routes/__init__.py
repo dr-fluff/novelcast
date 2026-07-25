@@ -4,7 +4,7 @@ from fastapi import APIRouter
 from novelcast.api.ws.notifications import router as notifications_router
 from novelcast.auth.routes import router as auth_router
 
-from . import add_story, download, files, password_reset, static, stories, sync, users
+from . import add_story, covers, download, files, password_reset, static, stories, sync, users
 from .admin import router as admin_router
 from .pages import router as pages_router
 
@@ -27,6 +27,7 @@ api_router.include_router(users.router, prefix="/users", tags=["users"])
 api_router.include_router(files.router, prefix="/files", tags=["files"])
 api_router.include_router(stories.router, prefix="/stories", tags=["stories"])
 api_router.include_router(add_story.router, prefix="/stories", tags=["stories"])
+api_router.include_router(covers.router)
 api_router.include_router(download.router, prefix="/download", tags=["download"])
 api_router.include_router(sync.router, prefix="/sync", tags=["sync"])
 

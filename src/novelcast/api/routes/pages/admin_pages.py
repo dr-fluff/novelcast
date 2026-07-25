@@ -1,9 +1,10 @@
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, Depends, Form, HTTPException, Request
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
+from sqlalchemy.exc import IntegrityError
 
 from novelcast.api.deps import (
     get_chapter_filter,
@@ -107,22 +108,28 @@ def users(
     )
 
 
-@router.get("/admin/users/{user_id}/delete")
+@router.post("/admin/users/{user_id}/delete")
 def delete_user(
-    request: Request,
     user_id: int,
     users: UserService = Depends(get_users),
     current_user: dict | None = Depends(get_current_user),
-    templates: Jinja2Templates = Depends(get_templates),
 ):
     if not current_user or not current_user.get("is_root"):
         raise HTTPException(status_code=403, detail="Admin access required")
+    if current_user.get("id") == user_id:
+        raise HTTPException(status_code=400, detail="You cannot delete your own account")
 
     target_user = users.get_user_by_id(user_id)
     if not target_user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    return
+    if target_user.get("is_root"):
+        admin_count = sum(account.get("is_root", False) for account in users.get_all_users())
+        if admin_count <= 1:
+            raise HTTPException(status_code=400, detail="You cannot delete the last admin account")
+
+    users.delete_user(user_id)
+    return RedirectResponse("/admin/users?success=deleted", status_code=303)
 
 
 @router.get("/admin/users/{user_id}/edit")
@@ -155,6 +162,40 @@ def edit_user_page(
             "form_user": target_user,
         },
     )
+
+
+@router.post("/admin/users/{user_id}/edit")
+def edit_user(
+    user_id: int,
+    username: str = Form(...),
+    password: str | None = Form(None),
+    password_confirm: str | None = Form(None),
+    role: str = Form("user"),
+    users: UserService = Depends(get_users),
+    current_user: dict | None = Depends(get_current_user),
+):
+    if not current_user or not current_user.get("is_root"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    if current_user.get("id") == user_id and role != "admin":
+        return RedirectResponse(f"/admin/users/{user_id}/edit?error=demote", status_code=303)
+    if role not in {"user", "admin"} or (password and password != password_confirm):
+        return RedirectResponse(f"/admin/users/{user_id}/edit?error=invalid", status_code=303)
+
+    try:
+        updated = users.update_user(
+            user_id,
+            username=username,
+            password=password,
+            is_root=(role == "admin"),
+        )
+    except ValueError:
+        return RedirectResponse(f"/admin/users/{user_id}/edit?error=invalid", status_code=303)
+    except IntegrityError:
+        return RedirectResponse(f"/admin/users/{user_id}/edit?error=exists", status_code=303)
+
+    if not updated:
+        raise HTTPException(status_code=404, detail="User not found")
+    return RedirectResponse("/admin/users?success=updated", status_code=303)
 
 
 class PatternRequest(BaseModel):

@@ -64,6 +64,9 @@ class StoryService:
     def get_all_stories(self):
         return self.repo.get_all()
 
+    def restore_local_cover_paths(self) -> int:
+        return self.repo.restore_local_cover_paths()
+
     def get_story(self, story_id: int):
         data = self.repo.get_by_id(story_id)
         if not data:

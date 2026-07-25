@@ -88,3 +88,8 @@ docker-rebuild:
 	docker compose down
 	docker compose build --no-cache
 	docker compose up -d
+
+git-pull:
+	git pull --ff-only
+
+deploy: git-pull docker-rebuild

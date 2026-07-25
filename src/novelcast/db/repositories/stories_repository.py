@@ -2,6 +2,8 @@
 
 from datetime import datetime, timezone
 
+from pathlib import Path
+
 from sqlalchemy import func, select
 from sqlalchemy.dialects.sqlite import insert
 
@@ -180,7 +182,25 @@ class StoriesRepository(BaseRepository):
             story = db.get(Story, story_id)
             if story:
                 story.local_path = local_path
-                story.cover_path = cover_path
+                # A parser may not supply cover bytes on a later download.
+                # Keep an existing cover in that case; explicit removals use
+                # update_story_cover() instead.
+                if cover_path is not None:
+                    story.cover_path = cover_path
+
+    def restore_local_cover_paths(self) -> int:
+        """Restore missing cover metadata when the story's cover file still exists."""
+        restored = 0
+        with self.session() as db:
+            stories = db.scalars(select(Story).where(Story.cover_path.is_(None))).all()
+            for story in stories:
+                if not story.local_path:
+                    continue
+                cover_path = Path(story.local_path) / "cover.jpg"
+                if cover_path.is_file():
+                    story.cover_path = str(cover_path)
+                    restored += 1
+        return restored
 
     def set_story_setting(
         self,

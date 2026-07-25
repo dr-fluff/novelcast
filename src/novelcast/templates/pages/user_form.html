@@ -2,6 +2,7 @@
 
 {% block head %}
     <link rel="stylesheet" href="/static/css/pages/settings.css" />
+    {% if mode == 'signup' %}<link rel="stylesheet" href="/static/css/pages/auth.css" />{% endif %}
 {% endblock %}
 
 {% block title %}{% if mode == 'signup' %}Sign Up{% else %}Edit User{% endif %} - NovelCast{% endblock %}
@@ -12,7 +13,7 @@
 {% include "partials/library_header.html" %}
 {% endif %}
 
-<div class="pg-settings">
+<div class="pg-settings{% if mode == 'signup' %} auth-page{% endif %}">
   <div class="pg-header">
     <div>
       <h1 class="pg-title">{% if mode == 'signup' %}Create an account{% else %}Edit User{% endif %}</h1>

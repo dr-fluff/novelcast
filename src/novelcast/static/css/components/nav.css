@@ -1,9 +1,9 @@
 .library-header {
   position: sticky;
   top: 0;
-  z-index: 1000;
-  background: var(--bg);
-  border-bottom: 1px solid var(--border, rgba(0, 0, 0, 0.08));
+  z-index: var(--z-header);
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .library-header-inner {
@@ -30,14 +30,14 @@
   gap: 0.5rem;
   font-size: 1.1rem;
   font-weight: 700;
-  color: var(--text);
+  color: var(--text-primary);
   text-decoration: none;
   white-space: nowrap;
 }
 
 .library-brand i {
   font-size: 1.2rem;
-  color: var(--accent, #7c9ef8);
+  color: var(--accent-color);
 }
 
 /* ── NAV ── */
@@ -53,19 +53,19 @@
   border-radius: 8px;
   font-size: 0.95rem;
   font-weight: 500;
-  color: var(--muted);
+  color: var(--text-secondary);
   text-decoration: none;
   transition: background 0.12s, color 0.12s;
 }
 
 .library-nav-link:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--text);
+  background: var(--surface-hover);
+  color: var(--text-primary);
 }
 
 .library-nav-link--active {
-  color: var(--text);
-  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+  background: var(--surface-hover);
 }
 
 /* ── ACTIONS ── */
@@ -85,7 +85,7 @@
   border: none;
   border-radius: 10px;
   background: transparent;
-  color: var(--text);
+  color: var(--text-primary);
   font-size: 1rem;
   cursor: pointer;
   text-decoration: none;
@@ -93,7 +93,7 @@
 }
 
 .icon-button:hover {
-  background: rgba(255, 255, 255, 0.07);
+  background: var(--surface-hover);
 }
 
 /* ── USER BUTTON ── */
@@ -106,14 +106,14 @@
   border: none;
   border-radius: 10px;
   background: transparent;
-  color: var(--text);
+  color: var(--text-primary);
   font: inherit;
   cursor: pointer;
   transition: background 0.12s;
 }
 
 .library-user-btn:hover {
-  background: rgba(255, 255, 255, 0.07);
+  background: var(--surface-hover);
 }
 
 .library-username {
@@ -127,7 +127,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--muted);
+  background: var(--text-secondary);
   flex-shrink: 0;
 }
 
