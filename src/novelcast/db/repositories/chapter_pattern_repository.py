@@ -29,9 +29,7 @@ class ChapterPatternRepository(BaseRepository):
     def get_enabled_regexes(self) -> list[str]:
         """Return only enabled patterns as regex strings (for EpubParser)."""
         with self.session_no_commit() as db:
-            rows = db.scalars(
-                select(ChapterPattern).where(ChapterPattern.enabled).order_by(ChapterPattern.id)
-            ).all()
+            rows = db.scalars(select(ChapterPattern).where(ChapterPattern.enabled).order_by(ChapterPattern.id)).all()
             return [row.pattern for row in rows]
 
     def get_by_id(self, pattern_id: int) -> dict | None:

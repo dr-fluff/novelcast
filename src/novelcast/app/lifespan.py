@@ -68,7 +68,7 @@ async def lifespan(app: FastAPI):
         app.state.loop = asyncio.get_running_loop()
         ctx.loop = app.state.loop
         ctx.notifier = NotifierService(ws_manager=ws_manager, loop=ctx.loop)
-        
+
         telegram = ctx.telegram
         telegram.start()
         app.state.telegram = telegram

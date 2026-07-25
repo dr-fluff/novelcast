@@ -26,8 +26,8 @@ ALIAS_MAP = {
 }
 
 _ENABLED_SETTING = {
-    "patreon":     setting_keys.SCRAPERS_SETTINGS.PATREON_ENABLED,
-    "royalroad":   setting_keys.SCRAPERS_SETTINGS.ROYALROAD_ENABLED,
+    "patreon": setting_keys.SCRAPERS_SETTINGS.PATREON_ENABLED,
+    "royalroad": setting_keys.SCRAPERS_SETTINGS.ROYALROAD_ENABLED,
     "scribblehub": setting_keys.SCRAPERS_SETTINGS.SCRIBBLEHUB_ENABLED,
 }
 

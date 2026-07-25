@@ -1,6 +1,7 @@
 import asyncio
 import httpx
 
+
 async def main():
     async with httpx.AsyncClient(follow_redirects=True) as client:
         r = await client.get(
@@ -17,5 +18,6 @@ async def main():
         print(r.status_code)
         print(r.headers)
         print(r.text[:500])
+
 
 asyncio.run(main())

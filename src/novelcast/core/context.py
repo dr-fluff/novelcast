@@ -92,7 +92,7 @@ class AppContext:
         self._init_pipeline()
         self._init_orchestrator()
         self._init_service_layer()
-        self._init_telegram() 
+        self._init_telegram()
         self._init_rss()
         self._validate()
 

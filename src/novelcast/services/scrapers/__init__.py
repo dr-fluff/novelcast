@@ -31,8 +31,6 @@ _KIND_METHOD = {
 }
 
 
-
-
 def _build_task(client: httpx.AsyncClient, sr, settings_service=None):
     if not registry.is_enabled(sr.site, settings_service):
         return None
@@ -44,9 +42,7 @@ def _build_task(client: httpx.AsyncClient, sr, settings_service=None):
 
         session_cookie = None
         if settings_service:
-            session_cookie = settings_service.get(
-                setting_keys.PATREON_SETTINGS.SESSION_COOKIE, default=None
-            ).value
+            session_cookie = settings_service.get(setting_keys.PATREON_SETTINGS.SESSION_COOKIE, default=None).value
 
         return patreon.scrape_patreon_creator(client, creator, session_cookie=session_cookie)
 

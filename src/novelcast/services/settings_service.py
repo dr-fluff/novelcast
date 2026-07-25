@@ -158,7 +158,7 @@ class SettingsService:
 
     def get_section(self, section: str) -> dict:
         return self.get_resolved_server_settings().get(section, {})
-    
+
     def migrate_server_secrets(self):
         db_values = self.get_server_settings()
 

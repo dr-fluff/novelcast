@@ -30,6 +30,7 @@ from novelcast.core import setting_keys
 
 router = APIRouter()
 
+
 @router.get("/admin")
 def admin_dashboard(
     request: Request,

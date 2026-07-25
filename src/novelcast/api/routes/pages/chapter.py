@@ -114,8 +114,6 @@ async def get_chapter_settings(
         }
 
 
-
-
 @router.post("/api/chapter-settings")
 async def update_chapter_settings(
     request: Request,

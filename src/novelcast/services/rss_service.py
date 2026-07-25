@@ -13,6 +13,7 @@ from novelcast.services.story_service import StoryService
 
 logger = logging.getLogger(__name__)
 
+
 class RssService:
     def __init__(
         self,
@@ -39,9 +40,7 @@ class RssService:
             return
 
         if self._thread and self._thread.is_alive():
-            logger.error(
-                "RSS start() refused: previous thread is still shutting down"
-            )
+            logger.error("RSS start() refused: previous thread is still shutting down")
             return
 
         if not self.settings.get(setting_keys.RSS_SETTINGS.ENABLED, default=False).value:

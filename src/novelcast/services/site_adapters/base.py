@@ -9,8 +9,9 @@ class SiteQueryMatch:
     """What a site adapter found when asked to interpret a raw search
     string. SearchService turns this straight into a ParsedQuery — it
     never inspects `raw` itself for site-specific patterns."""
-    target: str            # "fiction" | "author"
-    lookup_type: str       # "id" | "text" | "url"
+
+    target: str  # "fiction" | "author"
+    lookup_type: str  # "id" | "text" | "url"
     identifier: str
     resolved_url: Optional[str] = None
 

@@ -53,6 +53,7 @@ def build_bot_commands_payload() -> list[dict]:
         for key, command in TELEGRAM_COMMANDS.items()
     ]
 
+
 # Optional argument hint for commands that take one, shown only in /help
 # text (Telegram's setMyCommands menu doesn't support argument placeholders).
 COMMAND_USAGE = {

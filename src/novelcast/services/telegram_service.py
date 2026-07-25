@@ -34,9 +34,7 @@ class TelegramService:
         self.settings = settings_service
         self.stories = story_service
         self.downloads = download_service
-        self.sync = sync_service 
-        
-
+        self.sync = sync_service
 
         self._task: Optional[asyncio.Task] = None
         self._loop: Optional[asyncio.AbstractEventLoop] = None
@@ -279,7 +277,7 @@ class TelegramService:
 
     async def _cmd_status(self, args: str):
         await self.send_message("✅ NovelCast is running.")
-        
+
     async def _cmd_help(self, args: str):
         await self.send_message(build_help_text())
 
@@ -361,9 +359,7 @@ class TelegramService:
         if not self._token() or not self._chat_id():
             return False, "Missing token or chat_id"
         try:
-            async with httpx.AsyncClient(
-                timeout=httpx.Timeout(connect=5.0, read=10.0, write=5.0, pool=5.0)
-            ) as client:
+            async with httpx.AsyncClient(timeout=httpx.Timeout(connect=5.0, read=10.0, write=5.0, pool=5.0)) as client:
                 r = await client.post(
                     self._url("sendMessage"),
                     json={

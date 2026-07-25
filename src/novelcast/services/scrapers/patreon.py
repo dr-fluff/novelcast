@@ -52,9 +52,7 @@ async def scrape_patreon_creator(
     cookies = {"session_id": session_cookie} if session_cookie else None
 
     try:
-        resp = await client.get(
-            url, headers=headers, cookies=cookies, timeout=10.0, follow_redirects=True
-        )
+        resp = await client.get(url, headers=headers, cookies=cookies, timeout=10.0, follow_redirects=True)
         resp.raise_for_status()
     except httpx.HTTPError as e:
         logger.warning("[Patreon] Failed to fetch %s: %s", url, e)

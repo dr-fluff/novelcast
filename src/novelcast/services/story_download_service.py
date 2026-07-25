@@ -348,7 +348,7 @@ class StoryDownloadService:
                 },
             )
             try:
-                settings = self._load_patreon_settings(story_id) 
+                settings = self._load_patreon_settings(story_id)
                 raw = self._download_raw(source_url, story_match=settings.get("chapter_regex"))
                 parsed = self._parse_raw(raw, settings=settings)
                 self._update_story_metadata(story_id, raw, parsed)

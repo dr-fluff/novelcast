@@ -320,7 +320,9 @@ class PatreonEngine:
         attrs[PATREON_FIELD_ID] = raw_post.get("id")
 
         relationships = raw_post.get("relationships", {})
-        attrs[PATREON_FIELD_ATTACHMENTS] = self._resolve_relationship(relationships, included, PATREON_FIELD_ATTACHMENTS)
+        attrs[PATREON_FIELD_ATTACHMENTS] = self._resolve_relationship(
+            relationships, included, PATREON_FIELD_ATTACHMENTS
+        )
         attrs[PATREON_FIELD_ATTACHMENTS_MEDIA] = self._resolve_relationship(
             relationships, included, PATREON_FIELD_ATTACHMENTS_MEDIA
         )

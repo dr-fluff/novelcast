@@ -268,9 +268,7 @@ class FanFicFareEngine(StoryEngine):
                 dot_count,
                 stderr_text[-1000:] if stderr_text else "(empty)",
             )
-            raise RuntimeError(
-                f"FanFicFare timed out fetching {url} ({timed_out_reason}) — process was killed"
-            )
+            raise RuntimeError(f"FanFicFare timed out fetching {url} ({timed_out_reason}) — process was killed")
 
         process.wait(timeout=30)
         stdout_thread.join(timeout=5)
