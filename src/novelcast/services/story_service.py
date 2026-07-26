@@ -167,7 +167,7 @@ class StoryService:
         tags: list[str] | None = None,
         source_url: str | None = None,
         auto_update: bool | None = None,
-        hide_author_notes: bool | None = None,  # ← ADD
+        hide_author_notes: bool | None = None,
     ) -> dict | None:
         updated = self.repo.update_full_metadata(
             story_id=story_id,
@@ -181,6 +181,7 @@ class StoryService:
             genres=genres,
             tags=tags,
             source_url=source_url,
+            is_user_edit=True,
         )
         if updated and self.author_repo and author is not None:
             names = self._parse_comma_separated(author)
@@ -193,7 +194,7 @@ class StoryService:
                 category="story",
                 type="bool",
             )
-        if updated and hide_author_notes is not None:  # ← ADD
+        if updated and hide_author_notes is not None:
             self.repo.set_story_setting(
                 story_id,
                 "hide_author_notes",

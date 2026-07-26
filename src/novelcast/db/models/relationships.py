@@ -41,3 +41,4 @@ story_series = Table(
     Column("story_id", ForeignKey("stories.id", ondelete="CASCADE"), primary_key=True),
     Column("series_id", ForeignKey("series.id", ondelete="CASCADE"), primary_key=True),
 )
+

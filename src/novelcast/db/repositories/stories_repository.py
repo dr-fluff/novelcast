@@ -1,5 +1,5 @@
-# novelcast/db/repositories/stories_repository.py
-
+import json
+import re
 from datetime import datetime, timezone
 
 from pathlib import Path
@@ -19,6 +19,17 @@ from novelcast.db.models import (
 from novelcast.db.repositories.base import BaseRepository
 from novelcast.utils.files import human_readable_size
 
+_HTML_TAG_RE = re.compile(r"<[^>]+>")
+
+
+def _strip_html(value: str | None) -> str | None:
+    """Defensive cleanup for any field that could end up holding rendered
+    markup (e.g. an edit form accidentally round-tripping the index page's
+    filter-link HTML back through save). Plain strings pass through untouched."""
+    if not value:
+        return value
+    return _HTML_TAG_RE.sub("", value).strip()
+
 
 class StoriesRepository(BaseRepository):
     # ── reads ──────────────────────────────────────────────────────────────
@@ -28,7 +39,6 @@ class StoriesRepository(BaseRepository):
             stories = db.scalars(select(Story).order_by(Story.created_at.desc())).all()
             dicts = [_to_dict(s) for s in stories]
 
-            # One query: latest chapter title per story
             subq = (
                 select(
                     Chapter.story_id,
@@ -139,40 +149,75 @@ class StoriesRepository(BaseRepository):
         auto_update: bool | None = None,
         hide_author_notes: bool | None = None,
         story_site_id: str | None = None,
+        is_user_edit: bool = False,
     ) -> dict | None:
-        """Used by the metadata edit panel."""
+        """
+        Two callers, two behaviors:
+
+        - GUI edit/add panel (is_user_edit=True): applies every field the
+          user submitted, and records which fields actually *changed* vs
+          the current DB value in `locked_fields`.
+        - Scrape/sync pipeline (is_user_edit=False, the default — used by
+          StoryDownloadService._update_story_metadata): applies freshly
+          scraped values EXCEPT for any field name already present in
+          `locked_fields`, so a manual edit is never silently overwritten
+          by the next auto-update.
+
+        Cover is intentionally not tracked here — it's written separately
+        by StoryPipeline.persist()/update_paths() and always refreshes.
+        """
         with self.session() as db:
-            story = db.get(Story, story_id)  # FIX: was `id` (Python builtin)
+            story = db.get(Story, story_id)
             if not story:
                 return None
-            story.title = title
-            # FIX: removed bogus `story.story_id = story_id` — Story has no such column
-            story.author = author
-            story.subtitle = subtitle
-            story.description = description
-            story.publish_year = publish_year
-            story.language = language
+
+            locked = set(json.loads(story.locked_fields)) if story.locked_fields else set()
+
+            def apply_scalar(field: str, new_value, sanitize: bool = False):
+                if sanitize and isinstance(new_value, str):
+                    new_value = _strip_html(new_value)
+                if is_user_edit:
+                    old_value = getattr(story, field)
+                    setattr(story, field, new_value)
+                    if new_value != old_value:
+                        locked.add(field)
+                else:
+                    if field not in locked:
+                        setattr(story, field, new_value)
+
+            apply_scalar("title", title, sanitize=True)
+            apply_scalar("author", author, sanitize=True)
+            apply_scalar("subtitle", subtitle, sanitize=True)
+            apply_scalar("description", description)
+            apply_scalar("publish_year", publish_year)
+            apply_scalar("language", language)
+
             if source_url is not None:
                 story.source_url = source_url
             if story_site_id is not None:
                 story.story_site_id = story_site_id
 
             if auto_update is not None:
-                self.set_story_setting(
-                    story_id,
-                    "auto_update",
-                    "1" if auto_update else "0",
-                )
+                self.set_story_setting(story_id, "auto_update", "1" if auto_update else "0")
             if hide_author_notes is not None:
-                self.set_story_setting(
-                    story_id,
-                    "hide_author_notes",
-                    "1" if hide_author_notes else "0",
-                )
+                self.set_story_setting(story_id, "hide_author_notes", "1" if hide_author_notes else "0")
 
-            _sync_story_relations(db, story, Series, "series", series or [])
-            _sync_story_relations(db, story, Genre, "genres", genres or [])
-            _sync_story_relations(db, story, Tag, "tags", tags or [])
+            def apply_relation(field: str, model, raw_names: list[str] | None):
+                cleaned = [n for n in (_strip_html(v) for v in (raw_names or [])) if n]
+                if is_user_edit:
+                    old_names = sorted(item.name for item in getattr(story, field))
+                    _sync_story_relations(db, story, model, field, cleaned)
+                    if sorted(cleaned) != old_names:
+                        locked.add(field)
+                else:
+                    if field not in locked:
+                        _sync_story_relations(db, story, model, field, cleaned)
+
+            apply_relation("series", Series, series)
+            apply_relation("genres", Genre, genres)
+            apply_relation("tags", Tag, tags)
+
+            story.locked_fields = json.dumps(sorted(locked)) if locked else None
             story.last_updated = datetime.now(timezone.utc)
             db.flush()
             return _to_dict(story)
@@ -182,14 +227,10 @@ class StoriesRepository(BaseRepository):
             story = db.get(Story, story_id)
             if story:
                 story.local_path = local_path
-                # A parser may not supply cover bytes on a later download.
-                # Keep an existing cover in that case; explicit removals use
-                # update_story_cover() instead.
                 if cover_path is not None:
                     story.cover_path = cover_path
 
     def restore_local_cover_paths(self) -> int:
-        """Restore missing cover metadata when the story's cover file still exists."""
         restored = 0
         with self.session() as db:
             stories = db.scalars(select(Story).where(Story.cover_path.is_(None))).all()
@@ -210,7 +251,6 @@ class StoriesRepository(BaseRepository):
         category: str | None = None,
         type: str = "str",
     ) -> None:
-        """Create or update a StorySetting entry for a story."""
         with self.session() as db:
             existing = db.scalars(
                 select(StorySetting).where(StorySetting.story_id == story_id, StorySetting.name == name)
@@ -317,6 +357,7 @@ def _to_dict(story: Story | None) -> dict | None:
         "language": getattr(story, "language", None),
         "publisher": getattr(story, "publisher", None),
         "narrators": getattr(story, "narrators", None),
+        "locked_fields": json.loads(story.locked_fields) if getattr(story, "locked_fields", None) else [],
         "genres": ", ".join([g.name for g in getattr(story, "genres", [])]) if getattr(story, "genres", None) else None,
         "tags": ", ".join([t.name for t in getattr(story, "tags", [])]) if getattr(story, "tags", None) else None,
         "series": ", ".join([s.name for s in getattr(story, "series", [])]) if getattr(story, "series", None) else None,
@@ -328,7 +369,6 @@ def _to_dict(story: Story | None) -> dict | None:
         "created_at": story.created_at,
     }
 
-    # FIX: size enrichment was unreachable (came after an early return). Now runs correctly.
     try:
         size_field = getattr(story, "size", None)
         if size_field:

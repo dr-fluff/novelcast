@@ -1,5 +1,3 @@
-# novelcast/db/models/story.py
-
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
@@ -40,6 +38,14 @@ class Story(Base):
 
     description: Mapped[Optional[str]] = mapped_column(Text)
 
+    # ── metadata override tracking ───────────────────────────────────────
+    # JSON list of field names ("title", "author", "subtitle", "description",
+    # "publish_year", "language", "series", "genres", "tags") the user has
+    # manually edited via the GUI. Scrape/sync updates skip any field name
+    # present here so re-syncing never clobbers a manual edit. Set/cleared
+    # only by StoriesRepository.update_full_metadata().
+    locked_fields: Mapped[Optional[str]] = mapped_column(Text)
+
     # ── files ──────────────────────────────────────────────────────────────
     cover_path: Mapped[Optional[str]] = mapped_column(String)
     local_img_path: Mapped[Optional[str]] = mapped_column(String)
@@ -58,14 +64,12 @@ class Story(Base):
 
     # ── relationships ──────────────────────────────────────────────────────
 
-    # authors (already correct M2M)
     authors: Mapped[list["Author"]] = relationship(
         "Author",
         secondary="story_author",
         back_populates="stories",
     )
 
-    # chapters
     chapters: Mapped[list["Chapter"]] = relationship(
         "Chapter",
         back_populates="story",
@@ -73,35 +77,29 @@ class Story(Base):
         order_by="Chapter.chapter_number",
     )
 
-    # permissions
     permissions: Mapped[list["StoryPermission"]] = relationship(
         "StoryPermission",
         back_populates="story",
         cascade="all, delete-orphan",
     )
 
-    # reading progress
     reading_progress: Mapped[list["ReadingProgress"]] = relationship(
         "ReadingProgress",
         back_populates="story",
         cascade="all, delete-orphan",
     )
 
-    # settings
     settings: Mapped[list["StorySetting"]] = relationship(
         "StorySetting",
         back_populates="story",
         cascade="all, delete-orphan",
     )
 
-    # update jobs
     update_jobs: Mapped[list["UpdateJob"]] = relationship(
         "UpdateJob",
         back_populates="story",
         cascade="all, delete-orphan",
     )
-
-    # ── normalized metadata (NEW GLOBAL ENTITIES) ─────────────────────────
 
     tags: Mapped[list["Tag"]] = relationship(
         "Tag",
@@ -121,6 +119,5 @@ class Story(Base):
         back_populates="stories",
     )
 
-    # ── debug / display ────────────────────────────────────────────────────
     def __repr__(self) -> str:
         return f"<Story id={self.id} title={self.title!r}>"
