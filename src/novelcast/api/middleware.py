@@ -58,6 +58,9 @@ class AuthMiddleware:
         "/favicon.svg",
     }
 
+    # paths that stay accessible even if the user is logged in
+    ALWAYS_ACCESSIBLE = {"/logout"}
+
     def __init__(self, app):
         self.app = app
 
@@ -97,8 +100,8 @@ class AuthMiddleware:
         state = scope.setdefault("state", {})
         state["user"] = user
 
-        # logged-in users should not see auth pages
-        if user and path in self.PUBLIC_PATHS:
+        # logged-in users should not see auth pages (except logout)
+        if user and path in self.PUBLIC_PATHS and path not in self.ALWAYS_ACCESSIBLE:
             response = RedirectResponse("/", status_code=303)
             return await response(scope, receive, send)
 

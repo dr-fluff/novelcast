@@ -3,6 +3,8 @@
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import RedirectResponse
 
+from novelcast.utils.password_validation import validate_password_strength
+
 from .session import create_session_token
 
 router = APIRouter()
@@ -89,6 +91,10 @@ def signup(
     if not username or password != password_confirm:
         return RedirectResponse("/signup?error=invalid", status_code=303)
 
+    password_errors = validate_password_strength(password)
+    if password_errors:
+        return RedirectResponse("/signup?error=weak_password", status_code=303)
+
     user_service = request.app.state.users
     config_service = getattr(request.app.state, "settings", None)
 
@@ -140,26 +146,27 @@ def forgot_password_page(request: Request):
 
 @router.post("/forgot-password")
 def forgot_password_submit(request: Request, username: str = Form(...)):
-    password_reset = request.app.state.password_reset  # ✅ FIXED (no ctx)
+    password_reset = request.app.state.password_reset
 
     token = password_reset.request_reset(username.strip())
 
-    if token:
-        print(f"[RESET LINK] http://localhost:8001/reset-password?token={token}")
+    if not token:
+        return RedirectResponse("/forgot-password?error=not_found", status_code=303)
 
-    return RedirectResponse("/login?success=reset-sent", status_code=303)
+    return RedirectResponse("/reset-password?requested=1", status_code=303)
 
 
 # ─────────────────────────────
 # RESET PASSWORD
 # ─────────────────────────────
 @router.get("/reset-password")
-def reset_password_page(request: Request, token: str):
+def reset_password_page(request: Request, token: str = "", requested: str | None = None):
     return templates(request).TemplateResponse(
         "pages/reset_password.html",
         {
             "request": request,
             "token": token,
+            "requested": requested,
             "error": request.query_params.get("error"),
         },
     )
@@ -178,7 +185,14 @@ def reset_password_submit(
             status_code=303,
         )
 
-    password_reset = request.app.state.password_reset  # ✅ FIXED
+    password_errors = validate_password_strength(password)
+    if password_errors:
+        return RedirectResponse(
+            f"/reset-password?token={token}&error=weak_password",
+            status_code=303,
+        )
+
+    password_reset = request.app.state.password_reset
 
     ok = password_reset.reset_password(token, password)
 

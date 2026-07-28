@@ -26,6 +26,7 @@ from novelcast.services import (
 )
 
 from novelcast.core import setting_keys
+from novelcast.utils.password_validation import validate_password_strength
 
 
 router = APIRouter()
@@ -181,6 +182,9 @@ def edit_user(
         return RedirectResponse(f"/admin/users/{user_id}/edit?error=demote", status_code=303)
     if role not in {"user", "admin"} or (password and password != password_confirm):
         return RedirectResponse(f"/admin/users/{user_id}/edit?error=invalid", status_code=303)
+
+    if password and validate_password_strength(password):
+        return RedirectResponse(f"/admin/users/{user_id}/edit?error=weak_password", status_code=303)
 
     try:
         updated = users.update_user(

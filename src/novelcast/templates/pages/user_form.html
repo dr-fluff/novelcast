@@ -101,6 +101,15 @@
           <div class="alert alert-error">Signups are currently disabled.</div>
         </div>
       </div>
+      {% elif error == 'weak_password' %}
+      <div class="field-card">
+        <div class="field-card__input-col">
+          <div class="alert alert-error">
+            Password must be at least 8 characters, with an uppercase letter, a lowercase letter,
+            a number, and a special character.
+          </div>
+        </div>
+      </div>
       {% endif %}
 
       <div class="field-card" style="border-bottom:none;">

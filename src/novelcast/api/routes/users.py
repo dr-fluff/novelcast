@@ -1,7 +1,9 @@
-from fastapi import APIRouter, Depends
+# novelcast/api/routers/users.py
+from fastapi import APIRouter, Depends, HTTPException
 
 from novelcast.api.deps import get_users
 from novelcast.services import UserService
+from novelcast.utils.password_validation import validate_password_strength
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -12,6 +14,10 @@ def create_user(
     password: str,
     users: UserService = Depends(get_users),
 ):
+    password_errors = validate_password_strength(password)
+    if password_errors:
+        raise HTTPException(status_code=400, detail={"errors": password_errors})
+
     users.create_user(username, password)
     return {"status": "created"}
 

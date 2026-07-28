@@ -2,7 +2,7 @@
 
 import logging
 
-from fastapi import APIRouter, Depends, Form
+from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 
@@ -21,15 +21,11 @@ def forgot_page(templates: Jinja2Templates = Depends(get_templates)):
 
 
 @router.post("/forgot-password")
-def forgot_submit(
-    username: str = Form(...),
-    service: PasswordResetService = Depends(get_password_reset),
-):
-    token = service.request_reset(username)
+def forgot_password_submit(request: Request, username: str = Form(...)):
+    password_reset = request.app.state.password_reset  # ✅ FIXED (no ctx)
 
-    if token:
-        # DEV ONLY: replace with email delivery in production
-        log.debug("RESET LINK: http://localhost:8001/reset-password?token=%s", token)
+    base_url = str(request.base_url).rstrip("/")
+    token = password_reset.request_reset(username.strip(), base_url)
 
     return RedirectResponse("/login?success=reset-sent", status_code=303)
 

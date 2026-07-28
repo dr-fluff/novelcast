@@ -68,7 +68,30 @@ window.setStatus = function (state) {
 };
 
 window.toggleUserMenu = function () {
-    console.log("User menu toggle");
+    const panel = document.getElementById("user-menu-panel");
+    const overlay = document.getElementById("user-menu-overlay");
+    if (!panel || !overlay) return;
+
+    const isOpen = panel.classList.contains("open");
+    if (isOpen) {
+        window.closeUserMenu();
+    } else {
+        panel.classList.add("open");
+        overlay.classList.add("open");
+    }
+};
+
+window.closeUserMenu = function () {
+    const panel = document.getElementById("user-menu-panel");
+    const overlay = document.getElementById("user-menu-overlay");
+    if (!panel || !overlay) return;
+
+    panel.classList.remove("open");
+    overlay.classList.remove("open");
+};
+
+window.logoutUser = function () {
+    window.location.href = "/logout";
 };
 
 window.startSync = async function () {

@@ -46,3 +46,29 @@
 
   </div>
 </header>
+
+<!-- USER MENU SLIDE-OUT PANEL -->
+<div class="user-menu-overlay" id="user-menu-overlay" onclick="closeUserMenu()"></div>
+
+<aside class="user-menu-panel" id="user-menu-panel">
+    <div class="user-menu-panel-header">
+        <span class="user-menu-panel-title">
+            {{ current_user.get("username", "") if current_user else "" }}
+        </span>
+        <button class="icon-button" onclick="closeUserMenu()" title="Close">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </div>
+
+    <div class="user-menu-panel-body">
+        <button class="user-menu-item" disabled title="Coming soon">
+            <i class="fa-solid fa-chart-simple"></i>
+            <span>Stats</span>
+        </button>
+
+        <button class="user-menu-item user-menu-item--danger" onclick="logoutUser()">
+            <i class="fa-solid fa-right-from-bracket"></i>
+            <span>Logout</span>
+        </button>
+    </div>
+</aside>
