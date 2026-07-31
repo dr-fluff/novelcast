@@ -133,7 +133,7 @@ class AppContext:
         self.chapters_repo = ChaptersRepository(sf)
         self.progress_repo = ProgressRepository(sf)
         self.sync_repo = SyncRepository(self.chapters_repo)
-        self.settings_repo = SettingsRepository(sf)
+        self.settings_repo = SettingsRepository(sf, user_settings_schema=USER_SETTINGS_SCHEMA)
         self.chapter_pattern_repo = ChapterPatternRepository(sf)
         self.rss_entry_repo = RssEntryRepository(sf)
 

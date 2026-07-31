@@ -216,6 +216,45 @@ class PaginatedEReader {
     };
   }
 
+  // Runs once the iframe document has actually loaded. Pulled out into
+  // its own method (rather than an inline arrow function passed straight
+  // to addEventListener) so it can be attached to the 'load' event
+  // BEFORE we write to the document — see buildIframe() below for why
+  // that ordering matters.
+  onIframeLoad() {
+    const touchTarget = this.iframeDoc.body;
+
+    touchTarget.addEventListener('touchstart', e => {
+      this.touch.startX = e.changedTouches[0].screenX;
+      this.touch.startY = e.changedTouches[0].screenY;
+    });
+
+    touchTarget.addEventListener('touchend', e => {
+      const dx = e.changedTouches[0].screenX - this.touch.startX;
+      const dy = e.changedTouches[0].screenY - this.touch.startY;
+
+      // Ignore mostly vertical gestures
+      if (Math.abs(dy) > Math.abs(dx)) return;
+
+      if (dx < -this.touch.threshold) {
+        this.nextPage();
+      } else if (dx > this.touch.threshold) {
+        this.prevPage();
+      }
+    });
+
+    requestAnimationFrame(() =>
+      requestAnimationFrame(async () => {
+        this.calculatePages();
+
+        this.render(0);  // show content immediately
+        this.iframeWin.addEventListener('keydown', e => this.handleKey(e));
+        const startPage = await this.resolveStartPage();
+        if (startPage > 0) this.render(startPage);  // jump once progress loads
+      })
+    );
+  }
+
   buildIframe() {
     if (!this.state.originalContent) {
       this.state.originalContent = this.el.chapterSource?.innerHTML || '';
@@ -249,6 +288,19 @@ class PaginatedEReader {
     const titleEscaped = this.state.chapterTitle
       .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
+    // IMPORTANT: attach the 'load' listener BEFORE calling doc.open() /
+    // write() / close(). Some WebKit builds (confirmed: iPadOS 15.8,
+    // real hardware — not reproducible in desktop Firefox's simulated
+    // iPad viewport) can fire 'load' synchronously as part of close(),
+    // or on an earlier tick than expected. If the listener is attached
+    // AFTER close(), it can miss the event entirely — totalPages then
+    // stays stuck at its initial value of 0 forever, the page counter
+    // pill never gets its text set, and nextPage()/prevPage() always
+    // fall through to the change-chapter branch since
+    // `currentPage < totalPages - 1` (0 < -1) is false. That matches
+    // every symptom seen on that device exactly.
+    iframe.addEventListener('load', () => this.onIframeLoad(), { once: true });
+
     this.iframeDoc.open();
     this.iframeDoc.write(`<!DOCTYPE html>
 <html>
@@ -267,39 +319,6 @@ class PaginatedEReader {
 </body>
 </html>`);
     this.iframeDoc.close();
-
-    iframe.addEventListener('load', () => {
-    const touchTarget = this.iframeDoc.body;
-
-    touchTarget.addEventListener('touchstart', e => {
-      this.touch.startX = e.changedTouches[0].screenX;
-      this.touch.startY = e.changedTouches[0].screenY;
-    });
-
-    touchTarget.addEventListener('touchend', e => {
-      const dx = e.changedTouches[0].screenX - this.touch.startX;
-      const dy = e.changedTouches[0].screenY - this.touch.startY;
-
-      // Ignore mostly vertical gestures
-      if (Math.abs(dy) > Math.abs(dx)) return;
-
-      if (dx < -this.touch.threshold) {
-        this.nextPage();
-      } else if (dx > this.touch.threshold) {
-        this.prevPage();
-      }
-    });
-    requestAnimationFrame(() =>
-      requestAnimationFrame(async () => {
-        this.calculatePages();
-        this.render(0);  // show content immediately
-        this.iframeWin.addEventListener('keydown', e => this.handleKey(e));
-        const startPage = await this.resolveStartPage();
-        if (startPage > 0) this.render(startPage);  // jump once progress loads
-      })
-    );
-    
-  }, { once: true });
   }
 
   async resolveStartPage() {
@@ -402,8 +421,6 @@ class PaginatedEReader {
     const fontSans  = `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
     const fontStack = this.settings.fontFamily === 'sans' ? fontSans : fontSerif;
 
-    
-
     return `
       * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -414,15 +431,17 @@ class PaginatedEReader {
         background: ${c.bg};
       }
 
-      /* The column container spans as wide as needed for all pages */
       #columns {
         width:               ${w}px;
         height:              ${h}px;
-        /* CSS columns: each column = one page */
         column-width:        ${w}px;
+        -webkit-column-width: ${w}px;
         column-gap:          0px;
-        /* Start at page 0 */
+        -webkit-column-gap:  0px;
+        column-fill:         auto;
+        -webkit-column-fill: auto;
         transform:           translateX(0);
+        -webkit-transform:   translateX(0);
         will-change:         transform;
       }
 
@@ -446,7 +465,9 @@ class PaginatedEReader {
         margin-bottom:  0.75rem;
         /* Prevent title from being split across columns */
         break-after:    avoid;
+        -webkit-column-break-after: avoid;
         column-span:    none;
+        -webkit-column-span: none;
       }
 
       .chapter-divider {
@@ -454,6 +475,7 @@ class PaginatedEReader {
         border-top:    1px solid ${c.hr};
         margin-bottom: 1.25rem;
         break-after:   avoid;
+        -webkit-column-break-after: avoid;
       }
 
       /* Override inline styles from scraped HTML */
@@ -544,12 +566,19 @@ class PaginatedEReader {
   repaginate(targetPage) {
     clearTimeout(this.repaginateTimer);
     this.repaginateTimer = setTimeout(() => {
-      this.buildIframe();
-      this.iframe.addEventListener('load', () => {
+      // Same ordering fix as buildIframe(): attach 'load' before
+      // rebuilding the iframe's document, not after.
+      const onLoad = () => {
         requestAnimationFrame(() => requestAnimationFrame(() => {
           this.render(Math.min(targetPage, this.state.totalPages - 1));
         }));
-      }, { once: true });
+      };
+      // buildIframe() itself now attaches onIframeLoad() first, so by
+      // the time it returns the 'load' handling for this rebuild is
+      // already wired up. We still want our own targetPage callback to
+      // run after that too.
+      this.buildIframe();
+      this.iframe.addEventListener('load', onLoad, { once: true });
     }, 50);
   }
 
