@@ -1,5 +1,13 @@
+# novelcast/api/router/pages/chapter.py
 # novelcast/api/router/chapter.py
+#
+# TEMP DIAGNOSTIC VERSION — adds timing logs around each step of the
+# /chapter route so we can see where the actual latency is coming from
+# (DB queries, file I/O, template render, etc.) before deciding on a fix.
+# Remove the `t0 = ...` / `logger.info("TIMING: ...")` lines once done.
+
 import logging
+import time
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from fastapi.templating import Jinja2Templates
@@ -32,22 +40,37 @@ def chapter(
     current_user: dict | None = Depends(get_current_user),
     templates: Jinja2Templates = Depends(get_templates),
 ):
+    t_start = time.perf_counter()
+
     if not story_id or not chapter_id:
         raise HTTPException(status_code=404, detail="Chapter not found")
 
+    t0 = time.perf_counter()
     story = stories.get_story(story_id)
+    logger.info("TIMING get_story: %.1fms", (time.perf_counter() - t0) * 1000)
     if not story:
         raise HTTPException(status_code=404, detail="Story not found")
 
+    t0 = time.perf_counter()
     chapter = chapters.get_chapter(chapter_id)
+    logger.info("TIMING get_chapter: %.1fms", (time.perf_counter() - t0) * 1000)
     if not chapter or chapter.get("story_id") != story_id:
         raise HTTPException(status_code=404, detail="Chapter not found")
 
+    t0 = time.perf_counter()
     content = chapters.read_chapter(chapter_id)
+    logger.info("TIMING read_chapter (file I/O): %.1fms", (time.perf_counter() - t0) * 1000)
     if content is None:
         raise HTTPException(status_code=404, detail="Chapter file missing")
 
+    t0 = time.perf_counter()
     chapter_list = chapters.list_by_story(story_id)
+    logger.info(
+        "TIMING list_by_story (%d chapters): %.1fms",
+        len(chapter_list),
+        (time.perf_counter() - t0) * 1000,
+    )
+
     ids = [c["id"] for c in chapter_list]
     idx = next((i for i, cid in enumerate(ids) if cid == chapter_id), None)
 
@@ -56,18 +79,24 @@ def chapter(
 
     logger.info("prev_id: %s, next_id: %s", prev_id, next_id)
     read_chapters: set[int] = set()
+
+    t0 = time.perf_counter()
     if current_user and current_user.get("id"):
         prog = progress.get_progress(current_user["id"], story_id)
         if prog and prog.get("last_chapter_id"):
             last = prog["last_chapter_id"]
             read_chapters = {c["id"] for c in chapter_list if c["id"] <= last}
+    logger.info("TIMING progress/read_chapters: %.1fms", (time.perf_counter() - t0) * 1000)
 
     first_unread = next((c["id"] for c in chapter_list if c["id"] not in read_chapters), None)
     hide_author_notes = story.get("hide_author_notes", True)
 
+    t0 = time.perf_counter()
     reading_settings_schema = settings_service.get_reading_settings_schema()
+    logger.info("TIMING get_reading_settings_schema: %.1fms", (time.perf_counter() - t0) * 1000)
 
-    return templates.TemplateResponse(
+    t0 = time.perf_counter()
+    response = templates.TemplateResponse(
         "pages/chapter.html",
         {
             "request": request,
@@ -85,6 +114,11 @@ def chapter(
             "reading_settings_schema": reading_settings_schema,
         },
     )
+    logger.info("TIMING template render: %.1fms", (time.perf_counter() - t0) * 1000)
+
+    logger.info("TIMING TOTAL /chapter: %.1fms", (time.perf_counter() - t_start) * 1000)
+
+    return response
 
 
 @router.get("/api/chapter-settings")
