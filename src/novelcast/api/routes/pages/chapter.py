@@ -64,14 +64,8 @@ def chapter(
         raise HTTPException(status_code=404, detail="Chapter file missing")
 
     t0 = time.perf_counter()
-    chapter_list = chapters.list_by_story(story_id)
-    logger.info(
-        "TIMING list_by_story (%d chapters): %.1fms",
-        len(chapter_list),
-        (time.perf_counter() - t0) * 1000,
-    )
-
-    ids = [c["id"] for c in chapter_list]
+    ids = chapters.get_downloaded_ids(story_id)
+    
     idx = next((i for i, cid in enumerate(ids) if cid == chapter_id), None)
 
     prev_id = ids[idx - 1] if idx is not None and idx > 0 else None
@@ -85,10 +79,10 @@ def chapter(
         prog = progress.get_progress(current_user["id"], story_id)
         if prog and prog.get("last_chapter_id"):
             last = prog["last_chapter_id"]
-            read_chapters = {c["id"] for c in chapter_list if c["id"] <= last}
+            read_chapters = {cid for cid in ids if cid <= last}
     logger.info("TIMING progress/read_chapters: %.1fms", (time.perf_counter() - t0) * 1000)
 
-    first_unread = next((c["id"] for c in chapter_list if c["id"] not in read_chapters), None)
+    first_unread = next((cid for cid in ids if cid not in read_chapters), None)
     hide_author_notes = story.get("hide_author_notes", True)
 
     t0 = time.perf_counter()

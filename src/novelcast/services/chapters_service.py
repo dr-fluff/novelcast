@@ -17,6 +17,17 @@ class ChaptersService:
     def list_by_story(self, story_id: int):
         return self.repo.get_downloaded(story_id)
 
+    def get_downloaded_ids(self, story_id: int) -> list[int]:
+        """Lightweight variant of list_by_story() — only chapter IDs, in order.
+        Use this instead of list_by_story() whenever only IDs are needed
+        (e.g. computing prev/next chapter or read/unread state), since
+        list_by_story()/get_downloaded() triggers an N+1 query (one extra
+        query per chapter to resolve its canonical file via the lazy-loaded
+        `files` relationship in _to_dict()). This method never touches
+        that relationship, so it stays a single query regardless of how
+        many chapters the story has."""
+        return self.repo.get_downloaded_ids(story_id)
+
     def get_chapter(self, chapter_id: int):
         return self.repo.get_by_id(chapter_id)
 
