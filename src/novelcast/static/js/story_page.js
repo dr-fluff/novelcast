@@ -133,25 +133,31 @@ document.addEventListener("DOMContentLoaded", () => {
 
 /* ── Go to first unread ───────────────────────────────────────────────── */
 
-window.goToFirstUnread = async function () {
-    const section   = document.querySelector(".story-page");
-    const storyId   = section?.dataset.storyId;
-    const chapterId = section?.dataset.firstUnreadId;
+window.goToReading = async function () {
+    const section    = document.querySelector(".story-page");
+    const storyId    = section?.dataset.storyId;
+    // Prioritize resuming exactly where the person most recently read —
+    // this can legitimately be an earlier chapter than their furthest
+    // point if they went back to re-read something. Only fall back to
+    // "first unread" for a story they've never actually started.
+    const lastId     = section?.dataset.lastChapterId;
+    const unreadId    = section?.dataset.firstUnreadId;
+    const chapterId  = lastId || unreadId;
     if (!storyId || !chapterId) return;
 
     try {
-    const r = await fetch(`/api/chapter-progress?chapter_id=${chapterId}`);
-    if (r.ok) {
-        const data = await r.json();
-        const page = data.page || 0;
-        const url  = `/chapter?story_id=${storyId}&chapter_id=${chapterId}${page > 0 ? `&page=${page}` : ''}`;
-        window.location.href = url;
-        return;
-    }
+        const r = await fetch(`/api/chapter-progress?chapter_id=${chapterId}`);
+        if (r.ok) {
+            const data = await r.json();
+            const page = data.page || 0;
+            const url  = `/chapter?story_id=${storyId}&chapter_id=${chapterId}${page > 0 ? `&page=${page}` : ''}`;
+            window.location.href = url;
+            return;
+        }
     } catch (e) { /* fall through */ }
 
     window.location.href = `/chapter?story_id=${storyId}&chapter_id=${chapterId}`;
-    };
+};
 
 /* ── Metadata panel ───────────────────────────────────────────────────── */
 

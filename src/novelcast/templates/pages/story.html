@@ -15,6 +15,7 @@
 <section class="story-page"
     data-story-id="{{ story['id'] }}"
     data-first-unread-id="{{ first_unread_chapter_id | default('') }}"
+    data-last-chapter-id="{{ last_chapter_id | default('') }}"
     data-chapter-sort="{{ story_preferences.chapter_sort | default('asc') }}"
     data-file-sort="{{ story_preferences.file_sort | default('asc') }}">
 
@@ -89,8 +90,8 @@
             </dl>
 
             <div class="story-action-row">
-                {% if first_unread_chapter_id %}
-                    <button class="btn-play" onclick="goToFirstUnread()">
+                {% if last_chapter_id or first_unread_chapter_id %}
+                    <button class="btn-play" onclick="goToReading()">
                         <i class="fa-solid fa-play"></i> Read
                     </button>
                 {% endif %}
@@ -141,12 +142,19 @@
             {% if chapters %}
                 <ul class="chapter-list" id="chapterList">
                     {% for chapter in chapters %}
-                        <li class="chapter-item {% if chapter['id'] in read_chapters %}chapter-read{% endif %}"
+                        <li class="chapter-item
+                                {% if chapter['id'] in read_chapters %}chapter-read{% endif %}
+                                {% if last_chapter_id and chapter['id'] == last_chapter_id %}chapter-current{% endif %}"
                             data-chapter-number="{{ chapter['chapter_number'] }}">
                             <a href="/chapter?story_id={{ story['id'] }}&chapter_id={{ chapter['id'] }}" class="chapter-link">
                                 <div class="chapter-main">
                                     <span class="chapter-number">Chapter {{ chapter["chapter_number"] }}</span>
                                     <span class="chapter-name">{{ chapter["title"] or "Untitled chapter" }}</span>
+                                    {% if last_chapter_id and chapter['id'] == last_chapter_id %}
+                                        <span class="chapter-current-badge" title="You're currently reading this chapter">
+                                            <i class="fa-solid fa-bookmark"></i> Continue
+                                        </span>
+                                    {% endif %}
                                 </div>
                                 <span class="chapter-status {% if chapter['id'] in read_chapters %}status-read{% endif %}">
                                     {% if chapter["id"] in read_chapters %}Read{% else %}Unread{% endif %}

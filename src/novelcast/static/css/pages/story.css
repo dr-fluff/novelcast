@@ -609,3 +609,19 @@
         grid-template-columns: 1fr;
     }
 }
+
+.chapter-item.chapter-current .chapter-link {
+    border-left: 3px solid #6366f1;
+    padding-left: calc(0.5rem - 3px);
+}
+ 
+.chapter-current-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #6366f1;
+    margin-top: 0.15rem;
+}
+ 

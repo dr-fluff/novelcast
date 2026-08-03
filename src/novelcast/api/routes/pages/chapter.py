@@ -1,13 +1,6 @@
 # novelcast/api/router/pages/chapter.py
-# novelcast/api/router/chapter.py
-#
-# TEMP DIAGNOSTIC VERSION — adds timing logs around each step of the
-# /chapter route so we can see where the actual latency is coming from
-# (DB queries, file I/O, template render, etc.) before deciding on a fix.
-# Remove the `t0 = ...` / `logger.info("TIMING: ...")` lines once done.
 
 import logging
-import time
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from fastapi.templating import Jinja2Templates
@@ -27,6 +20,11 @@ router = APIRouter()
 
 logger = logging.getLogger(__name__)
 
+# How many chapters beyond the immediate next one to expose to the client
+# for background precaching (service worker). This only sends a few
+# extra integers in the page — no extra file reads happen here.
+PRECACHE_LOOKAHEAD = 3
+
 
 @router.get("/chapter")
 def chapter(
@@ -40,57 +38,46 @@ def chapter(
     current_user: dict | None = Depends(get_current_user),
     templates: Jinja2Templates = Depends(get_templates),
 ):
-    t_start = time.perf_counter()
-
     if not story_id or not chapter_id:
         raise HTTPException(status_code=404, detail="Chapter not found")
 
-    t0 = time.perf_counter()
     story = stories.get_story(story_id)
-    logger.info("TIMING get_story: %.1fms", (time.perf_counter() - t0) * 1000)
     if not story:
         raise HTTPException(status_code=404, detail="Story not found")
 
-    t0 = time.perf_counter()
     chapter = chapters.get_chapter(chapter_id)
-    logger.info("TIMING get_chapter: %.1fms", (time.perf_counter() - t0) * 1000)
     if not chapter or chapter.get("story_id") != story_id:
         raise HTTPException(status_code=404, detail="Chapter not found")
 
-    t0 = time.perf_counter()
     content = chapters.read_chapter(chapter_id)
-    logger.info("TIMING read_chapter (file I/O): %.1fms", (time.perf_counter() - t0) * 1000)
     if content is None:
         raise HTTPException(status_code=404, detail="Chapter file missing")
 
-    t0 = time.perf_counter()
+    # Lightweight — IDs only, no N+1 (see ChaptersService.get_downloaded_ids).
     ids = chapters.get_downloaded_ids(story_id)
-    
     idx = next((i for i, cid in enumerate(ids) if cid == chapter_id), None)
 
     prev_id = ids[idx - 1] if idx is not None and idx > 0 else None
     next_id = ids[idx + 1] if idx is not None and idx < len(ids) - 1 else None
 
-    logger.info("prev_id: %s, next_id: %s", prev_id, next_id)
-    read_chapters: set[int] = set()
+    # A short window of chapter IDs beyond the immediate next one, so the
+    # client can hand the service worker several chapters to precache in
+    # the background instead of only ever knowing about a single "next".
+    upcoming_chapter_ids = ids[idx + 1 : idx + 1 + PRECACHE_LOOKAHEAD] if idx is not None else []
 
-    t0 = time.perf_counter()
+    read_chapters: set[int] = set()
     if current_user and current_user.get("id"):
         prog = progress.get_progress(current_user["id"], story_id)
         if prog and prog.get("last_chapter_id"):
             last = prog["last_chapter_id"]
             read_chapters = {cid for cid in ids if cid <= last}
-    logger.info("TIMING progress/read_chapters: %.1fms", (time.perf_counter() - t0) * 1000)
 
     first_unread = next((cid for cid in ids if cid not in read_chapters), None)
     hide_author_notes = story.get("hide_author_notes", True)
 
-    t0 = time.perf_counter()
     reading_settings_schema = settings_service.get_reading_settings_schema()
-    logger.info("TIMING get_reading_settings_schema: %.1fms", (time.perf_counter() - t0) * 1000)
 
-    t0 = time.perf_counter()
-    response = templates.TemplateResponse(
+    return templates.TemplateResponse(
         "pages/chapter.html",
         {
             "request": request,
@@ -103,16 +90,12 @@ def chapter(
             "chapter_id": chapter_id,
             "prev_chapter_id": prev_id,
             "next_chapter_id": next_id,
+            "upcoming_chapter_ids": upcoming_chapter_ids,
             "first_unread_chapter_id": first_unread,
             "hide_author_notes": hide_author_notes,
             "reading_settings_schema": reading_settings_schema,
         },
     )
-    logger.info("TIMING template render: %.1fms", (time.perf_counter() - t0) * 1000)
-
-    logger.info("TIMING TOTAL /chapter: %.1fms", (time.perf_counter() - t_start) * 1000)
-
-    return response
 
 
 @router.get("/api/chapter-settings")
@@ -206,12 +189,16 @@ async def save_chapter_progress(
 
     progress.set_chapter_page(current_user["id"], chapter_id, page, anchor)
 
+    # "Continue reading" pointer — always follows wherever the person
+    # most recently read, even if that's an earlier chapter than one
+    # they've read before. No forward-only guard here on purpose.
+    progress.set_progress(current_user["id"], story_id, chapter_id, page)
+
     if page >= total_pages - 1:
-        # Only advance story progress, never move it backwards
-        current = progress.get_progress(current_user["id"], story_id)
-        current_last = (current or {}).get("last_chapter_id") or 0
-        if chapter_id >= current_last:
-            progress.set_progress(current_user["id"], story_id, chapter_id, page)
+        # Furthest-chapter tracking for read/unread marking — this one
+        # stays forward-only (enforced inside the repository's upsert),
+        # so re-reading an earlier chapter never regresses it.
+        progress.advance_furthest_chapter(current_user["id"], story_id, chapter_id, page)
 
     return {"ok": True}
 

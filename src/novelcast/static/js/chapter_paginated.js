@@ -57,6 +57,7 @@ class PaginatedEReader {
   // ======================
 
   async init() {
+    this.registerServiceWorker();
     this.cacheContainerData();
     this.cacheElements();
     this.loadSchema();
@@ -66,6 +67,15 @@ class PaginatedEReader {
     this.attachEvents();
     this.attachSettingsEvents();
     this.buildIframe();
+  }
+
+  registerServiceWorker() {
+    if (!('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.register('/static/js/sw.js').catch(() => {
+      // If registration fails (unsupported context, etc.) the reader
+      // still works — it just falls back to normal network requests
+      // with no background precaching.
+    });
   }
 
   getDeviceId() {
@@ -166,6 +176,12 @@ class PaginatedEReader {
     this.state.prevChapterId = c.dataset.prevChapterId;
     this.state.chapterTitle  = c.dataset.chapterTitle || '';
     this.state.hideAuthorNotes = c.dataset.hideAuthorNotes === 'true';
+
+    try {
+      this.state.upcomingChapterIds = JSON.parse(c.dataset.upcomingChapterIds || '[]');
+    } catch (e) {
+      this.state.upcomingChapterIds = [];
+    }
   }
 
   cacheElements() {
@@ -246,11 +262,16 @@ class PaginatedEReader {
     requestAnimationFrame(() =>
       requestAnimationFrame(async () => {
         this.calculatePages();
-
         this.render(0);  // show content immediately
         this.iframeWin.addEventListener('keydown', e => this.handleKey(e));
         const startPage = await this.resolveStartPage();
         if (startPage > 0) this.render(startPage);  // jump once progress loads
+
+        // Give the current chapter's own render a brief head start
+        // before kicking off background precaching of upcoming ones,
+        // so precache network activity doesn't compete with anything
+        // the person is actively waiting on right now.
+        setTimeout(() => this.precacheUpcomingChapters(), 300);
       })
     );
   }
@@ -359,23 +380,55 @@ class PaginatedEReader {
   }
 
   saveProgress(page, totalPages) {
+    // Track the latest pending save so it can be flushed immediately
+    // (bypassing the debounce) if the browser signals the page is
+    // about to be hidden/backgrounded — see flushProgress() below.
+    this._pendingProgress = { page, totalPages };
+
     clearTimeout(this.progressTimer);
-    this.progressTimer = setTimeout(() => {
-      // Find the paragraph index visible on the current page
-      const anchor = this.findAnchorParagraph();
-      
+    this.progressTimer = setTimeout(() => this.flushProgress(false), 500);
+  }
+
+  // Sends whatever progress is currently pending, right now, bypassing
+  // the normal 500ms debounce entirely. Mobile browsers commonly
+  // suspend JS timers the instant a tab is backgrounded (app switch,
+  // screen lock) — if several page turns happened in quick succession
+  // right before that, each one's debounce timer kept getting
+  // cancelled by the next, and the final pending save could be
+  // discarded entirely before it ever got a chance to fire. That's
+  // why reopening the app could show the reader having silently
+  // regressed by however many pages were turned in that last ~500ms
+  // window. Calling this on visibilitychange/pagehide closes that gap.
+  flushProgress(useBeacon) {
+    if (!this._pendingProgress) return;
+    const { page, totalPages } = this._pendingProgress;
+
+    clearTimeout(this.progressTimer);
+    this._pendingProgress = null;
+
+    const anchor = this.findAnchorParagraph();
+    const payload = JSON.stringify({
+      chapter_id: Number(this.state.chapterId),
+      story_id: Number(this.state.storyId),
+      page,
+      total_pages: totalPages,
+      anchor,
+    });
+
+    if (useBeacon && navigator.sendBeacon) {
+      // sendBeacon is specifically designed to survive the page being
+      // torn down mid-request — a normal fetch is not guaranteed to
+      // complete once the browser starts suspending/discarding the tab.
+      const blob = new Blob([payload], { type: 'application/json' });
+      navigator.sendBeacon('/api/chapter-progress', blob);
+    } else {
       fetch('/api/chapter-progress', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chapter_id: Number(this.state.chapterId),
-          story_id:   Number(this.state.storyId),
-          page,
-          total_pages: totalPages,
-          anchor,   // ← paragraph index
-        }),
+        body: payload,
+        keepalive: true, // best-effort: helps the request survive unload in more browsers
       }).catch(() => {});
-    }, 500);
+    }
   }
 
   findAnchorParagraph() {
@@ -592,6 +645,29 @@ class PaginatedEReader {
       this.el.nextBtn.style.opacity = currentPage === totalPages - 1 ? '0.3' : '0.8';
   }
 
+  // Hands the service worker a list of upcoming chapter URLs to fetch
+  // and cache in the background, with retry/backoff on its side. Runs
+  // once per chapter load, as early as reasonably possible — on a slow
+  // or spotty connection, the whole point is to get ahead of the
+  // problem before it happens, not wait until you're already near the
+  // end of the current chapter (by then a dropped connection has less
+  // time to recover before you tap "next").
+  precacheUpcomingChapters() {
+    if (!('serviceWorker' in navigator)) return;
+    const { storyId, upcomingChapterIds } = this.state;
+    if (!upcomingChapterIds || upcomingChapterIds.length === 0) return;
+
+    const urls = upcomingChapterIds.map(
+      (cid) => `/chapter?story_id=${storyId}&chapter_id=${cid}`
+    );
+
+    navigator.serviceWorker.ready.then((reg) => {
+      if (reg.active) {
+        reg.active.postMessage({ type: 'PRECACHE_CHAPTERS', urls });
+      }
+    }).catch(() => { /* best-effort — normal navigation still works without it */ });
+  }
+
   // ======================
   // NAVIGATION
   // ======================
@@ -600,7 +676,12 @@ class PaginatedEReader {
     const { currentPage, totalPages, nextChapterId, storyId } = this.state;
     const cleanNext = (!nextChapterId || nextChapterId === 'None') ? null : nextChapterId;
     if (currentPage < totalPages - 1) this.render(currentPage + 1);
-    else if (cleanNext) window.location.href = `/chapter?story_id=${storyId}&chapter_id=${cleanNext}`;
+    // Explicitly request page 0 — otherwise resolveStartPage() falls
+    // back to whatever page was last saved for this specific chapter,
+    // which could be stale (e.g. from skimming ahead once before) and
+    // would silently resume there instead of starting the chapter
+    // fresh, which is what advancing forward should always do.
+    else if (cleanNext) window.location.href = `/chapter?story_id=${storyId}&chapter_id=${cleanNext}&page=0`;
     else window.location.href = `/story?story_id=${storyId}`;
   };
 
@@ -784,6 +865,23 @@ class PaginatedEReader {
     this.el.nextBtn?.addEventListener('click', this.nextPage);
     this.el.prevBtn?.addEventListener('click', this.prevPage);
     this.el.backBtn?.addEventListener('click', () => { window.location.href = '/'; });
+
+    // Flush any pending (debounced) progress save immediately once the
+    // browser signals the page is being hidden — app switch, screen
+    // lock, closing the tab, etc. Covers both: visibilitychange fires
+    // reliably when the app is backgrounded but the page/process may
+    // still be alive; pagehide fires when the page is actually being
+    // torn down (navigation away, tab close). Using sendBeacon (via
+    // flushProgress(true)) so the request has the best chance of
+    // actually completing even as the browser suspends the page.
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') {
+        this.flushProgress(true);
+      }
+    });
+    window.addEventListener('pagehide', () => {
+      this.flushProgress(true);
+    });
   }
 }
 

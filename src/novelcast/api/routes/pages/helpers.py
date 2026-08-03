@@ -43,7 +43,7 @@ def story_has_not_unread(story: dict) -> bool:
 
 
 def build_story_view_model(story: dict, progress: dict | None) -> dict:
-    last_read = int((progress or {}).get("last_chapter_number") or 0)
+    furthest_read = int((progress or {}).get("furthest_chapter_number") or 0)
     latest = int(_story_latest_downloaded(story) or 0)
     downloaded = int(story.get("downloaded_chapters") or 0)
 
@@ -51,11 +51,11 @@ def build_story_view_model(story: dict, progress: dict | None) -> dict:
         **story,
         # keep progress separate (IMPORTANT)
         "progress": {
-            "last_read_chapter": last_read,
+            "last_read_chapter": furthest_read,
         },
         # derived UI state (single source of truth)
-        "is_caught_up": downloaded > 0 and last_read == latest,
-        "has_unread": downloaded > 0 and last_read < latest,
+        "is_caught_up": downloaded > 0 and furthest_read == latest,
+        "has_unread": downloaded > 0 and furthest_read < latest,
     }
 
 
@@ -210,7 +210,10 @@ def resolve_progress(
                 last_chapter = chapters.get_chapter(last_chapter_id)
                 if last_chapter:
                     last_read_title = last_chapter.get("title") or f"Chapter {last_chapter.get('chapter_number')}"
-                read_chapters = {c["id"] for c in chapter_list if c["id"] <= last_chapter_id}
+
+            furthest_chapter_id = prog.get("furthest_chapter_id")
+            if furthest_chapter_id:
+                read_chapters = {c["id"] for c in chapter_list if c["id"] <= furthest_chapter_id}
 
     return read_chapters, last_chapter_id, last_read_title
 

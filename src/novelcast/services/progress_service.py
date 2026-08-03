@@ -15,4 +15,12 @@ class ProgressService:
         self.repo.set_chapter_page(user_id, chapter_id, page, anchor)
 
     def set_progress(self, user_id: int, story_id: int, chapter_id: int, last_position: int) -> None:
+        """Unconditionally updates the 'continue reading' pointer — see
+        ProgressRepository.set_progress for why this is deliberately not
+        forward-only."""
         self.repo.set_progress(user_id, story_id, chapter_id, last_position)
+
+    def advance_furthest_chapter(self, user_id: int, story_id: int, chapter_id: int, last_position: int) -> None:
+        """Forward-only furthest-chapter tracking, used for read/unread
+        marking. See ProgressRepository.advance_furthest_chapter."""
+        self.repo.advance_furthest_chapter(user_id, story_id, chapter_id, last_position)
