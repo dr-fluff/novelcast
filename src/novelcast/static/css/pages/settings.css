@@ -1,4 +1,3 @@
-
 /* ── Page wrapper ─────────────────────────────────────────── */
 .pg-settings,
 .pg-admin {
@@ -176,8 +175,16 @@
 /* ============================================================
   USERS TABLE
    ============================================================ */
+
+/* Wrapper that lets the table scroll horizontally on narrow screens
+   instead of squeezing columns or breaking the layout. */
+.table-scroll {
+  overflow-x: auto;
+}
+
 .user-table {
   width: 100%;
+  min-width: 500px;
   border-collapse: collapse;
   font-size: 0.875rem;
 }
@@ -198,6 +205,10 @@
 }
 .user-table tbody tr:last-child td { border-bottom: none; }
 .user-table tbody tr:hover td { background: var(--hover, rgba(0,0,0,.02)); }
+
+.user-table .col-avatar {
+  width: 30px;
+}
 
 .user-avatar {
   display: inline-flex;
@@ -225,6 +236,19 @@
 .badge--user  { background: #f3f4f6; color: #6b7280; }
 
 .muted { color: var(--text-muted, #bbb); }
+
+/* Empty-state row (e.g. "No users found.") */
+.empty-state-cell {
+  text-align: center;
+  padding: 20px;
+  color: var(--text-muted, #bbb);
+}
+
+/* Utility for a form that needs to sit inline with adjacent
+   action buttons (e.g. a per-row delete button). */
+.inline-form {
+  display: inline;
+}
 
 /* ============================================================
 ADMIN DASHBOARD
