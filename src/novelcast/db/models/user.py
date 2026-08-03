@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from novelcast.db.models.group import Group
     from novelcast.db.models.progress import ReadingProgress
     from novelcast.db.models.settings import UserSetting
+    from novelcast.db.models.stats import UserDailyActivity, UserDevice
 
 
 class User(Base):
@@ -34,6 +35,12 @@ class User(Base):
     )
     password_reset_tokens: Mapped[list["PasswordResetToken"]] = relationship(
         "PasswordResetToken", back_populates="user", cascade="all, delete-orphan"
+    )
+    daily_activity: Mapped[list["UserDailyActivity"]] = relationship(
+        "UserDailyActivity", back_populates="user", cascade="all, delete-orphan"
+    )
+    devices: Mapped[list["UserDevice"]] = relationship(
+        "UserDevice", back_populates="user", cascade="all, delete-orphan"
     )
 
     def __repr__(self) -> str:

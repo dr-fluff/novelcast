@@ -21,6 +21,7 @@ from novelcast.db.repositories import (
     ProgressRepository,
     RssEntryRepository,
     SettingsRepository,
+    StatsRepository,
     StoriesRepository,
     SyncRepository,
     UsersRepository,
@@ -60,6 +61,7 @@ from novelcast.services import (
     TelegramService,
 )
 from novelcast.services.chapter_filter_service import ChapterFilterService
+from novelcast.services.stats_service import StatsService
 from novelcast.utils.files import FileUtils
 
 logger = logging.getLogger(__name__)
@@ -132,6 +134,7 @@ class AppContext:
         self.files_repo = FilesRepository(sf)
         self.chapters_repo = ChaptersRepository(sf)
         self.progress_repo = ProgressRepository(sf)
+        self.stats_repo = StatsRepository(sf)
         self.sync_repo = SyncRepository(self.chapters_repo)
         self.settings_repo = SettingsRepository(sf, user_settings_schema=USER_SETTINGS_SCHEMA)
         self.chapter_pattern_repo = ChapterPatternRepository(sf)
@@ -152,6 +155,7 @@ class AppContext:
         self.files = FileService(self.files_repo)
         self.chapters = ChaptersService(self.chapters_repo)
         self.progress = ProgressService(self.progress_repo)
+        self.stats = StatsService(self.stats_repo)
 
         self.settings = SettingsService(
             self.settings_repo,

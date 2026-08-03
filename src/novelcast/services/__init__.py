@@ -17,3 +17,4 @@ from .story_service import StoryService
 from .sync_service import LibrarySyncService
 from .telegram_service import TelegramService
 from .user_service import UserService
+from .stats_service import StatsService

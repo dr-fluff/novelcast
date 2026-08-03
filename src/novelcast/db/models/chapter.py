@@ -34,6 +34,12 @@ class Chapter(Base):
     # True once at least one ChapterFile exists and the canonical HTML is ready
     is_downloaded: Mapped[bool] = mapped_column(Boolean, default=False)
 
+    # Word count of the canonical chapter text. Populated once the chapter
+    # is downloaded/parsed; used for reading-speed stats (words / read time).
+    # NULL until computed, so existing chapters degrade gracefully rather
+    # than reporting 0.
+    word_count: Mapped[Optional[int]] = mapped_column(Integer)
+
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
     story: Mapped["Story"] = relationship("Story", back_populates="chapters")

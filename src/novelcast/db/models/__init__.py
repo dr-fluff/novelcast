@@ -11,6 +11,7 @@ from novelcast.db.models.progress import ReadingProgress
 from novelcast.db.models.relationships import story_author, user_groups
 from novelcast.db.models.series import Series
 from novelcast.db.models.settings import ServerSetting, StorySetting, UserSetting
+from novelcast.db.models.stats import UserDailyActivity, UserDevice
 from novelcast.db.models.story import Story
 from novelcast.db.models.tag import Tag
 from novelcast.db.models.user import PasswordResetToken, User
@@ -32,6 +33,8 @@ __all__ = [
     "ServerSetting",
     "StorySetting",
     "UserSetting",
+    "UserDailyActivity",
+    "UserDevice",
     "Story",
     "User",
     "PasswordResetToken",
