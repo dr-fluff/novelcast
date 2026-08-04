@@ -61,6 +61,8 @@ async def scrape_patreon_creator(
     headers = dict(HEADERS)
     cookies = {"session_id": session_cookie} if session_cookie else None
 
+    resp = None
+
     try:
         resp = await client.get(url, headers=headers, cookies=cookies, timeout=15.0, follow_redirects=True)
         resp.raise_for_status()
@@ -79,7 +81,34 @@ async def scrape_patreon_creator(
             url = fallback_url
         except httpx.HTTPError as fallback_error:
             logger.warning("[Patreon] Fallback fetch also failed for %s: %s", fallback_url, fallback_error)
-            return []
+            creator_display = creator_name
+            fallback_title = f"Patreon: {creator_display}" if creator_display else "Patreon creator"
+            return [
+                ScrapedResult(
+                    site="patreon",
+                    kind="author_profile",
+                    url=url,
+                    title=fallback_title,
+                    author=creator_display,
+                    description=f"Open {creator_display}'s Patreon page to browse available posts and rewards",
+                    patreon_url=url,
+                )
+            ]
+
+    if resp is None:
+        creator_display = creator_name
+        fallback_title = f"Patreon: {creator_display}" if creator_display else "Patreon creator"
+        return [
+            ScrapedResult(
+                site="patreon",
+                kind="author_profile",
+                url=url,
+                title=fallback_title,
+                author=creator_display,
+                description=f"Open {creator_display}'s Patreon page to browse available posts and rewards",
+                patreon_url=url,
+            )
+        ]
 
     soup = BeautifulSoup(resp.text, "html.parser")
 

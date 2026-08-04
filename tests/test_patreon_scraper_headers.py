@@ -35,3 +35,14 @@ def test_scraper_sends_browser_like_headers():
     assert results
     assert client.calls[0][1]["headers"]["User-Agent"] == HEADERS["User-Agent"]
     assert client.calls[0][1]["cookies"] == {"session_id": "abc"}
+
+
+def test_scraper_returns_author_profile_when_requests_are_blocked():
+    client = DummyClient([DummyResponse(status_code=403), DummyResponse(status_code=403)])
+
+    results = asyncio.run(scrape_patreon_creator(client, "brianjnordon", session_cookie="abc"))
+
+    assert results
+    assert results[0].kind == "author_profile"
+    assert results[0].url == "https://www.patreon.com/c/brianjnordon/posts"
+    assert results[0].patreon_url == "https://www.patreon.com/c/brianjnordon/posts"
