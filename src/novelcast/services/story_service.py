@@ -1,6 +1,7 @@
 # novelcast/services/story_service.py
 
 import logging
+import os
 import re
 from pathlib import Path
 from urllib.parse import quote
@@ -16,6 +17,7 @@ class StoryService:
     def __init__(self, repo, author_repo: AuthorRepository | None = None):
         self.repo = repo
         self.author_repo = author_repo
+        self._story_files_cache: dict[str, tuple[int, list[dict]]] = {}
 
     # ── path helper ────────────────────────────────────────────────────────
 
@@ -76,6 +78,35 @@ class StoryService:
         data["cover_url"] = self._cover_url(data.get("cover_path"))
         return data
 
+    def _scan_story_files(self, path: Path) -> list[dict]:
+        from novelcast.utils.files import human_readable_size
+
+        files: list[dict] = []
+        for root, dirnames, filenames in os.walk(path):
+            dirnames.sort()
+            filenames.sort()
+            root_path = Path(root)
+            for filename in filenames:
+                file_path = root_path / filename
+                try:
+                    stat = file_path.stat()
+                except FileNotFoundError:
+                    continue
+                if not file_path.is_file():
+                    continue
+                files.append(
+                    {
+                        "name": file_path.name,
+                        "relative_path": str(file_path.relative_to(path)),
+                        "path": str(file_path),
+                        "size": human_readable_size(stat.st_size),
+                        "size_bytes": stat.st_size,
+                        "modified_at": stat.st_mtime,
+                    }
+                )
+
+        return files
+
     def get_story_files(self, story_id: int) -> list[dict]:
         story = self.get_story(story_id)
         if not story:
@@ -89,24 +120,18 @@ class StoryService:
         if not path.exists() or not path.is_dir():
             return []
 
-        from novelcast.utils.files import human_readable_size
+        cache_key = str(path.resolve())
+        try:
+            dir_mtime_ns = path.stat().st_mtime_ns
+        except FileNotFoundError:
+            return []
 
-        files: list[dict] = []
-        for file_path in sorted(path.rglob("*")):
-            if not file_path.is_file():
-                continue
-            stat = file_path.stat()
-            files.append(
-                {
-                    "name": file_path.name,
-                    "relative_path": str(file_path.relative_to(path)),
-                    "path": str(file_path),
-                    "size": human_readable_size(stat.st_size),
-                    "size_bytes": stat.st_size,
-                    "modified_at": stat.st_mtime,
-                }
-            )
+        cached = self._story_files_cache.get(cache_key)
+        if cached and cached[0] == dir_mtime_ns:
+            return cached[1]
 
+        files = self._scan_story_files(path)
+        self._story_files_cache[cache_key] = (dir_mtime_ns, files)
         return files
 
     def get_by_url(self, url: str):
@@ -145,6 +170,7 @@ class StoryService:
             if cover_file.exists():
                 cover_file.unlink()
 
+        self._story_files_cache.clear()
         self.repo.delete_with_relations(story_id)
 
         telegram = getattr(self, "telegram", None)
@@ -183,6 +209,8 @@ class StoryService:
             source_url=source_url,
             is_user_edit=True,
         )
+        self._story_files_cache.clear()
+
         if updated and self.author_repo and author is not None:
             names = self._parse_comma_separated(author)
             self._sync_story_authors(story_id, names)

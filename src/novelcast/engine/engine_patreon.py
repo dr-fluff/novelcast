@@ -83,13 +83,21 @@ class PatreonEngine:
         return hostname in {"patreon.com", "www.patreon.com"} if hostname else False
 
     def _cookie(self) -> str:
-        cookie = self.settings_service.get_secret("patreon.session_cookie")
-        if not cookie:
+        raw_cookie = self.settings_service.get_secret("patreon.session_cookie")
+        if not raw_cookie:
             raise ValueError(
                 "No Patreon session cookie configured — copy 'session_id' "
                 "from your logged-in browser session into settings."
             )
-        return cookie
+
+        if raw_cookie.startswith("ncsec:v1:"):
+            try:
+                return self.settings_service._decrypt_secret_value(raw_cookie)
+            except Exception as exc:
+                logger.warning("Failed to decrypt Patreon session cookie; falling back to raw value: %s", exc)
+                return raw_cookie
+
+        return raw_cookie
 
     def _headers(self) -> dict:
         return {

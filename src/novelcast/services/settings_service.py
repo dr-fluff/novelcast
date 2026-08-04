@@ -73,12 +73,17 @@ class SettingsService:
 
     def get_server_setting(self, key: str, default=None):
         value = self.repo.get_server_setting(key)
-        return default if value is None else value
+        if value is None:
+            return default
+        return self._coerce_setting_value(key, value)
 
     def set_server_setting(self, key: str, value):
         if not key or "." not in key:
             logger.warning("Invalid server setting key: %s", key)
             return None
+
+        meta = self._get_schema_meta(key)
+        value = self._coerce_setting_value(key, value, meta=meta)
 
         if self._is_secret_key(key):
             if value == "":
@@ -115,6 +120,8 @@ class SettingsService:
                 if value is None:
                     value = meta.get("default")
 
+                value = self._coerce_setting_value(full_key, value, meta=meta)
+
                 if self._is_secret_key(full_key):
                     value = self._decrypt_secret_value(value)
 
@@ -144,6 +151,8 @@ class SettingsService:
             value = self.repo.get_server_setting(meta["legacy_key"])
         if value is None:
             value = meta.get("default", default)
+
+        value = self._coerce_setting_value(dotted_key, value, meta=meta)
 
         if meta.get("type") == "secret":
             value = self._decrypt_secret_value(value)
@@ -206,13 +215,44 @@ class SettingsService:
             return default
         return self._decrypt_secret_value(value)
 
+    def _get_schema_meta(self, key: str) -> dict | None:
+        if "." not in key:
+            return None
+
+        section, field = key.split(".", 1)
+        return self.schema.get(section, {}).get(field)
+
+    def _coerce_setting_value(self, key: str, value, meta=None):
+        if meta is None:
+            meta = self._get_schema_meta(key)
+
+        if meta is None:
+            return value
+
+        if meta.get("type") != "bool":
+            return value
+
+        if isinstance(value, bool):
+            return value
+
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            return bool(value)
+
+        if isinstance(value, str):
+            lowered = value.strip().lower()
+            if lowered in {"1", "true", "yes", "on"}:
+                return True
+            if lowered in {"0", "false", "no", "off", ""}:
+                return False
+
+        return bool(value)
+
     def _is_secret_key(self, key: str) -> bool:
         if "." not in key:
             return False
 
-        section, field = key.split(".", 1)
-        meta = self.schema.get(section, {}).get(field, {})
-        return meta.get("type") == "secret"
+        meta = self._get_schema_meta(key)
+        return meta is not None and meta.get("type") == "secret"
 
     def _decrypt_secret_value(self, value):
         if not value:
