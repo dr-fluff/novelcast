@@ -2,7 +2,6 @@
 
 import inspect
 import logging
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -11,7 +10,7 @@ class StoryDownloadOrchestrator:
     def __init__(self, selector):
         self.selector = selector
 
-    def download(self, url: str, progress_callback=None, story_match: Optional[str] = None) -> dict:
+    def download(self, url: str, progress_callback=None, story_match: str | None = None) -> dict:
         engine = self.selector.get_engine(url)
         logger.debug("Using engine: %s", engine.__class__.__name__)
 
@@ -21,7 +20,7 @@ class StoryDownloadOrchestrator:
 
         return engine.fetch(url, **kwargs)
 
-    def check_updates(self, url: str, story_match: Optional[str] = None) -> dict:  # CHANGED — added story_match
+    def check_updates(self, url: str, story_match: str | None = None) -> dict:  # CHANGED — added story_match
         engine = self.selector.get_engine(url)
         logger.debug("Checking updates with engine: %s", engine.__class__.__name__)
 

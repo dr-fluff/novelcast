@@ -1,59 +1,62 @@
 <!-- novelcast/templates/layouts/base.html -->
 <!doctype html>
 <html>
-  <head>
-    <title>{% block title %}NovelCast{% endblock %}</title>
+    <head>
+        <title>{% block title %}NovelCast{% endblock %}</title>
 
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="icon" href="/static/images/favicon.svg" onerror="this.href='/favicon.svg'">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <link rel="icon" href="/static/images/favicon.svg" onerror="this.href = '/favicon.svg'" />
 
-    <!-- HTMX — must load before body content -->
-    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+        <!-- HTMX — must load before body content -->
+        <script src="https://unpkg.com/htmx.org@1.9.12"></script>
 
-    <!-- GLOBAL CSS -->
-    <link rel="stylesheet" href="/static/css/tokens.css" />
-    <link rel="stylesheet" href="/static/css/base.css" />
-    <link rel="stylesheet" href="/static/css/layout.css" />
+        <!-- GLOBAL CSS -->
+        <link rel="stylesheet" href="/static/css/tokens.css" />
+        <link rel="stylesheet" href="/static/css/base.css" />
+        <link rel="stylesheet" href="/static/css/layout.css" />
 
-    <!-- COMPONENT CSS -->
-    <link rel="stylesheet" href="/static/css/components/nav.css" />
-    <link rel="stylesheet" href="/static/css/components/grid.css" />
-    <link rel="stylesheet" href="/static/css/components/grid_toolbar.css" />
-    <link rel="stylesheet" href="/static/css/components/cards.css" />
-    <link rel="stylesheet" href="/static/css/components/forms.css" />
-    <link rel="stylesheet" href="/static/css/components/buttons.css" />
-    <link rel="stylesheet" href="/static/css/components/modal.css" />
-    <link rel="stylesheet" href="/static/css/components/notifications.css" />
-    <link rel="stylesheet" href="/static/css/components/pagination.css" />
+        <!-- COMPONENT CSS -->
+        <link rel="stylesheet" href="/static/css/components/nav.css" />
+        <link rel="stylesheet" href="/static/css/components/grid.css" />
+        <link rel="stylesheet" href="/static/css/components/grid_toolbar.css" />
+        <link rel="stylesheet" href="/static/css/components/cards.css" />
+        <link rel="stylesheet" href="/static/css/components/forms.css" />
+        <link rel="stylesheet" href="/static/css/components/buttons.css" />
+        <link rel="stylesheet" href="/static/css/components/modal.css" />
+        <link rel="stylesheet" href="/static/css/components/notifications.css" />
+        <link rel="stylesheet" href="/static/css/components/pagination.css" />
 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
 
-    <link rel="stylesheet" href="/static/css/components/unified-panel.css">
-    <script src="/static/js/unified-panel.js"></script>
+        <link rel="stylesheet" href="/static/css/components/unified-panel.css" />
+        <script src="/static/js/unified-panel.js"></script>
 
-    {% block head %}{% endblock %}
+        {% block head %}{% endblock %}
+    </head>
 
-  </head>
+    <body>
+        <script>
+            window.NOVELCAST_API_HOST = '{{ api_host }}';
+        </script>
+        <script>
+            window.NOVELCAST_API_HOST =
+                "{{ request.client.host if false else '' }}{{ request.url.hostname }}:{{ api_port }}";
+        </script>
 
-  <body>
-    <script>window.NOVELCAST_API_HOST = "{{ api_host }}";</script>
-    <script>
-        window.NOVELCAST_API_HOST = "{{ request.client.host if false else '' }}{{ request.url.hostname }}:{{ api_port }}";
-    </script>
+        {% include "partials/add_story_panel_unified.html" %}
+        {% include "partials/metadata_author_panels_unified.html" %}
+        {% include "partials/metadata_panels_unified.html" %}
+        {% block content %}
+        {% endblock %}
+        {%
+            include
+            "components/notifications.html"
+        %}
 
-    {% include "partials/add_story_panel_unified.html" %}
-    {% include "partials/metadata_author_panels_unified.html" %}
-    {% include "partials/metadata_panels_unified.html" %}
+        <script src="/static/js/main.js" defer></script>
+        <script src="/static/js/library_header.js" defer></script>
+        <script src="/static/js/notifications.js" defer></script>
 
-    {% block content %}{% endblock %}
-
-    {% include "components/notifications.html" %}
-
-    <script src="/static/js/main.js" defer></script>
-    <script src="/static/js/library_header.js" defer></script>
-    <script src="/static/js/notifications.js" defer></script>
-
-    {% block scripts %}{% endblock %}
-
-  </body>
+        {% block scripts %}{% endblock %}
+    </body>
 </html>

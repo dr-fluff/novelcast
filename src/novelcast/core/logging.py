@@ -14,7 +14,6 @@ from datetime import datetime
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from threading import Lock
-from typing import Deque
 
 from novelcast.core import setting_keys
 from novelcast.core.defaults import (
@@ -58,7 +57,7 @@ class LogConfig:
     max_files: int = field(default_factory=lambda: _schema_default(LOGGING_MAX_AMOUNT_OF_FILES))
 
     @classmethod
-    def from_settings_service(cls, svc) -> "LogConfig":
+    def from_settings_service(cls, svc) -> LogConfig:
         cfg = cls()
 
         if v := _get(svc, setting_keys.LOGGING_SETTINGS.LEVEL):
@@ -86,14 +85,14 @@ class LogConfig:
         return cfg
 
     @classmethod
-    def from_app_config(cls, app_config) -> "LogConfig":
+    def from_app_config(cls, app_config) -> LogConfig:
         cfg = cls()
         cfg.level = getattr(app_config, "log_level", _schema_default(LOGGING_LEVEL)).upper()
         cfg.file_path = getattr(app_config, "log_file", _schema_default(LOGGING_FILE)) or _schema_default(LOGGING_FILE)
         return cfg
 
     @classmethod
-    def console_only(cls) -> "LogConfig":
+    def console_only(cls) -> LogConfig:
         cfg = cls()
         cfg.file_path = ""
         return cfg
@@ -148,7 +147,7 @@ class _SizeRollingFileHandler(RotatingFileHandler):
 class InMemoryLogBuffer(logging.Handler):
     def __init__(self, maxlen: int = 500) -> None:
         super().__init__()
-        self._buf: Deque[str] = deque(maxlen=maxlen)
+        self._buf: deque[str] = deque(maxlen=maxlen)
         self._lock = Lock()
         self._fmt = JsonFormatter()
         self._total_emitted = 0  # monotonic count of every line ever emitted, never reset by eviction

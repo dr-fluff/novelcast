@@ -1,47 +1,51 @@
 .btn-primary,
 .btn-secondary,
 .btn-ghost {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.4rem;
-  border-radius: var(--radius);
-  font-family: inherit;
-  font-weight: 600;
-  text-decoration: none;
-  cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    border-radius: var(--radius);
+    font-family: inherit;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition:
+        background 0.15s ease,
+        border-color 0.15s ease,
+        opacity 0.15s ease,
+        transform 0.15s ease;
 }
 
 .btn-primary {
-  padding: 0.55rem 1.2rem;
-  border: none;
-  background: var(--accent-color);
-  color: var(--text-on-accent);
-  font-size: var(--font-size-sm);
+    padding: 0.55rem 1.2rem;
+    border: none;
+    background: var(--accent-color);
+    color: var(--text-on-accent);
+    font-size: var(--font-size-sm);
 }
 
 .btn-primary:hover {
-  background: var(--accent-hover);
+    background: var(--accent-hover);
 }
 
 .btn-secondary,
 .btn-ghost {
-  padding: 0.5rem 1rem;
-  border: 1px solid var(--border-color);
-  background: transparent;
-  color: var(--text-primary);
-  font-size: var(--font-size-sm);
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--border-color);
+    background: transparent;
+    color: var(--text-primary);
+    font-size: var(--font-size-sm);
 }
 
 .btn-secondary:hover,
 .btn-ghost:hover {
-  background: var(--surface-hover);
+    background: var(--surface-hover);
 }
 
 .btn-ghost--sm {
-  padding: 0.35rem 0.75rem;
-  font-size: var(--font-size-xs);
+    padding: 0.35rem 0.75rem;
+    font-size: var(--font-size-xs);
 }
 
 .btn-play,
@@ -50,118 +54,122 @@
 .btn-file-menu,
 .btn-probe,
 .btn-modal-close {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  font-family: inherit;
-  cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    font-family: inherit;
+    cursor: pointer;
 }
 
 .btn-play {
-  gap: 0.45rem;
-  padding: 0.55rem 1.4rem;
-  border-radius: 999px;
-  background: var(--success-color);
-  color: var(--text-on-accent);
-  font-size: var(--font-size-sm);
-  font-weight: 700;
-  transition: background 0.15s ease, transform 0.15s ease;
+    gap: 0.45rem;
+    padding: 0.55rem 1.4rem;
+    border-radius: 999px;
+    background: var(--success-color);
+    color: var(--text-on-accent);
+    font-size: var(--font-size-sm);
+    font-weight: 700;
+    transition:
+        background 0.15s ease,
+        transform 0.15s ease;
 }
 
 .btn-play:hover {
-  background: var(--success-color);
-  transform: translateY(-1px);
+    background: var(--success-color);
+    transform: translateY(-1px);
 }
 
 .btn-action-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius);
-  border: 1px solid var(--border-strong);
-  background: transparent;
-  color: var(--text-primary);
-  font-size: var(--font-size-sm);
-  transition: background 0.15s ease;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border-strong);
+    background: transparent;
+    color: var(--text-primary);
+    font-size: var(--font-size-sm);
+    transition: background 0.15s ease;
 }
 
 .btn-action-icon:hover {
-  background: var(--surface-hover);
+    background: var(--surface-hover);
 }
 
 .btn-action-danger {
-  border-color: var(--danger-color);
-  color: var(--danger-color);
+    border-color: var(--danger-color);
+    color: var(--danger-color);
 }
 
 .btn-action-danger:hover {
-  background: var(--danger-subtle);
+    background: var(--danger-subtle);
 }
 
 .btn-header-action {
-  gap: 0.35rem;
-  padding: 0.3rem 0.75rem;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border-strong);
-  background: transparent;
-  color: var(--text-primary);
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  white-space: nowrap;
-  transition: background 0.12s ease;
+    gap: 0.35rem;
+    padding: 0.3rem 0.75rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-strong);
+    background: transparent;
+    color: var(--text-primary);
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    white-space: nowrap;
+    transition: background 0.12s ease;
 }
 
 .btn-header-action:hover {
-  background: var(--surface-hover);
+    background: var(--surface-hover);
 }
 
 .btn-header-action.active {
-  background: var(--accent-subtle);
-  border-color: var(--accent-color);
-  color: var(--accent-color);
+    background: var(--accent-subtle);
+    border-color: var(--accent-color);
+    color: var(--accent-color);
 }
 
 .btn-file-menu {
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--text-secondary);
-  font-size: var(--font-size-sm);
-  transition: background 0.12s ease, color 0.12s ease;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+    transition:
+        background 0.12s ease,
+        color 0.12s ease;
 }
 
 .btn-file-menu:hover {
-  background: var(--surface-hover);
-  color: var(--text-primary);
+    background: var(--surface-hover);
+    color: var(--text-primary);
 }
 
 .btn-probe {
-  gap: 0.4rem;
-  padding: 0.4rem 0.9rem;
-  border-radius: var(--radius);
-  border: 1px solid var(--border-color);
-  background: transparent;
-  color: var(--text-secondary);
-  font-size: var(--font-size-sm);
-  transition: background 0.12s ease;
+    gap: 0.4rem;
+    padding: 0.4rem 0.9rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--border-color);
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+    transition: background 0.12s ease;
 }
 
 .btn-probe:hover {
-  background: var(--surface-hover);
+    background: var(--surface-hover);
 }
 
 .btn-modal-close {
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius);
-  background: var(--surface-hover);
-  color: var(--text-secondary);
-  font-size: var(--font-size-base);
-  transition: background 0.12s ease;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius);
+    background: var(--surface-hover);
+    color: var(--text-secondary);
+    font-size: var(--font-size-base);
+    transition: background 0.12s ease;
 }
 
 .btn-modal-close:hover {
-  background: var(--surface-hover);
-  color: var(--text-primary);
+    background: var(--surface-hover);
+    color: var(--text-primary);
 }

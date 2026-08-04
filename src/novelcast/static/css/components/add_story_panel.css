@@ -40,7 +40,9 @@
 
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.2s ease, transform 0.2s ease;
+    transition:
+        opacity 0.2s ease,
+        transform 0.2s ease;
 }
 
 .add-story-panel.open {
@@ -87,7 +89,9 @@
     cursor: pointer;
     font-size: 1rem;
     font-family: inherit;
-    transition: background 0.12s ease, color 0.12s ease;
+    transition:
+        background 0.12s ease,
+        color 0.12s ease;
 }
 
 .panel-close-btn:hover {
@@ -114,7 +118,9 @@
     cursor: pointer;
     border-bottom: 2px solid transparent;
     margin-bottom: -1px;
-    transition: color 0.12s ease, border-color 0.12s ease;
+    transition:
+        color 0.12s ease,
+        border-color 0.12s ease;
     font-family: inherit;
 }
 
@@ -194,7 +200,9 @@
     color: #0f172a;
     font-size: 0.9rem;
     font-family: inherit;
-    transition: border-color 0.12s ease, box-shadow 0.12s ease;
+    transition:
+        border-color 0.12s ease,
+        box-shadow 0.12s ease;
     box-sizing: border-box;
 }
 
@@ -208,7 +216,7 @@
     color: #94a3b8;
 }
 
-.add-story-input[type="number"] {
+.add-story-input[type='number'] {
     width: 100%;
 }
 
@@ -296,7 +304,9 @@
     cursor: pointer;
     font-size: 0.65rem;
     font-family: inherit;
-    transition: border-color 0.12s, color 0.12s;
+    transition:
+        border-color 0.12s,
+        color 0.12s;
 }
 
 .add-story-tag-add:hover {
@@ -345,7 +355,7 @@
     color: #334155;
 }
 
-.add-story-checkbox-label input[type="checkbox"] {
+.add-story-checkbox-label input[type='checkbox'] {
     width: 1.1rem;
     height: 1.1rem;
     accent-color: #6366f1;
@@ -371,8 +381,12 @@
 }
 
 @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .add-story-center h3 {
@@ -517,7 +531,7 @@
     align-items: center;
     gap: 0.75rem;
     padding: 0.6rem 0.85rem;
-    border-bottom: 1px solid rgba(0,0,0,0.06);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
     cursor: pointer;
     transition: background 0.12s;
 }
@@ -530,7 +544,7 @@
     border-bottom: none;
 }
 
-.chapter-item input[type="checkbox"] {
+.chapter-item input[type='checkbox'] {
     width: 1rem;
     height: 1rem;
     accent-color: #6366f1;

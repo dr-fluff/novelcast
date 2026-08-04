@@ -5,11 +5,11 @@ const dismissedNotificationIds = new Set();
 let isIntentionalClose = false;
 
 function ensureNotificationContainer() {
-    let container = document.getElementById("notification-container");
+    let container = document.getElementById('notification-container');
     if (!container) {
-        container = document.createElement("div");
-        container.id = "notification-container";
-        container.className = "notification-container";
+        container = document.createElement('div');
+        container.id = 'notification-container';
+        container.className = 'notification-container';
         document.body.appendChild(container);
     }
     return container;
@@ -25,26 +25,26 @@ function createNotificationContent(message) {
 }
 
 function setNotificationProgress(notification, progress, indeterminate = false) {
-    let progressWrapper = notification.querySelector(".notification-progress");
+    let progressWrapper = notification.querySelector('.notification-progress');
     if (!progressWrapper) {
-        const wrapper = document.createElement("div");
-        wrapper.className = "notification-progress";
+        const wrapper = document.createElement('div');
+        wrapper.className = 'notification-progress';
 
-        const bar = document.createElement("div");
-        bar.className = "notification-progress-bar";
+        const bar = document.createElement('div');
+        bar.className = 'notification-progress-bar';
         wrapper.appendChild(bar);
 
-        const body = notification.querySelector(".notification-body");
+        const body = notification.querySelector('.notification-body');
         body.appendChild(wrapper);
         progressWrapper = wrapper;
     }
 
-    const bar = progressWrapper.querySelector(".notification-progress-bar");
+    const bar = progressWrapper.querySelector('.notification-progress-bar');
     if (indeterminate) {
-        bar.classList.add("indeterminate");
-        bar.style.width = "50%";
+        bar.classList.add('indeterminate');
+        bar.style.width = '50%';
     } else {
-        bar.classList.remove("indeterminate");
+        bar.classList.remove('indeterminate');
         bar.style.width = `${Math.min(Math.max(progress, 0), 100)}%`;
     }
 }
@@ -63,7 +63,7 @@ function removeNotification(notification, id, dismissed = false) {
     }
 }
 
-function showNotification(message, type = "info", timeout = 7000, options = {}) {
+function showNotification(message, type = 'info', timeout = 7000, options = {}) {
     const container = ensureNotificationContainer();
     const id = options.id;
 
@@ -81,7 +81,7 @@ function showNotification(message, type = "info", timeout = 7000, options = {}) 
 
     if (notif) {
         notif.className = `notification ${type}`;
-        notif.querySelector(".notification-content").textContent = message;
+        notif.querySelector('.notification-content').textContent = message;
 
         if (options.progress != null || options.indeterminate) {
             setNotificationProgress(notif, options.progress ?? 0, !!options.indeterminate);
@@ -99,11 +99,11 @@ function showNotification(message, type = "info", timeout = 7000, options = {}) 
         return notif;
     }
 
-    notif = document.createElement("div");
+    notif = document.createElement('div');
     notif.className = `notification ${type}`;
     notif.innerHTML = createNotificationContent(message);
 
-    const closeButton = notif.querySelector(".notification-close");
+    const closeButton = notif.querySelector('.notification-close');
     closeButton.onclick = () => removeNotification(notif, id, true);
 
     container.appendChild(notif);
@@ -124,10 +124,10 @@ function showNotification(message, type = "info", timeout = 7000, options = {}) 
 
 function buildNotification(payload) {
     switch (payload.type) {
-        case "job:start":
+        case 'job:start':
             return {
                 message: payload.payload.label,
-                type: "info",
+                type: 'info',
                 timeout: 0,
                 options: {
                     id: payload.payload.job_id,
@@ -136,10 +136,10 @@ function buildNotification(payload) {
                     resetDismissal: true,
                 },
             };
-        case "job:progress":
+        case 'job:progress':
             return {
                 message: payload.payload.message,
-                type: "info",
+                type: 'info',
                 timeout: 0,
                 options: {
                     id: payload.payload.job_id,
@@ -148,24 +148,24 @@ function buildNotification(payload) {
                     indeterminate: payload.payload.progress == null,
                 },
             };
-        case "job:done":
+        case 'job:done':
             return {
                 message: `${payload.payload.label} complete`,
-                type: "success",
+                type: 'success',
                 timeout: 5000,
                 options: { id: payload.payload.job_id },
             };
-        case "job:error":
+        case 'job:error':
             return {
-                message: `${payload.payload.label} failed: ${payload.payload.error || "unknown error"}`,
-                type: "error",
+                message: `${payload.payload.label} failed: ${payload.payload.error || 'unknown error'}`,
+                type: 'error',
                 timeout: 0,
                 options: { id: payload.payload.job_id },
             };
-        case "download_started":
+        case 'download_started':
             return {
                 message: `Downloading: ${payload.source_url}`,
-                type: "info",
+                type: 'info',
                 timeout: 0,
                 options: {
                     id: `download-${payload.download_id}`,
@@ -174,10 +174,10 @@ function buildNotification(payload) {
                     resetDismissal: true,
                 },
             };
-        case "download_progress":
+        case 'download_progress':
             return {
-                message: `Downloading: ${payload.source_url || "story"}`,
-                type: "info",
+                message: `Downloading: ${payload.source_url || 'story'}`,
+                type: 'info',
                 timeout: 0,
                 options: {
                     id: `download-${payload.download_id}`,
@@ -186,35 +186,35 @@ function buildNotification(payload) {
                     indeterminate: payload.indeterminate !== false,
                 },
             };
-        case "download_finished":
+        case 'download_finished':
             return {
-                message: "Downloading completed",
-                type: "success",
+                message: 'Downloading completed',
+                type: 'success',
                 timeout: 5000,
                 options: {
                     id: `download-${payload.download_id}`,
                     progress: 100,
                 },
             };
-        case "download_failed":
+        case 'download_failed':
             return {
-                message: `Download failed: ${payload.error || "Unknown error"}`,
-                type: "error",
+                message: `Download failed: ${payload.error || 'Unknown error'}`,
+                type: 'error',
                 timeout: 8000,
                 options: {
                     id: `download-${payload.download_id}`,
                 },
             };
-        case "sync_run_started":
+        case 'sync_run_started':
             return {
                 message: `Sync started for ${payload.stories || 0} stories.`,
-                type: "info",
+                type: 'info',
                 timeout: 7000,
             };
-        case "sync_story_started":
+        case 'sync_story_started':
             return {
                 message: `Syncing "${payload.title || payload.story_id}".`,
-                type: "info",
+                type: 'info',
                 timeout: 0,
                 options: {
                     id: `sync-${payload.story_id}`,
@@ -222,72 +222,72 @@ function buildNotification(payload) {
                     resetDismissal: true,
                 },
             };
-        case "sync_no_changes":
+        case 'sync_no_changes':
             return {
                 message: `No library updates found.`,
-                type: "info",
+                type: 'info',
                 timeout: 7000,
             };
-        case "sync_progress":
+        case 'sync_progress':
             return {
-                message: `Syncing "${payload.title || payload.story_id}": ${payload.new_chapters} new chapter${payload.new_chapters === 1 ? "" : "s"}.`,
-                type: "info",
+                message: `Syncing "${payload.title || payload.story_id}": ${payload.new_chapters} new chapter${payload.new_chapters === 1 ? '' : 's'}.`,
+                type: 'info',
                 timeout: 0,
                 options: {
                     id: `sync-${payload.story_id}`,
                     persistent: true,
                 },
             };
-        case "sync_story_updated":
+        case 'sync_story_updated':
             return {
-                message: `Updated "${payload.title || payload.story_id}": ${payload.new_chapters} new chapter${payload.new_chapters === 1 ? "" : "s"}.`,
-                type: "success",
+                message: `Updated "${payload.title || payload.story_id}": ${payload.new_chapters} new chapter${payload.new_chapters === 1 ? '' : 's'}.`,
+                type: 'success',
                 timeout: 5000,
                 options: {
                     id: `sync-${payload.story_id}`,
                 },
             };
-        case "sync_story_no_changes":
+        case 'sync_story_no_changes':
             return {
                 message: `No updates for "${payload.title}".`,
-                type: "info",
+                type: 'info',
                 timeout: 4000,
                 options: {
                     id: `sync-${payload.story_id}`,
                 },
             };
-        case "sync_story_failed":
+        case 'sync_story_failed':
             return {
                 message: `Failed to check "${payload.title}".`,
-                type: "error",
+                type: 'error',
                 timeout: 6000,
                 options: {
                     id: `sync-${payload.story_id}`,
                 },
             };
-        case "sync_finished":
+        case 'sync_finished':
             return {
                 message: payload.new_chapters
                     ? `Sync complete: ${payload.stories_updated} of ${payload.stories_checked} stories had updates (${payload.new_chapters} new chapters).`
                     : `Sync complete: checked ${payload.stories_checked} stories, no new chapters.`,
-                type: payload.new_chapters ? "success" : "info",
+                type: payload.new_chapters ? 'success' : 'info',
                 timeout: 6000,
                 options: {
-                    id: "sync-summary",
+                    id: 'sync-summary',
                 },
             };
-        case "story_updated":
+        case 'story_updated':
             return {
-                message: "Story metadata updated.",
-                type: "success",
+                message: 'Story metadata updated.',
+                type: 'success',
                 timeout: 4000,
             };
-        case "story_added":
+        case 'story_added':
             return null;
         default:
             return {
-                message: "Background update received.",
-                type: "info",
+                message: 'Background update received.',
+                type: 'info',
                 timeout: 7000,
             };
     }
@@ -298,13 +298,13 @@ function getWebSocketHost() {
 }
 
 function createWebSocketUrl() {
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     return `${protocol}//${getWebSocketHost()}/ws/notifications`;
 }
 
 function initNotificationSocket() {
     if (!window.WebSocket) {
-        showNotification("WebSockets are not supported by this browser.", "warning");
+        showNotification('WebSockets are not supported by this browser.', 'warning');
         return;
     }
 
@@ -312,31 +312,35 @@ function initNotificationSocket() {
     const url = createWebSocketUrl();
     const socket = new WebSocket(url);
 
-    socket.addEventListener("message", (event) => {
+    socket.addEventListener('message', (event) => {
         try {
             const payload = JSON.parse(event.data);
-            window.dispatchEvent(new CustomEvent("novelcast:notification", { detail: payload }));
+            window.dispatchEvent(new CustomEvent('novelcast:notification', { detail: payload }));
             const notification = buildNotification(payload);
             if (!notification) return;
             showNotification(notification.message, notification.type, notification.timeout, notification.options);
         } catch (error) {
-            console.error("Notification parse error:", error, event.data);
+            console.error('Notification parse error:', error, event.data);
         }
     });
 
-    socket.addEventListener("close", () => {
+    socket.addEventListener('close', () => {
         if (isIntentionalClose) return;
         setTimeout(initNotificationSocket, 2000);
     });
 
-    socket.addEventListener("error", () => {
+    socket.addEventListener('error', () => {
         // errors are always followed by close — let close handle reconnect
     });
 
-    window.addEventListener("beforeunload", () => {
-        isIntentionalClose = true;
-        socket.close();
-    }, { once: true });
+    window.addEventListener(
+        'beforeunload',
+        () => {
+            isIntentionalClose = true;
+            socket.close();
+        },
+        { once: true }
+    );
 }
 
-window.addEventListener("DOMContentLoaded", initNotificationSocket);
+window.addEventListener('DOMContentLoaded', initNotificationSocket);

@@ -1,5 +1,4 @@
 import re
-from typing import Optional
 
 from .base import SiteQueryMatch
 
@@ -8,13 +7,13 @@ class ScribbleHubAdapter:
     name = "scribblehub"
     query_prefixes = ("scribblehub", "scribelhub", "s")
 
-    def match_fiction_url(self, raw: str) -> Optional[str]:
+    def match_fiction_url(self, raw: str) -> str | None:
         # TODO: verify against real ScribbleHub series URLs, e.g.
         # https://www.scribblehub.com/series/123456/some-slug/
         m = re.match(r"https?://.*scribblehub\.com/series/(\d+)", raw)
         return m.group(1) if m else None
 
-    def match_author_url(self, raw: str) -> Optional[str]:
+    def match_author_url(self, raw: str) -> str | None:
         # TODO: verify against real ScribbleHub profile URLs
         m = re.match(r"https?://.*scribblehub\.com/profile/(\d+)", raw)
         return m.group(1) if m else None
@@ -37,7 +36,7 @@ class ScribbleHubAdapter:
                 return SiteQueryMatch(target="fiction", lookup_type="id", identifier=part)
         return SiteQueryMatch(target="fiction", lookup_type="text", identifier=remainder.strip())
 
-    def match_bare(self, raw: str) -> Optional[SiteQueryMatch]:
+    def match_bare(self, raw: str) -> SiteQueryMatch | None:
         if raw.isdigit():
             return SiteQueryMatch(target="fiction", lookup_type="id", identifier=raw)
         if "/" in raw:

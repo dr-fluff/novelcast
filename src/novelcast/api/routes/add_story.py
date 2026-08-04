@@ -4,7 +4,6 @@ import asyncio
 import hashlib
 import logging
 import uuid
-from typing import Optional
 from urllib.parse import parse_qs, urlparse
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -21,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 class Chapter(BaseModel):
     number: int
-    title: Optional[str] = None
+    title: str | None = None
     selected: bool
     locked: bool = False
 
@@ -204,7 +203,7 @@ async def preview_story_metadata(
         )
     except Exception as e:
         logger.exception("Failed to preview story metadata")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.post("/add")

@@ -18,11 +18,11 @@ class UpdateJob(Base):
     __tablename__ = "update_jobs"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    story_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("stories.id", ondelete="CASCADE"))
+    story_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("stories.id", ondelete="CASCADE"))
     status: Mapped[str] = mapped_column(String, default="pending")
-    last_run: Mapped[Optional[datetime]] = mapped_column(DateTime)
-    next_run: Mapped[Optional[datetime]] = mapped_column(DateTime)
-    error: Mapped[Optional[str]] = mapped_column(Text)
+    last_run: Mapped[datetime | None] = mapped_column(DateTime)
+    next_run: Mapped[datetime | None] = mapped_column(DateTime)
+    error: Mapped[str | None] = mapped_column(Text)
 
     story: Mapped[Optional["Story"]] = relationship("Story", back_populates="update_jobs")
 

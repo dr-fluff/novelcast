@@ -112,3 +112,7 @@ def get_logs(request: Request) -> LoggingService:
 
 def get_patreon_engine(request: Request) -> PatreonEngine:
     return request.app.state.ctx.patreon_engine
+
+
+def get_stats(request: Request):
+    return request.app.state.ctx.stats

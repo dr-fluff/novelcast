@@ -1,7 +1,6 @@
 import logging
 import re
 import threading
-import time
 
 from novelcast.core import setting_keys
 from novelcast.db.repositories.rss_entry_repository import RssEntryRepository

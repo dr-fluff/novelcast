@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 
 @dataclass
@@ -13,7 +13,7 @@ class SiteQueryMatch:
     target: str  # "fiction" | "author"
     lookup_type: str  # "id" | "text" | "url"
     identifier: str
-    resolved_url: Optional[str] = None
+    resolved_url: str | None = None
 
 
 @runtime_checkable
@@ -32,11 +32,11 @@ class SiteAdapter(Protocol):
     # no trailing colon.
     query_prefixes: tuple[str, ...]
 
-    def match_fiction_url(self, raw: str) -> Optional[str]:
+    def match_fiction_url(self, raw: str) -> str | None:
         """Return the fiction id if `raw` is a fiction-detail URL for this site."""
         ...
 
-    def match_author_url(self, raw: str) -> Optional[str]:
+    def match_author_url(self, raw: str) -> str | None:
         """Return the author id if `raw` is an author/profile URL for this site."""
         ...
 
@@ -51,7 +51,7 @@ class SiteAdapter(Protocol):
         claimed, the remainder unambiguously belongs to this site."""
         ...
 
-    def match_bare(self, raw: str) -> Optional[SiteQueryMatch]:
+    def match_bare(self, raw: str) -> SiteQueryMatch | None:
         """Try to interpret an un-prefixed, non-URL query as belonging
         to this site (e.g. RoyalRoad/ScribbleHub's shared '{id}/{name}'
         shorthand, or a bare numeric id). Return None if this site has

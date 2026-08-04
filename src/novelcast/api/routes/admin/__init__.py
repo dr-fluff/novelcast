@@ -107,7 +107,7 @@ def create_pattern(
     try:
         return svc.add_pattern(body.pattern, body.description)
     except ValueError as e:
-        raise HTTPException(status_code=422, detail=str(e))
+        raise HTTPException(status_code=422, detail=str(e)) from e
 
 
 @router.patch("/chapter-patterns/{pattern_id}")
@@ -131,7 +131,7 @@ def patch_pattern(
                 body.description if body.description is not None else row["description"],
             )
         except ValueError as e:
-            raise HTTPException(status_code=422, detail=str(e))
+            raise HTTPException(status_code=422, detail=str(e)) from e
     return {"ok": True}
 
 
@@ -153,7 +153,7 @@ def test_pattern(
     try:
         return svc.test_pattern(body.pattern, body.samples)
     except ValueError as e:
-        raise HTTPException(status_code=422, detail=str(e))
+        raise HTTPException(status_code=422, detail=str(e)) from e
 
 
 # ── Health ────────────────────────────────────────────────────────────────

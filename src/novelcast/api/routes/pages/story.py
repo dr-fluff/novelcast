@@ -57,7 +57,7 @@ def story(
 
         first_unread = next((c["id"] for c in chapter_list if c["id"] not in read_chapters), None)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
     story_preferences = {
         "chapter_sort": "asc",

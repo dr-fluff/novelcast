@@ -1,124 +1,145 @@
 {# novelcast/templates/macros/settings_fields.html #}
-
 {% macro render_field(section, key, meta, value, hide_label=false) %}
-
-  {% set field_name = section ~ "." ~ key %}
-  {% set field_id   = (section ~ "_" ~ key) | replace(".", "_") %}
-
-  {# ── TEXT / URL / EMAIL / PASSWORD ── #}
-  {% if meta.type in ["text", "url", "email", "password"] %}
-
-    {% if not hide_label %}
-    <label for="{{ field_id }}">
-      {{ meta.label | default(key | replace("_", " ") | capitalize) }}
-    </label>
-    {% endif %}
-    <input
-      type="{{ meta.type }}"
-      id="{{ field_id }}"
-      name="{{ field_name }}"
-      value="{{ value | default('') }}"
-      {% if meta.placeholder is defined %}placeholder="{{ meta.placeholder }}"{% endif %}
-      {% if meta.required is defined and meta.required %}required{% endif %}
-    />
-
-  {# ── NUMBER ── #}
-  {% elif meta.type == "number" %}
-
-    {% if not hide_label %}
-    <label for="{{ field_id }}">
-      {{ meta.label | default(key | replace("_", " ") | capitalize) }}
-    </label>
-    {% endif %}
-    <input
-      type="number"
-      id="{{ field_id }}"
-      name="{{ field_name }}"
-      value="{{ value | default(meta.default | default(0)) }}"
-      {% if meta.min is defined %}min="{{ meta.min }}"{% endif %}
-      {% if meta.max is defined %}max="{{ meta.max }}"{% endif %}
-      {% if meta.step is defined %}step="{{ meta.step }}"{% endif %}
-    />
-    {% if meta.min is defined or meta.max is defined %}
-    <span class="field-sub-hint">
-      {% if meta.min is defined %}Min: {{ meta.min }}{% endif %}
-      {% if meta.max is defined %} Max: {{ meta.max }}{% endif %}
-    </span>
-    {% endif %}
-
-  {# ── SELECT ── #}
-  {% elif meta.type == "select" %}
-
-    {% if not hide_label %}
-    <label for="{{ field_id }}">
-      {{ meta.label | default(key | replace("_", " ") | capitalize) }}
-    </label>
-    {% endif %}
-    <select id="{{ field_id }}" name="{{ field_name }}">
-      {% for option in meta.options %}
-        {% if option is mapping %}
-          <option value="{{ option.value }}"
-            {% if option.value == value %}selected{% endif %}>
-            {{ option.label }}
-          </option>
-        {% else %}
-          <option value="{{ option }}"
-            {% if option == value %}selected{% endif %}>
-            {{ option | capitalize }}
-          </option>
+    {% set field_name = section ~ "." ~ key %}
+    {% set field_id = (section ~ "_" ~ key) | replace(".", "_") %}
+    {# ── TEXT
+/ URL / EMAIL / PASSWORD ── #}
+    {% if meta.type in ["text", "url", "email", "password"] %}
+        {% if not hide_label %}
+            <label for="{{ field_id }}"> {{ meta.label | default(key | replace("_", " ") | capitalize) }} </label>
         {% endif %}
-      {% endfor %}
-    </select>
+        <input
+            type="{{ meta.type }}"
+            id="{{ field_id }}"
+            name="{{ field_name }}"
+            value="{{ value | default('') }}"
+            {%
+                if
+                meta.placeholder
+                is
+                defined
+            %}
+                placeholder="{{ meta.placeholder }}"
+            {% endif %}
+            {%
+                if
+                meta.required
+                is
+                defined
+                and
+                meta.required
+            %}
+                required
+            {% endif %}
+        />
 
-  {# ── BOOLEAN / TOGGLE ── #}
-  {% elif meta.type in ["bool", "boolean", "toggle", "checkbox"] %}
+        {# ── NUMBER ── #}
+    {% elif meta.type == "number" %}
+        {% if not hide_label %}
+            <label for="{{ field_id }}"> {{ meta.label | default(key | replace("_", " ") | capitalize) }} </label>
+        {% endif %}
+        <input
+            type="number"
+            id="{{ field_id }}"
+            name="{{ field_name }}"
+            value="{{ value | default(meta.default | default(0)) }}"
+            {%
+                if
+                meta.min
+                is
+                defined
+            %}
+                min="{{ meta.min }}"
+            {% endif %}
+            {%
+                if
+                meta.max
+                is
+                defined
+            %}
+                max="{{ meta.max }}"
+            {% endif %}
+            {%
+                if
+                meta.step
+                is
+                defined
+            %}
+                step="{{ meta.step }}"
+            {% endif %}
+        />
+        {% if meta.min is defined or meta.max is defined %}
+            <span class="field-sub-hint">
+                {% if meta.min is defined %}Min: {{ meta.min }}{% endif %}
+                {% if meta.max is defined %}
+                    Max: {{ meta.max }}
+                {% endif %}
+            </span>
+        {% endif %}
+        {# ── SELECT ── #}
+    {% elif meta.type == "select" %}
+        {% if not hide_label %}
+            <label for="{{ field_id }}"> {{ meta.label | default(key | replace("_", " ") | capitalize) }} </label>
+        {% endif %}
+        <select id="{{ field_id }}" name="{{ field_name }}">
+            {% for option in meta.options %}{% if option is mapping %}
+                <option value="{{ option.value }}" {% if option.value="" ="value" %}selected{% endif %}>
+                    {{ option.label }}
+                </option>
+            {% else %}
+                <option value="{{ option }}" {% if option="" ="value" %}selected{% endif %}>
+                    {{ option | capitalize }}
+                </option>
+            {% endif %}{% endfor %}
+        </select>
 
-    <input type="hidden" name="{{ field_name }}" value="0" />
-    <label class="toggle" title="{{ meta.label | default(key) }}">
-      <input
-        type="checkbox"
-        name="{{ field_name }}"
-        value="1"
-        {% if value in [true, 1, "1", "true", "True", "on", "yes"] %}checked{% endif %}
-      />
-      <span class="slider"></span>
-    </label>
-    {% if not hide_label %}
-    <span class="toggle-label">
-      {{ meta.label | default(key | replace("_", " ") | capitalize) }}
-    </span>
+        {# ── BOOLEAN / TOGGLE ── #}
+    {% elif meta.type in ["bool", "boolean", "toggle", "checkbox"] %}
+        <input type="hidden" name="{{ field_name }}" value="0" />
+        <label class="toggle" title="{{ meta.label | default(key) }}">
+            <input
+                type="checkbox"
+                name="{{ field_name }}"
+                value="1"
+                {%
+                    if
+                    value
+                    in
+                    [true, 1, "1", "true", "True", "on", "yes"]
+                %}
+                    checked
+                {% endif %}
+            />
+            <span class="slider"></span>
+        </label>
+        {% if not hide_label %}
+            <span class="toggle-label"> {{ meta.label | default(key | replace("_", " ") | capitalize) }} </span>
+        {% endif %}
+        {# ── TEXTAREA ── #}
+    {% elif meta.type == "textarea" %}
+        {% if not hide_label %}
+            <label for="{{ field_id }}"> {{ meta.label | default(key | replace("_", " ") | capitalize) }} </label>
+        {% endif %}
+        <textarea
+            id="{{ field_id }}"
+            name="{{ field_name }}"
+            rows="{{ meta.rows | default(4) }}"
+            {%
+                if
+                meta.placeholder
+                is
+                defined
+            %}
+                placeholder="{{ meta.placeholder }}"
+            {% endif %}
+        >
+{{ value | default('') }}</textarea>
+
+        {# ── FALLBACK: plain text ── #}
+    {% else %}
+        {% if not hide_label %}
+            <label for="{{ field_id }}"> {{ meta.label | default(key | replace("_", " ") | capitalize) }} </label>
+        {% endif %}
+        <input type="text" id="{{ field_id }}" name="{{ field_name }}" value="{{ value | default('') }}" />
     {% endif %}
-
-  {# ── TEXTAREA ── #}
-  {% elif meta.type == "textarea" %}
-
-    {% if not hide_label %}
-    <label for="{{ field_id }}">
-      {{ meta.label | default(key | replace("_", " ") | capitalize) }}
-    </label>
-    {% endif %}
-    <textarea
-      id="{{ field_id }}"
-      name="{{ field_name }}"
-      rows="{{ meta.rows | default(4) }}"
-      {% if meta.placeholder is defined %}placeholder="{{ meta.placeholder }}"{% endif %}
-    >{{ value | default('') }}</textarea>
-
-  {# ── FALLBACK: plain text ── #}
-  {% else %}
-
-    {% if not hide_label %}
-    <label for="{{ field_id }}">
-      {{ meta.label | default(key | replace("_", " ") | capitalize) }}
-    </label>
-    {% endif %}
-    <input
-      type="text"
-      id="{{ field_id }}"
-      name="{{ field_name }}"
-      value="{{ value | default('') }}"
-    />
-
-  {% endif %}
-
 {% endmacro %}

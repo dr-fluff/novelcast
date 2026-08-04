@@ -5,7 +5,7 @@ import logging
 from collections import OrderedDict
 from pathlib import Path
 
-from novelcast.core.defaults import SECTION_FANFICFARE, FFF_CONFIG_PATH
+from novelcast.core.defaults import FFF_CONFIG_PATH, SECTION_FANFICFARE
 
 logger = logging.getLogger(__name__)
 

@@ -1,7 +1,6 @@
 import json
 import re
-from datetime import datetime, timezone
-
+from datetime import UTC, datetime
 from pathlib import Path
 
 from sqlalchemy import func, select
@@ -119,7 +118,7 @@ class StoriesRepository(BaseRepository):
                     set_={
                         "title": title,
                         "author": author,
-                        "last_updated": datetime.now(timezone.utc),
+                        "last_updated": datetime.now(UTC),
                     },
                 )
             )
@@ -131,7 +130,7 @@ class StoriesRepository(BaseRepository):
             if story:
                 story.title = title
                 story.author = author
-                story.last_updated = datetime.now(timezone.utc)
+                story.last_updated = datetime.now(UTC)
 
     def update_full_metadata(
         self,
@@ -218,7 +217,7 @@ class StoriesRepository(BaseRepository):
             apply_relation("tags", Tag, tags)
 
             story.locked_fields = json.dumps(sorted(locked)) if locked else None
-            story.last_updated = datetime.now(timezone.utc)
+            story.last_updated = datetime.now(UTC)
             db.flush()
             return _to_dict(story)
 

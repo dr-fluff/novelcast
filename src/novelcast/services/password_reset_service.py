@@ -1,7 +1,7 @@
 # novelcast/services/password_reset_service.py
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from novelcast.auth.password_reset import generate_reset_token
@@ -26,7 +26,7 @@ class PasswordResetService:
             return None
 
         token = generate_reset_token()
-        expires_at = (datetime.now(timezone.utc) + timedelta(hours=self.TOKEN_TTL_HOURS)).strftime("%Y-%m-%d %H:%M:%S")
+        expires_at = (datetime.now(UTC) + timedelta(hours=self.TOKEN_TTL_HOURS)).strftime("%Y-%m-%d %H:%M:%S")
 
         self.repo.create_token(user["id"], token, expires_at)
 
@@ -41,9 +41,9 @@ class PasswordResetService:
 
         expires_at = datetime.fromisoformat(record["expires_at"])
         if expires_at.tzinfo is None:
-            expires_at = expires_at.replace(tzinfo=timezone.utc)
+            expires_at = expires_at.replace(tzinfo=UTC)
 
-        if expires_at < datetime.now(timezone.utc):
+        if expires_at < datetime.now(UTC):
             return False
 
         self.users_repo.update(record["user_id"], password_hash=hash_password(new_password))

@@ -1,0 +1,63 @@
+<!-- novelcast/templates/pages/stats.html -->
+{% extends "layouts/base.html" %} {% block title %}Stats - NovelCast{% endblock %}
+{% block head %}
+    <link rel="stylesheet" href="/static/css/pages/stats.css" />
+{% endblock %}
+{% block content %}
+    {% include "partials/library_header.html" %}
+
+    <div class="pg-stats">
+        <div class="pg-header">
+            <h1 class="pg-title">Stats</h1>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stats-card">
+                <span class="stats-card__label">Read time</span>
+                <span class="stats-card__value">{{ total_read_hours }}<span class="stats-card__unit">h</span></span>
+            </div>
+
+            <div class="stats-card">
+                <span class="stats-card__label">Devices</span>
+                <span class="stats-card__value">{{ device_count }}</span>
+            </div>
+
+            <div class="stats-card">
+                <span class="stats-card__label">Chapters read</span>
+                <span class="stats-card__value">{{ chapters_read }}</span>
+            </div>
+
+            <div class="stats-card">
+                <span class="stats-card__label">Stories read</span>
+                <span class="stats-card__value">{{ stories_read }}</span>
+            </div>
+
+            <div class="stats-card">
+                <span class="stats-card__label">Reading speed</span>
+                <span class="stats-card__value">
+                    {% if reading_speed_wpm is not none %}
+                        {{ reading_speed_wpm }}<span class="stats-card__unit">wpm</span>
+                    {% else %}
+                        <span class="stats-card__value--empty">—</span>
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+
+        <div class="section-card">
+            <div class="section-card__head">
+                <span class="section-card__title">Activity</span>
+            </div>
+            <div class="heatmap-wrap">
+                <div class="heatmap-grid">
+                    {% for day in heatmap_days %}
+                        <div
+                            class="heatmap-day{% if day.seconds > 0 %}heatmap-day--active{% endif %}"
+                            title="{{ day.date }}{% if day.seconds > 0 %}— {{ (day.seconds / 60) | round | int }} min{% endif %}"
+                        ></div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

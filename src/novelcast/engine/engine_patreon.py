@@ -4,7 +4,6 @@ import os
 import re
 import tempfile
 from pathlib import Path
-from typing import Dict, List, Optional
 from urllib.parse import parse_qs, urlparse
 
 import requests
@@ -98,7 +97,7 @@ class PatreonEngine:
             "Cookie": f"session_id={self._cookie()}",
         }
 
-    def validate_settings(self, test_oauth: bool = False) -> tuple[bool, Optional[str]]:
+    def validate_settings(self, test_oauth: bool = False) -> tuple[bool, str | None]:
         try:
             self._cookie()
         except ValueError as e:
@@ -127,8 +126,8 @@ class PatreonEngine:
         self,
         url: str,
         progress_callback=None,
-        output_dir: Optional[str] = None,
-        story_match: Optional[str] = None,
+        output_dir: str | None = None,
+        story_match: str | None = None,
         include_locked: bool = False,
     ) -> dict:
         logger.info("Starting Patreon fetch for URL: %s", url)
@@ -175,7 +174,7 @@ class PatreonEngine:
 
         except Exception as e:
             logger.error("Patreon fetch failed: %s", e, exc_info=True)
-            raise RuntimeError(f"Failed to fetch from Patreon: {e}")
+            raise RuntimeError(f"Failed to fetch from Patreon: {e}") from e
 
     def check_access(self, url: str) -> dict:
         campaign_id, creator_name = self._resolve_campaign(url)
@@ -192,7 +191,7 @@ class PatreonEngine:
             "fully_subscribed": viewable == len(posts) if posts else False,
         }
 
-    def check_updates(self, url: str, story_match: Optional[str] = None) -> dict:
+    def check_updates(self, url: str, story_match: str | None = None) -> dict:
         campaign_id, creator_name = self._resolve_campaign(url)
         posts = self._fetch_all_posts(campaign_id, max_posts=5)
         posts = [p for p in posts if p.get(PATREON_FIELD_CURRENT_USER_CAN_VIEW, True)]
@@ -213,7 +212,7 @@ class PatreonEngine:
             },
         )
 
-    def _extract_creator_from_url(self, url: str) -> Optional[str]:
+    def _extract_creator_from_url(self, url: str) -> str | None:
         parsed = urlparse(url)
         hostname = (parsed.hostname or "").lower()
         if hostname not in {"patreon.com", "www.patreon.com"}:
@@ -248,7 +247,7 @@ class PatreonEngine:
             )
             resp.raise_for_status()
         except requests.RequestException as e:
-            raise RuntimeError(f"Failed to load creator page for '{creator}': {e}")
+            raise RuntimeError(f"Failed to load creator page for '{creator}': {e}") from e
 
         campaign_id = self._extract_campaign_id(resp.text)
         if not campaign_id:
@@ -259,7 +258,7 @@ class PatreonEngine:
 
         return campaign_id, creator
 
-    def _extract_campaign_id(self, page: str) -> Optional[str]:
+    def _extract_campaign_id(self, page: str) -> str | None:
         patterns = [
             r'"campaign":\{"data":\{"id":"(\d+)"',
             r'\\"campaign\\":\{\\"data\\":\{\\"id\\":\\"(\d+)\\"',
@@ -270,7 +269,7 @@ class PatreonEngine:
                 return match.group(1)
         return None
 
-    def _build_posts_url(self, campaign_id: str, cursor: Optional[str] = None) -> str:
+    def _build_posts_url(self, campaign_id: str, cursor: str | None = None) -> str:
         url = (
             f"{self.ROOT}/api/posts"
             "?include=campaign,attachments,attachments_media"
@@ -285,7 +284,7 @@ class PatreonEngine:
             url += f"&page[cursor]={cursor}"
         return url
 
-    def _fetch_all_posts(self, campaign_id: str, max_posts: Optional[int] = None) -> List[Dict]:
+    def _fetch_all_posts(self, campaign_id: str, max_posts: int | None = None) -> list[dict]:
         posts = []
         url = self._build_posts_url(campaign_id)
 
@@ -295,7 +294,7 @@ class PatreonEngine:
                 resp.raise_for_status()
                 data = resp.json()
             except requests.RequestException as e:
-                raise RuntimeError(f"Failed to fetch posts: {e}")
+                raise RuntimeError(f"Failed to fetch posts: {e}") from e
 
             included = self._transform_included(data.get("included", []))
 
@@ -309,13 +308,13 @@ class PatreonEngine:
         logger.info("Fetched %d posts", len(posts))
         return posts
 
-    def _transform_included(self, included: List[Dict]) -> Dict[str, Dict]:
-        result: Dict[str, Dict] = {}
+    def _transform_included(self, included: list[dict]) -> dict[str, dict]:
+        result: dict[str, dict] = {}
         for item in included:
             result.setdefault(item["type"], {})[item["id"]] = item.get("attributes", {})
         return result
 
-    def _flatten_post(self, raw_post: Dict, included: Dict[str, Dict]) -> Dict:
+    def _flatten_post(self, raw_post: dict, included: dict[str, dict]) -> dict:
         attrs = dict(raw_post.get("attributes", {}))
         attrs[PATREON_FIELD_ID] = raw_post.get("id")
 
@@ -329,7 +328,7 @@ class PatreonEngine:
 
         return attrs
 
-    def _resolve_relationship(self, relationships: Dict, included: Dict[str, Dict], key: str) -> List[Dict]:
+    def _resolve_relationship(self, relationships: dict, included: dict[str, dict], key: str) -> list[dict]:
         rel = relationships.get(key)
         if not rel or not rel.get("data"):
             return []
@@ -340,7 +339,7 @@ class PatreonEngine:
                 out.append(attrs)
         return out
 
-    def _filter_posts_for_story(self, posts: List[Dict], story_match: str) -> List[Dict]:
+    def _filter_posts_for_story(self, posts: list[dict], story_match: str) -> list[dict]:
         try:
             pattern = re.compile(story_match, re.I)
         except re.error as e:
@@ -377,10 +376,10 @@ class PatreonEngine:
             logger.error("Failed to download file %s -> %s: %s", url, output_path, e, exc_info=True)
             return False
 
-    def _dedupe_attachments(self, attachments: List[Dict]) -> List[Dict]:
+    def _dedupe_attachments(self, attachments: list[dict]) -> list[dict]:
         """If a PDF and an EPUB share the same base filename, drop the PDF —
         EPUB is preferred for better structure/formatting."""
-        by_stem: Dict[str, List[tuple]] = {}
+        by_stem: dict[str, list[tuple]] = {}
         for a in attachments:
             filename = a.get(PATREON_FIELD_FILE_NAME) or ""
             ext = Path(filename).suffix.lower()
@@ -388,7 +387,7 @@ class PatreonEngine:
             by_stem.setdefault(stem, []).append((ext, a))
 
         result = []
-        for stem, items in by_stem.items():
+        for _stem, items in by_stem.items():
             exts = {ext for ext, _ in items}
             if EXT_PDF in exts and EXT_EPUB in exts:
                 result.extend(a for ext, a in items if ext != EXT_PDF)
@@ -396,7 +395,7 @@ class PatreonEngine:
                 result.extend(a for _, a in items)
         return result
 
-    def _get_raw_post_content(self, post: Dict) -> tuple[str, str]:
+    def _get_raw_post_content(self, post: dict) -> tuple[str, str]:
         """Returns (raw_content, format). No interpretation — parser handles it."""
         if post.get(PATREON_FIELD_CONTENT):
             return post[PATREON_FIELD_CONTENT], "html"
@@ -405,12 +404,12 @@ class PatreonEngine:
             return cjs, "tiptap_json"
         return "", "html"
 
-    def _extract_inline_image_urls(self, tiptap_json_str: str) -> List[str]:
+    def _extract_inline_image_urls(self, tiptap_json_str: str) -> list[str]:
         try:
             doc = json.loads(tiptap_json_str)
         except Exception:
             return []
-        urls: List[str] = []
+        urls: list[str] = []
 
         def walk(node):
             if isinstance(node, dict):
@@ -427,7 +426,7 @@ class PatreonEngine:
         walk(doc)
         return urls
 
-    def _collect_post_data(self, posts: List[Dict], output_dir: str, progress_callback=None) -> List[Dict]:
+    def _collect_post_data(self, posts: list[dict], output_dir: str, progress_callback=None) -> list[dict]:
         """Download everything from each post — text, PDFs, EPUBs, images —
         without interpreting any of it. Videos are skipped entirely. All
         interpretation (chapter splitting, format conversion) is the parser's
@@ -443,7 +442,7 @@ class PatreonEngine:
 
                 raw_content, content_format = self._get_raw_post_content(post)
 
-                inline_images: Dict[str, str] = {}
+                inline_images: dict[str, str] = {}
                 if content_format == "tiptap_json" and raw_content:
                     for idx, img_url in enumerate(self._extract_inline_image_urls(raw_content)):
                         ext = Path(urlparse(img_url).path).suffix or EXT_JPG
@@ -505,8 +504,8 @@ class PatreonEngine:
     def list_posts_with_access(
         self,
         url: str,
-        story_match: Optional[str] = None,
-        max_posts: Optional[int] = None,
+        story_match: str | None = None,
+        max_posts: int | None = None,
     ) -> dict:
         """Fetch a creator's posts with per-post lock status, optionally filtered
         by a title regex. Used by the Add Story preview.

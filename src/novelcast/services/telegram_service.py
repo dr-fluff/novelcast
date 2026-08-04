@@ -3,18 +3,17 @@
 
 import asyncio
 import logging
-from typing import Optional
 
 import httpx
 
 from novelcast.services.telegram_commands import (
+    COMMAND_KEYS_BY_TEXT,
     DOWNLOAD_KEY,
     HELP_KEY,
     STATUS_KEY,
     STORIES_KEY,
-    UPDATE_KEY,
-    COMMAND_KEYS_BY_TEXT,
     TELEGRAM_COMMANDS,
+    UPDATE_KEY,
     build_bot_commands_payload,
     build_help_text,
 )
@@ -36,8 +35,8 @@ class TelegramService:
         self.downloads = download_service
         self.sync = sync_service
 
-        self._task: Optional[asyncio.Task] = None
-        self._loop: Optional[asyncio.AbstractEventLoop] = None
+        self._task: asyncio.Task | None = None
+        self._loop: asyncio.AbstractEventLoop | None = None
         self._offset = 0
 
         self._disabled = False  # permanent auth failure
@@ -58,10 +57,10 @@ class TelegramService:
     def _tg(self) -> dict:
         return self.settings.get_resolved_server_settings().get("telegram", {})
 
-    def _token(self) -> Optional[str]:
+    def _token(self) -> str | None:
         return self._tg().get("bot_token")
 
-    def _chat_id(self) -> Optional[str]:
+    def _chat_id(self) -> str | None:
         return self._tg().get("chat_id")
 
     def _enabled(self) -> bool:

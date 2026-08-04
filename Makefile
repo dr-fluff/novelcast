@@ -36,11 +36,11 @@ ports:
 
 
 lint:
-	$(UV) run ruff src
+	$(UV) run ruff check .
 
 
 format:
-	$(UV) run black src
+	$(NPM) run format
 
 
 test:

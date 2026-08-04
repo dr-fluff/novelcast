@@ -6,12 +6,11 @@ from queue import Queue
 from novelcast.core import setting_keys
 from novelcast.core.defaults import (
     REQUIRED_USER_SETTINGS,
+    SECTION_RSS,
     SECTION_TELEGRAM,
     SETTINGS,
     USER_SETTINGS_SCHEMA,
-    SECTION_RSS,
 )
-
 from novelcast.db.engine import engine
 from novelcast.db.init_db import init_db
 from novelcast.db.repositories import (
@@ -57,8 +56,8 @@ from novelcast.services import (
     SettingsService,
     StoryDownloadService,
     StoryService,
-    UserService,
     TelegramService,
+    UserService,
 )
 from novelcast.services.chapter_filter_service import ChapterFilterService
 from novelcast.services.stats_service import StatsService

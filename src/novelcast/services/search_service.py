@@ -1,6 +1,5 @@
 import re
 from dataclasses import dataclass
-from typing import Optional
 
 from novelcast.services.site_adapters import registry
 
@@ -14,8 +13,8 @@ class ParsedQuery:
     target: str  # fiction | author | auto
     identifier: str
     lookup_type: str  # id | text | url
-    site: Optional[str] = None
-    resolved_url: Optional[str] = None
+    site: str | None = None
+    resolved_url: str | None = None
 
 
 @dataclass
@@ -23,7 +22,7 @@ class SearchResult:
     site: str
     kind: str  # fiction_search | author_search | fiction_detail | author_profile
     url: str
-    label: Optional[str] = None
+    label: str | None = None
 
 
 # ---------------------------------------------------------------------------

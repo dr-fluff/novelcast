@@ -17,22 +17,26 @@ const PAGE_SIZE = 15;
 function createPaginator({ getItems, pagerEl, pageSize = PAGE_SIZE }) {
     let currentPage = 1;
 
-    function items()      { return getItems(); }
-    function totalPages() { return Math.max(1, Math.ceil(items().length / pageSize)); }
+    function items() {
+        return getItems();
+    }
+    function totalPages() {
+        return Math.max(1, Math.ceil(items().length / pageSize));
+    }
 
     function show(page) {
-        const all   = items();
+        const all = items();
         const total = Math.max(1, Math.ceil(all.length / pageSize));
         currentPage = Math.max(1, Math.min(page, total));
 
         const start = (currentPage - 1) * pageSize;
-        const end   = start + pageSize;
+        const end = start + pageSize;
 
         all.forEach((el, i) => {
             if (i >= start && i < end) {
-                el.classList.remove("paged-hidden");
+                el.classList.remove('paged-hidden');
             } else {
-                el.classList.add("paged-hidden");
+                el.classList.add('paged-hidden');
             }
         });
 
@@ -41,10 +45,10 @@ function createPaginator({ getItems, pagerEl, pageSize = PAGE_SIZE }) {
 
     function renderButtons(total) {
         if (total <= 1) {
-            pagerEl.style.display = "none";
+            pagerEl.style.display = 'none';
             return;
         }
-        pagerEl.style.display = "";
+        pagerEl.style.display = '';
 
         const cur = currentPage;
 
@@ -61,20 +65,20 @@ function createPaginator({ getItems, pagerEl, pageSize = PAGE_SIZE }) {
         }
         const sorted = [...visible].sort((a, b) => a - b);
 
-        let html = `<button class="page-btn" ${cur === 1 ? "disabled" : ""} data-page="${cur - 1}" aria-label="Previous">&#8249;</button>`;
+        let html = `<button class="page-btn" ${cur === 1 ? 'disabled' : ''} data-page="${cur - 1}" aria-label="Previous">&#8249;</button>`;
 
         let prev = 0;
         for (const p of sorted) {
             if (p - prev > 1) html += `<span class="page-ellipsis">…</span>`;
-            html += `<button class="page-btn ${p === cur ? "active" : ""}" data-page="${p}">${p}</button>`;
+            html += `<button class="page-btn ${p === cur ? 'active' : ''}" data-page="${p}">${p}</button>`;
             prev = p;
         }
 
-        html += `<button class="page-btn" ${cur === total ? "disabled" : ""} data-page="${cur + 1}" aria-label="Next">&#8250;</button>`;
+        html += `<button class="page-btn" ${cur === total ? 'disabled' : ''} data-page="${cur + 1}" aria-label="Next">&#8250;</button>`;
 
         pagerEl.innerHTML = html;
-        pagerEl.querySelectorAll(".page-btn[data-page]").forEach(btn => {
-            btn.addEventListener("click", () => show(parseInt(btn.dataset.page, 10)));
+        pagerEl.querySelectorAll('.page-btn[data-page]').forEach((btn) => {
+            btn.addEventListener('click', () => show(parseInt(btn.dataset.page, 10)));
         });
     }
 
@@ -82,7 +86,9 @@ function createPaginator({ getItems, pagerEl, pageSize = PAGE_SIZE }) {
     const api = {
         show,
         // Call after external reorder (e.g. cycleSort) to re-apply current page
-        refresh() { show(1); },
+        refresh() {
+            show(1);
+        },
     };
 
     show(1);
@@ -92,24 +98,24 @@ function createPaginator({ getItems, pagerEl, pageSize = PAGE_SIZE }) {
 /* ── Chapter pagination ───────────────────────────────────────────────── */
 
 (function initChapterPagination() {
-    const list = document.getElementById("chapterList");
+    const list = document.getElementById('chapterList');
     if (!list) return;
-    if (list.querySelectorAll(".chapter-item").length <= PAGE_SIZE) return;
+    if (list.querySelectorAll('.chapter-item').length <= PAGE_SIZE) return;
 
-    const pagerEl = document.createElement("div");
-    pagerEl.className = "pagination";
-    pagerEl.id = "chapterPager";
-    list.insertAdjacentElement("afterend", pagerEl);
+    const pagerEl = document.createElement('div');
+    pagerEl.className = 'pagination';
+    pagerEl.id = 'chapterPager';
+    list.insertAdjacentElement('afterend', pagerEl);
 
     // Re-query each time so cycleSort() DOM reordering is respected
     const paginator = createPaginator({
-        getItems: () => [...list.querySelectorAll(".chapter-item")],
+        getItems: () => [...list.querySelectorAll('.chapter-item')],
         pagerEl,
     });
 
     // Hook into cycleSort if it exists: after sort, reset to page 1
     const _origCycleSort = window.cycleSort;
-    if (typeof _origCycleSort === "function") {
+    if (typeof _origCycleSort === 'function') {
         window.cycleSort = function (...args) {
             _origCycleSort.apply(this, args);
             // Small delay so the sort has time to reorder the DOM
@@ -124,26 +130,26 @@ function createPaginator({ getItems, pagerEl, pageSize = PAGE_SIZE }) {
 /* ── File table pagination ────────────────────────────────────────────── */
 
 (function initFilePagination() {
-    const tbody = document.querySelector(".file-table tbody");
+    const tbody = document.querySelector('.file-table tbody');
     if (!tbody) return;
-    if (tbody.querySelectorAll(".file-row").length <= PAGE_SIZE) return;
+    if (tbody.querySelectorAll('.file-row').length <= PAGE_SIZE) return;
 
-    const body = tbody.closest(".collapsible-body");
+    const body = tbody.closest('.collapsible-body');
     if (!body) return;
 
-    const pagerEl = document.createElement("div");
-    pagerEl.className = "pagination";
-    pagerEl.id = "filePager";
+    const pagerEl = document.createElement('div');
+    pagerEl.className = 'pagination';
+    pagerEl.id = 'filePager';
     body.appendChild(pagerEl);
 
     const paginator = createPaginator({
-        getItems: () => [...tbody.querySelectorAll(".file-row")],
+        getItems: () => [...tbody.querySelectorAll('.file-row')],
         pagerEl,
     });
 
     // After deleteFile removes a row, refresh pagination
     const _origDeleteFile = window.deleteFile;
-    if (typeof _origDeleteFile === "function") {
+    if (typeof _origDeleteFile === 'function') {
         window.deleteFile = async function (...args) {
             await _origDeleteFile.apply(this, args);
             paginator.refresh();

@@ -7,229 +7,226 @@
 {% endblock %}
 
 {% block content %}
+    {% from "macros/settings_fields.html" import render_field %}
+    {% include "partials/library_header.html" %}
 
-{% from "macros/settings_fields.html" import render_field %}
-{% include "partials/library_header.html" %}
-
-<div class="pg-settings">
-
-  <!-- PAGE HEADER -->
-  <div class="pg-header">
-    <h1 class="pg-title">Settings</h1>
-    <button type="submit" form="settings-form" class="btn-primary">Save All</button>
-  </div>
-
-  <!-- TAB BAR -->
-  <div class="tab-bar">
-    {% for section_name in schema.keys() %}
-    <button
-      class="tab-btn{% if loop.first %} active{% endif %}"
-      data-tab="{{ section_name }}"
-      type="button">
-      {{ section_name | capitalize }}
-    </button>
-    {% endfor %}
-
-    {% if user and user.is_root %}
-    <button class="tab-btn" data-tab="users" type="button">Users</button>
-    {% endif %}
-  </div>
-
-  <!-- FORM -->
-  <form method="post" action="/settings" id="settings-form">
-    <input type="hidden" name="_active_tab" id="active-tab" value="" />
-
-    {% for section_name, section in schema.items() %}
-    <div class="tab-panel{% if loop.first %} active{% endif %}" data-panel="{{ section_name }}">
-
-      {% set section_values = server_settings.get(section_name, {}) %}
-
-      {% for scope_name, scope_fields in section_values.items() %}
-        {% for key, value in scope_fields.items() %}
-          {% if section[key] is defined %}
-            {% set meta = section[key] %}
-
-            {% if meta.type != "site_map" %}
-
-              {# ── Regular field ── #}
-              <div class="section-card">
-                <div class="field-card">
-
-                  {# LEFT: title + optional description #}
-                  <div class="field-card__label-col">
-                    <span class="field-label">
-                      {{ meta.label | default(key | replace("_", " ") | capitalize) }}
-                    </span>
-                    {% if meta.description is defined %}
-                    <span class="field-hint">{{ meta.description }}</span>
-                    {% endif %}
-                  </div>
-
-                  {# RIGHT: input — pass hide_label=true so the macro skips its own <label> #}
-                  <div class="field-card__input-col">
-                    {{ render_field(section_name, key, meta, value, hide_label=true) }}
-                  </div>
-
-                </div>
-              </div>
-
-            {% else %}
-
-              {# ── Site map ── #}
-              {% set site_values = scope_fields %}
-              {% for domain, defaults in meta.default.items() %}
-              <div class="section-card">
-                <div class="section-card__head">
-                  <span class="section-card__title">{{ domain }}</span>
-                </div>
-                {% set domain_values = site_values.get(domain, {}) %}
-                {% for field_key, field_meta in meta.fields.items() %}
-                  {% set field_value = domain_values.get(field_key, field_meta.default) %}
-                  <div class="field-card field-card--inner">
-                    <div class="field-card__label-col">
-                      <span class="field-label">
-                        {{ field_meta.label | default(field_key | replace("_", " ") | capitalize) }}
-                      </span>
-                      {% if field_meta.description is defined %}
-                      <span class="field-hint">{{ field_meta.description }}</span>
-                      {% endif %}
-                    </div>
-                    <div class="field-card__input-col">
-                      {{ render_field(
-                          section_name ~ "." ~ domain,
-                          field_key, field_meta, field_value,
-                          hide_label=true
-                      ) }}
-                    </div>
-                  </div>
-                {% endfor %}
-              </div>
-              {% endfor %}
-
-            {% endif %}
-          {% endif %}
-        {% endfor %}
-
-        {% if section_name == "telegram" %}
-              <div class="section-card">
-                <div class="field-card">
-                  <div class="field-card__label-col">
-                    <span class="field-label">Connection test</span>
-                    <span class="field-hint">Send a test message to confirm the bot is working.</span>
-                  </div>
-                  <div class="field-card__input-col">
-                    <button
-                      type="button"
-                      class="btn-secondary"
-                      hx-post="/api/admin/telegram/test"
-                      hx-target="#telegram-test-result"
-                      hx-swap="innerHTML"
-                    >Send Test Message</button>
-                    <div id="telegram-test-result" class="mt-2 text-sm"></div>
-                  </div>
-                </div>
-              </div>
-        {% endif %}
-
-        {% if section_name == "patreon" %}
-              <div class="section-card">
-                <div class="field-card">
-                  <div class="field-card__label-col">
-                    <span class="field-label">Credentials test</span>
-                    <span class="field-hint">Test your Patreon OAuth credentials to ensure they are valid.</span>
-                  </div>
-                  <div class="field-card__input-col">
-                    <button
-                      type="button"
-                      class="btn-secondary"
-                      hx-post="/api/admin/patreon/test"
-                      hx-target="#patreon-test-result"
-                      hx-swap="innerHTML"
-                    >Test Credentials</button>
-                    <div id="patreon-test-result" class="mt-2 text-sm"></div>
-                  </div>
-                </div>
-              </div>
-        {% endif %}
-
-      {% endfor %}
-
-    </div>
-    {% endfor %}
-
-    {# ── Users panel (admin only) ── #}
-    {% if user and user.is_root %}
-    <div class="tab-panel" data-panel="users">
-      <div class="section-card">
-        <div class="section-card__head">
-          <span class="section-card__title">Accounts</span>
+    <div class="pg-settings">
+        <!-- PAGE HEADER -->
+        <div class="pg-header">
+            <h1 class="pg-title">Settings</h1>
+            <button type="submit" form="settings-form" class="btn-primary">Save All</button>
         </div>
-        <table class="user-table">
-          <thead>
-            <tr><th>Username</th><th>Role</th><th>Actions</th></tr>
-          </thead>
-          <tbody>
-            {% for account in users %}
-            <tr>
-              <td>
-                <span class="user-avatar">{{ account.username[0] | upper }}</span>
-                {{ account.username }}
-              </td>
-              <td>
-                {% if account.is_root %}
-                  <span class="badge badge--admin">Admin</span>
-                {% else %}
-                  <span class="badge badge--user">User</span>
-                {% endif %}
-              </td>
-            </tr>
+
+        <!-- TAB BAR -->
+        <div class="tab-bar">
+            {% for section_name in schema.keys() %}
+                <button class="tab-btn{% if loop.first %}active{% endif %}" data-tab="{{ section_name }}" type="button">
+                    {{ section_name | capitalize }}
+                </button>
             {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      
 
-      </div>  {# closes tab-panel #}
+            {% if user and user.is_root %}
+                <button class="tab-btn" data-tab="users" type="button">Users</button>
+            {% endif %}
+        </div>
+
+        <!-- FORM -->
+        <form method="post" action="/settings" id="settings-form">
+            <input type="hidden" name="_active_tab" id="active-tab" value="" />
+
+            {% for section_name, section in schema.items() %}
+                <div class="tab-panel{% if loop.first %}active{% endif %}" data-panel="{{ section_name }}">
+                    {% set section_values = server_settings.get(section_name, {}) %}
+
+                    {% for scope_name, scope_fields in section_values.items() %}
+                        {% for key, value in scope_fields.items() %}
+                            {% if section[key] is defined %}
+                                {% set meta = section[key] %}
+
+                                {% if meta.type != "site_map" %}
+
+                                    {# ── Regular field ── #}
+                                    <div class="section-card">
+                                        <div class="field-card">
+                                            {# LEFT: title + optional description #}
+                                            <div class="field-card__label-col">
+                                                <span class="field-label">
+                                                    {{ meta.label | default(key | replace("_", " ") | capitalize) }}
+                                                </span>
+                                                {% if meta.description is defined %}
+                                                    <span class="field-hint">{{ meta.description }}</span>
+                                                {% endif %}
+                                            </div>
+                                            {# RIGHT: input — pass hide_label=true so the macro skips its own <label> #}
+                                            <div class="field-card__input-col">
+                                                {{ render_field(section_name, key, meta, value, hide_label=true) }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% else %}
+
+                                    {# ── Site map ── #}
+                                    {% set site_values = scope_fields %}
+                                    {% for domain, defaults in meta.default.items() %}
+                                        <div class="section-card">
+                                            <div class="section-card__head">
+                                                <span class="section-card__title">{{ domain }}</span>
+                                            </div>
+                                            {% set domain_values = site_values.get(domain, {}) %}
+                                            {% for field_key, field_meta in meta.fields.items() %}
+                                                {% set field_value = domain_values.get(field_key, field_meta.default) %}
+                                                <div class="field-card field-card--inner">
+                                                    <div class="field-card__label-col">
+                                                        <span class="field-label">
+                                                            {{ field_meta.label | default(field_key | replace("_", " ") | capitalize) }}
+                                                        </span>
+                                                        {% if field_meta.description is defined %}
+                                                            <span class="field-hint">{{ field_meta.description }}</span>
+                                                        {% endif %}
+                                                    </div>
+                                                    <div class="field-card__input-col">
+                                                        {{
+                                                            render_field(
+                                                                section_name ~ "." ~ domain,
+                                                                field_key, field_meta, field_value,
+                                                                hide_label=true
+                                                            )
+                                                        }}
+                                                    </div>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    {% endfor %}
+                                {% endif %}
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if section_name == "telegram" %}
+                            <div class="section-card">
+                                <div class="field-card">
+                                    <div class="field-card__label-col">
+                                        <span class="field-label">Connection test</span>
+                                        <span class="field-hint"
+                                            >Send a test message to confirm the bot is working.</span
+                                        >
+                                    </div>
+                                    <div class="field-card__input-col">
+                                        <button
+                                            type="button"
+                                            class="btn-secondary"
+                                            hx-post="/api/admin/telegram/test"
+                                            hx-target="#telegram-test-result"
+                                            hx-swap="innerHTML"
+                                        >
+                                            Send Test Message
+                                        </button>
+                                        <div id="telegram-test-result" class="mt-2 text-sm"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+
+                        {% if section_name == "patreon" %}
+                            <div class="section-card">
+                                <div class="field-card">
+                                    <div class="field-card__label-col">
+                                        <span class="field-label">Credentials test</span>
+                                        <span class="field-hint"
+                                            >Test your Patreon OAuth credentials to ensure they are valid.</span
+                                        >
+                                    </div>
+                                    <div class="field-card__input-col">
+                                        <button
+                                            type="button"
+                                            class="btn-secondary"
+                                            hx-post="/api/admin/patreon/test"
+                                            hx-target="#patreon-test-result"
+                                            hx-swap="innerHTML"
+                                        >
+                                            Test Credentials
+                                        </button>
+                                        <div id="patreon-test-result" class="mt-2 text-sm"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            {% endfor %}
+
+            {# ── Users panel (admin only) ── #}
+            {% if user and user.is_root %}
+                <div class="tab-panel" data-panel="users">
+                    <div class="section-card">
+                        <div class="section-card__head">
+                            <span class="section-card__title">Accounts</span>
+                        </div>
+                        <table class="user-table">
+                            <thead>
+                                <tr>
+                                    <th>Username</th>
+                                    <th>Role</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for account in users %}
+                                    <tr>
+                                        <td>
+                                            <span class="user-avatar">{{ account.username[0] | upper }}</span>
+                                            {{ account.username }}
+                                        </td>
+                                        <td>
+                                            {% if account.is_root %}
+                                                <span class="badge badge--admin">Admin</span>
+                                            {% else %}
+                                                <span class="badge badge--user">User</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {# closes tab-panel #}
+            {% endif %}
+        </form>
     </div>
-    {% endif %}
 
-  </form>
-</div>
+    <script>
+        (function () {
+            const tabs = document.querySelectorAll('.tab-btn');
+            const panels = document.querySelectorAll('.tab-panel');
+            const activeTabInput = document.querySelector('#active-tab');
 
-<script>
-(function () {
-  const tabs = document.querySelectorAll('.tab-btn');
-  const panels = document.querySelectorAll('.tab-panel');
-  const activeTabInput = document.querySelector('#active-tab');
+            function activateTab(tabName, updateHash = true) {
+                const tab = document.querySelector(`.tab-btn[data-tab="${tabName}"]`);
+                const panel = document.querySelector(`.tab-panel[data-panel="${tabName}"]`);
+                if (!tab || !panel) return;
 
-  function activateTab(tabName, updateHash = true) {
-    const tab = document.querySelector(`.tab-btn[data-tab="${tabName}"]`);
-    const panel = document.querySelector(`.tab-panel[data-panel="${tabName}"]`);
-    if (!tab || !panel) return;
+                tabs.forEach((t) => t.classList.remove('active'));
+                panels.forEach((p) => p.classList.remove('active'));
 
-    tabs.forEach(t => t.classList.remove('active'));
-    panels.forEach(p => p.classList.remove('active'));
+                tab.classList.add('active');
+                panel.classList.add('active');
 
-    tab.classList.add('active');
-    panel.classList.add('active');
+                if (activeTabInput) activeTabInput.value = tabName;
+                if (updateHash) history.replaceState(null, '', `#${encodeURIComponent(tabName)}`);
+            }
 
-    if (activeTabInput) activeTabInput.value = tabName;
-    if (updateHash) history.replaceState(null, '', `#${encodeURIComponent(tabName)}`);
-  }
+            const initialTab = decodeURIComponent(window.location.hash.replace(/^#/, ''));
+            if (initialTab) {
+                activateTab(initialTab, false);
+            } else if (tabs.length) {
+                activateTab(tabs[0].dataset.tab, false);
+            }
 
-  const initialTab = decodeURIComponent(window.location.hash.replace(/^#/, ''));
-  if (initialTab) {
-    activateTab(initialTab, false);
-  } else if (tabs.length) {
-    activateTab(tabs[0].dataset.tab, false);
-  }
-
-  tabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-      activateTab(tab.dataset.tab);
-    });
-  });
-})();
-</script>
-
+            tabs.forEach((tab) => {
+                tab.addEventListener('click', () => {
+                    activateTab(tab.dataset.tab);
+                });
+            });
+        })();
+    </script>
 {% endblock %}

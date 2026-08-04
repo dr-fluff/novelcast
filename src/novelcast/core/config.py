@@ -1,6 +1,5 @@
 # novelcast/core/config.py
 
-from typing import List
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -48,7 +47,7 @@ class AppConfig(BaseSettings):
     # ─────────────────────────────
     # CORS
     # ─────────────────────────────
-    cors_origins: List[str] = ["http://localhost:3000"]
+    cors_origins: list[str] = ["http://localhost:3000"]
 
     # ─────────────────────────────
     # VALIDATORS

@@ -1,12 +1,12 @@
 services:
-  novelcast:
-    build: .
-    ports:
-      - "8001:8001"
-    env_file:
-      - .env
-    volumes:
-      - /Users/oliver/Documents/Projekt/novelcast/data:/app/data 
-      - /Users/oliver/Documents/Projekt/novelcast/logs:/app/logs
-      - /Users/oliver/Documents/Projekt/novelcast/config:/app/config
-    restart: unless-stopped
+    novelcast:
+        build: .
+        ports:
+            - '8001:8001'
+        env_file:
+            - .env
+        volumes:
+            - /Users/oliver/Documents/Projekt/novelcast/data:/app/data
+            - /Users/oliver/Documents/Projekt/novelcast/logs:/app/logs
+            - /Users/oliver/Documents/Projekt/novelcast/config:/app/config
+        restart: unless-stopped

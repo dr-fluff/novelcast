@@ -1,77 +1,78 @@
 <!-- novelcast/templates/pages/users.html -->
-{% extends "layouts/base.html" %}
-{% block title %}Users - NovelCast{% endblock %}
-
+{% extends "layouts/base.html" %} {% block title %}Users - NovelCast{% endblock %}
 {% block head %}
     <link rel="stylesheet" href="/static/css/pages/settings.css" />
 {% endblock %}
-
 {% block content %}
+    {% include "partials/library_header.html" %}
 
-{% include "partials/library_header.html" %}
+    <div class="pg-settings">
+        <div class="pg-header">
+            <h1 class="pg-title">Users</h1>
+            <a href="/admin" class="btn-ghost">← Back to Admin</a>
+        </div>
 
-<div class="pg-settings">
+        <div class="section-card">
+            <div class="table-scroll">
+                <table class="user-table">
+                    <thead>
+                        <tr>
+                            <th class="col-avatar"></th>
+                            <th>Username</th>
+                            <th>Role</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
 
-  <div class="pg-header">
-    <h1 class="pg-title">Users</h1>
-    <a href="/admin" class="btn-ghost">← Back to Admin</a>
-  </div>
-
-  <div class="section-card">
-
-    <div class="table-scroll">
-      <table class="user-table">
-        <thead>
-          <tr>
-            <th class="col-avatar"></th>
-            <th>Username</th>
-            <th>Role</th>
-            <th>Created</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {% if users %}
-            {% for account in users %}
-            <tr>
-              <td>
-                <span class="user-avatar">{{ account.username[0] | upper }}</span>
-              </td>
-              <td>
-                <span>{{ account.username }}</span>
-              </td>
-              <td>
-                {% if account.is_root %}
-                  <span class="badge badge--admin">Admin</span>
-                {% else %}
-                  <span class="badge badge--user">User</span>
-                {% endif %}
-              </td>
-              <td>{{ account.created_at.strftime("%Y-%m-%d %H:%M") }}</td>
-              <td>
-                <a href="/admin/users/{{ account.id }}/edit"
-                  class="btn-ghost btn-ghost--sm edit-btn icon-button"
-                  title="Edit user"
-                  aria-label="Edit user">
-                    <i class="fa-solid fa-pen"></i>
-                </a>
-                {% if account.id != user.id %}
-                  <form action="/admin/users/{{ account.id }}/delete" method="post" class="inline-form" onsubmit="return confirm('Delete {{ account.username }}? This cannot be undone.');">
-                    <button type="submit" class="btn-ghost btn-ghost--sm">Delete</button>
-                  </form>
-                {% endif %}
-
-              </td>
-            </tr>
-            {% endfor %}
-          {% else %}
-            <tr>
-              <td colspan="5" class="empty-state-cell">No users found.</td>
-            </tr>
-          {% endif %}
-        </tbody>
-      </table>
+                    <tbody>
+                        {% if users %}
+                            {% for account in users %}
+                                <tr>
+                                    <td>
+                                        <span class="user-avatar">{{ account.username[0] | upper }}</span>
+                                    </td>
+                                    <td>
+                                        <span>{{ account.username }}</span>
+                                    </td>
+                                    <td>
+                                        {% if account.is_root %}
+                                            <span class="badge badge--admin">Admin</span>
+                                        {% else %}
+                                            <span class="badge badge--user">User</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ account.created_at.strftime("%Y-%m-%d %H:%M") }}</td>
+                                    <td>
+                                        <a
+                                            href="/admin/users/{{ account.id }}/edit"
+                                            class="btn-ghost btn-ghost--sm edit-btn icon-button"
+                                            title="Edit user"
+                                            aria-label="Edit user"
+                                        >
+                                            <i class="fa-solid fa-pen"></i>
+                                        </a>
+                                        {% if account.id != user.id %}
+                                            <form
+                                                action="/admin/users/{{ account.id }}/delete"
+                                                method="post"
+                                                class="inline-form"
+                                                onsubmit="return confirm('Delete {{ account.username }}? This cannot be undone.');"
+                                            >
+                                                <button type="submit" class="btn-ghost btn-ghost--sm">Delete</button>
+                                            </form>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="5" class="empty-state-cell">No users found.</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
-  </div>
 {% endblock %}

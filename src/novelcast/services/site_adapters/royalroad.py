@@ -1,5 +1,4 @@
 import re
-from typing import Optional
 
 from .base import SiteQueryMatch
 
@@ -11,11 +10,11 @@ class RoyalRoadAdapter:
     _FICTION_RE = re.compile(r"https?://.*royalroad\.com/fiction/(\d+)")
     _AUTHOR_RE = re.compile(r"https?://.*royalroad\.com/profile/(\d+)")
 
-    def match_fiction_url(self, raw: str) -> Optional[str]:
+    def match_fiction_url(self, raw: str) -> str | None:
         m = self._FICTION_RE.match(raw)
         return m.group(1) if m else None
 
-    def match_author_url(self, raw: str) -> Optional[str]:
+    def match_author_url(self, raw: str) -> str | None:
         m = self._AUTHOR_RE.match(raw)
         return m.group(1) if m else None
 
@@ -39,7 +38,7 @@ class RoyalRoadAdapter:
                 return SiteQueryMatch(target="fiction", lookup_type="id", identifier=part)
         return SiteQueryMatch(target="fiction", lookup_type="text", identifier=remainder.strip())
 
-    def match_bare(self, raw: str) -> Optional[SiteQueryMatch]:
+    def match_bare(self, raw: str) -> SiteQueryMatch | None:
         if raw.isdigit():
             return SiteQueryMatch(target="fiction", lookup_type="id", identifier=raw)
         if "/" in raw:

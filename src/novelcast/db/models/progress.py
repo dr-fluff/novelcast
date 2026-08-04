@@ -24,7 +24,7 @@ class ReadingProgress(Base):
 
     # "Continue reading" pointer — wherever the user MOST RECENTLY read,
     # regardless of direction. Updated unconditionally on every save.
-    last_chapter_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("chapters.id", ondelete="SET NULL"))
+    last_chapter_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("chapters.id", ondelete="SET NULL"))
     last_position: Mapped[int] = mapped_column(Integer, default=0)
 
     # Furthest chapter ever reached — forward-only, used for read/unread
@@ -32,9 +32,7 @@ class ReadingProgress(Base):
     # last_chapter_id so going back to re-read an earlier chapter
     # doesn't affect what's considered "read" or move the unread
     # boundary backwards.
-    furthest_chapter_id: Mapped[Optional[int]] = mapped_column(
-        Integer, ForeignKey("chapters.id", ondelete="SET NULL")
-    )
+    furthest_chapter_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("chapters.id", ondelete="SET NULL"))
 
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
 

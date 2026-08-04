@@ -4,16 +4,16 @@ const seenLogKeys = new Set();
 const MAX_ENTRIES = 2000;
 
 function logKey(log) {
-    return `${log.request_id || ""}|${log.timestamp || ""}|${log.message || ""}`;
+    return `${log.request_id || ''}|${log.timestamp || ''}|${log.message || ''}`;
 }
 
 function connectLogs() {
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     socket = new WebSocket(`${protocol}//${window.location.host}/api/admin/logs/tail`);
 
     socket.onmessage = function (event) {
         const data = JSON.parse(event.data);
-        if (data.type === "backlog" || data.type === "lines") {
+        if (data.type === 'backlog' || data.type === 'lines') {
             appendLogs(data.lines);
         }
     };
@@ -24,15 +24,15 @@ function connectLogs() {
 }
 
 function appendLogs(lines) {
-    const viewer = document.getElementById("log-viewer");
+    const viewer = document.getElementById('log-viewer');
     const fragment = document.createDocumentFragment();
 
     for (const line of lines) {
         let log;
         try {
-            log = typeof line === "string" ? JSON.parse(line) : line;
+            log = typeof line === 'string' ? JSON.parse(line) : line;
         } catch {
-            log = { level: "INFO", message: String(line) };
+            log = { level: 'INFO', message: String(line) };
         }
 
         const key = logKey(log);
@@ -41,14 +41,14 @@ function appendLogs(lines) {
         }
         seenLogKeys.add(key);
 
-        const row = document.createElement("div");
-        row.className = `log-entry log-${(log.level || "info").toLowerCase()}`;
+        const row = document.createElement('div');
+        row.className = `log-entry log-${(log.level || 'info').toLowerCase()}`;
         row.dataset.logKey = key;
         row.innerHTML = `
             <div>
                 <span class="log-time">${formatTime(log.timestamp)}</span>
-                <span class="log-level">${escapeHtml(log.level || "")}</span>
-                <span class="log-message">${escapeHtml(log.message || "")}</span>
+                <span class="log-level">${escapeHtml(log.level || '')}</span>
+                <span class="log-message">${escapeHtml(log.message || '')}</span>
             </div>
             <details class="log-details">
                 <summary>details</summary>
@@ -75,39 +75,36 @@ function appendLogs(lines) {
 }
 
 function formatTime(value) {
-    if (!value) return "";
+    if (!value) return '';
     return new Date(value).toLocaleTimeString();
 }
 
 function escapeHtml(value) {
-    return String(value)
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;");
+    return String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 }
 
 function clearLogs() {
-    document.getElementById("log-viewer").innerHTML = "";
+    document.getElementById('log-viewer').innerHTML = '';
     seenLogKeys.clear();
 }
 
 function resumeLive() {
     autoScroll = true;
-    const viewer = document.getElementById("log-viewer");
+    const viewer = document.getElementById('log-viewer');
     viewer.scrollTop = viewer.scrollHeight;
-    document.getElementById("resume-live").style.display = "none";
+    document.getElementById('resume-live').style.display = 'none';
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-    const viewer = document.getElementById("log-viewer");
+document.addEventListener('DOMContentLoaded', () => {
+    const viewer = document.getElementById('log-viewer');
 
-    viewer.addEventListener("scroll", () => {
+    viewer.addEventListener('scroll', () => {
         autoScroll = viewer.scrollTop + viewer.clientHeight >= viewer.scrollHeight - 20;
-        document.getElementById("resume-live").style.display = autoScroll ? "none" : "inline-block";
+        document.getElementById('resume-live').style.display = autoScroll ? 'none' : 'inline-block';
     });
 
-    viewer.addEventListener("click", (event) => {
-        if (event.target.closest("summary")) {
+    viewer.addEventListener('click', (event) => {
+        if (event.target.closest('summary')) {
             autoScroll = false;
         }
     });

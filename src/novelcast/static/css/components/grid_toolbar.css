@@ -1,279 +1,279 @@
 .grid-toolbar {
-  display: flex;
-  align-items: stretch;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.9rem 2rem;
-  background: rgba(0, 0, 0, 0.08);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    align-items: stretch;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.9rem 2rem;
+    background: rgba(0, 0, 0, 0.08);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .grid-toolbar-search {
-  display: flex;
-  align-items: center;
-  min-width: min(420px, 100%);
+    display: flex;
+    align-items: center;
+    min-width: min(420px, 100%);
 }
 
 .grid-toolbar-search input {
-  width: 100%;
-  min-width: 220px;
-  padding: 0.75rem 1rem;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: var(--bg-secondary, var(--card));
-  color: var(--text);
-  font: inherit;
+    width: 100%;
+    min-width: 220px;
+    padding: 0.75rem 1rem;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--bg-secondary, var(--card));
+    color: var(--text);
+    font: inherit;
 }
 
 .grid-toolbar-actions {
-  display: flex;
-  align-items: stretch;
-  gap: 0.35rem;
+    display: flex;
+    align-items: stretch;
+    gap: 0.35rem;
 }
 
 .grid-toolbar-divider {
-  width: 1px;
-  margin: 0.25rem 0.75rem;
-  background: rgba(255, 255, 255, 0.22);
+    width: 1px;
+    margin: 0.25rem 0.75rem;
+    background: rgba(255, 255, 255, 0.22);
 }
 
 /* Clear button — sits flush with the other toolbar actions */
 .grid-toolbar-clear {
-  align-self: center;
-  white-space: nowrap;
+    align-self: center;
+    white-space: nowrap;
 }
 
 /* ── TOOL TRIGGER ── */
 
 .grid-tool {
-  position: relative;
+    position: relative;
 }
 
 .grid-tool-summary {
-  display: grid;
-  grid-template-rows: 1fr auto;
-  place-items: center;
-  gap: 0.25rem;
-  min-width: 74px;
-  height: 62px;
-  padding: 0.35rem 0.6rem;
-  border-radius: 8px;
-  color: var(--text);
-  cursor: pointer;
-  list-style: none;
+    display: grid;
+    grid-template-rows: 1fr auto;
+    place-items: center;
+    gap: 0.25rem;
+    min-width: 74px;
+    height: 62px;
+    padding: 0.35rem 0.6rem;
+    border-radius: 8px;
+    color: var(--text);
+    cursor: pointer;
+    list-style: none;
 }
 
 .grid-tool-summary::-webkit-details-marker {
-  display: none;
+    display: none;
 }
 
 .grid-tool-summary:hover,
 .grid-tool[open] .grid-tool-summary {
-  background: rgba(255, 255, 255, 0.07);
+    background: rgba(255, 255, 255, 0.07);
 }
 
 .grid-tool-icon {
-  font-size: 1.5rem;
+    font-size: 1.5rem;
 }
 
 /* Accent colour on the icon when a filter is active */
 .grid-tool-icon--active {
-  color: var(--accent, #7c9ef8);
+    color: var(--accent, #7c9ef8);
 }
 
 .grid-tool-label {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-  font-size: 0.82rem;
-  font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.82rem;
+    font-weight: 600;
 }
 
 .grid-tool-label .fa-caret-down {
-  font-size: 0.75rem;
-  color: var(--muted);
+    font-size: 0.75rem;
+    color: var(--muted);
 }
 
 /* ── DROPDOWN PANEL ── */
 
 .grid-tool-menu {
-  position: absolute;
-  top: calc(100% + 0.35rem);
-  right: 0;
-  z-index: 50;
-  min-width: 240px;
-  padding: 0.4rem;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: var(--card);
-  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.28);
-  overflow: hidden;
+    position: absolute;
+    top: calc(100% + 0.35rem);
+    right: 0;
+    z-index: 50;
+    min-width: 240px;
+    padding: 0.4rem;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--card);
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.28);
+    overflow: hidden;
 }
 
 /* ── FILTER PANELS (drill-down) ── */
 
 .filter-panel {
-  display: flex;
-  flex-direction: column;
+    display: flex;
+    flex-direction: column;
 }
 
 .filter-panel--hidden {
-  display: none;
+    display: none;
 }
 
 /* Sub-panel has fixed max-height so long lists scroll */
 #filterMenu .filter-panel:not(#filterHome) {
-  max-height: 360px;
-  overflow-y: auto;
+    max-height: 360px;
+    overflow-y: auto;
 }
 
 /* ── OPTION BUTTONS ── */
 
 .grid-tool-option {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  padding: 0.6rem 0.8rem;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--text);
-  font: inherit;
-  font-size: 0.9rem;
-  text-align: left;
-  cursor: pointer;
-  transition: background 0.12s;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 0.6rem 0.8rem;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    font-size: 0.9rem;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.12s;
 }
 
 .grid-tool-option:hover {
-  background: rgba(255, 255, 255, 0.07);
+    background: rgba(255, 255, 255, 0.07);
 }
 
 .grid-tool-option--active {
-  color: var(--accent, #7c9ef8);
-  font-weight: 600;
+    color: var(--accent, #7c9ef8);
+    font-weight: 600;
 }
 
 /* Nav options (category list): space between label+value and arrow */
 .grid-tool-option--nav {
-  justify-content: space-between;
+    justify-content: space-between;
 }
 
 .grid-tool-option-value {
-  margin-left: auto;
-  margin-right: 0.5rem;
-  font-size: 0.8rem;
-  font-weight: 400;
-  color: var(--accent, #7c9ef8);
-  max-width: 90px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+    margin-left: auto;
+    margin-right: 0.5rem;
+    font-size: 0.8rem;
+    font-weight: 400;
+    color: var(--accent, #7c9ef8);
+    max-width: 90px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .grid-tool-option-arrow {
-  font-size: 0.75rem;
-  color: var(--muted);
-  flex-shrink: 0;
+    font-size: 0.75rem;
+    color: var(--muted);
+    flex-shrink: 0;
 }
 
 /* ── BACK BUTTON ── */
 
 .grid-tool-back {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  width: 100%;
-  padding: 0.6rem 0.8rem;
-  border: none;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 0;
-  background: transparent;
-  color: var(--muted);
-  font: inherit;
-  font-size: 0.85rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  cursor: pointer;
-  margin-bottom: 0.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.6rem 0.8rem;
+    border: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 0;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    margin-bottom: 0.25rem;
 }
 
 .grid-tool-back:hover {
-  color: var(--text);
+    color: var(--text);
 }
 
 /* ── LEGACY FIELD STYLES (kept for other uses) ── */
 
 .grid-tool-field {
-  display: grid;
-  gap: 0.35rem;
+    display: grid;
+    gap: 0.35rem;
 }
 
 .grid-tool-field label {
-  color: var(--muted);
-  font-size: 0.78rem;
-  font-weight: 700;
-  text-transform: uppercase;
+    color: var(--muted);
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
 }
 
 .grid-tool-field select {
-  width: 100%;
-  padding: 0.55rem 0.7rem;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: var(--bg);
-  color: var(--text);
-  font: inherit;
+    width: 100%;
+    padding: 0.55rem 0.7rem;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--bg);
+    color: var(--text);
+    font: inherit;
 }
 
 .grid-tool-menu .btn-secondary {
-  width: 100%;
+    width: 100%;
 }
 
 /* ── RESPONSIVE ── */
 
 @media (max-width: 760px) {
-  .grid-toolbar {
-    flex-direction: column;
-    padding: 0.9rem 1rem;
-  }
+    .grid-toolbar {
+        flex-direction: column;
+        padding: 0.9rem 1rem;
+    }
 
-  .grid-toolbar-actions {
-    overflow-x: auto;
-  }
+    .grid-toolbar-actions {
+        overflow-x: auto;
+    }
 
-  .grid-tool-summary {
-    min-width: 68px;
-  }
+    .grid-tool-summary {
+        min-width: 68px;
+    }
 
-  /* Full-width panel on mobile */
-  .grid-tool-menu {
-    position: fixed;
-    top: auto;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    border-radius: 12px 12px 0 0;
-    min-width: unset;
-  }
+    /* Full-width panel on mobile */
+    .grid-tool-menu {
+        position: fixed;
+        top: auto;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        border-radius: 12px 12px 0 0;
+        min-width: unset;
+    }
 
-  #filterMenu .filter-panel:not(#filterHome) {
-    max-height: 50vh;
-  }
+    #filterMenu .filter-panel:not(#filterHome) {
+        max-height: 50vh;
+    }
 }
 
 .grid-tool-option--clear {
-  color: var(--muted);
-  font-size: 0.85rem;
+    color: var(--muted);
+    font-size: 0.85rem;
 }
 
 .grid-tool-option--clear:hover {
-  color: var(--text);
+    color: var(--text);
 }
 
 .grid-tool-separator {
-  height: 1px;
-  background: rgba(255, 255, 255, 0.08);
-  margin: 0.25rem 0.4rem;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.08);
+    margin: 0.25rem 0.4rem;
 }

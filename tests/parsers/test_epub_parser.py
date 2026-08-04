@@ -26,7 +26,7 @@ def test_missing_epub_raises():
 
     try:
         parser.extract(missing_file)
-        assert False, "Expected FileNotFoundError"
+        raise AssertionError("Expected FileNotFoundError")
     except FileNotFoundError:
         pass
 

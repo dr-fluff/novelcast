@@ -3,7 +3,6 @@ import json
 import logging
 import os
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +25,7 @@ class PatreonCache:
     # -------------------------
     # POSTS CACHE
     # -------------------------
-    def get_cached_posts(self, campaign_id: str) -> Optional[List[Dict]]:
+    def get_cached_posts(self, campaign_id: str) -> list[dict] | None:
         """Get cached posts for campaign"""
         cache_file = self._get_campaign_file(campaign_id)
 
@@ -35,7 +34,7 @@ class PatreonCache:
             return None
 
         try:
-            with open(cache_file, "r") as f:
+            with open(cache_file) as f:
                 data = json.load(f)
 
             logger.info(
@@ -49,7 +48,7 @@ class PatreonCache:
             logger.warning("Failed to load post cache: %s", e)
             return None
 
-    def save_posts(self, campaign_id: str, posts: List[Dict], creator_name: str = ""):
+    def save_posts(self, campaign_id: str, posts: list[dict], creator_name: str = ""):
         """Save posts to cache"""
         cache_file = self._get_campaign_file(campaign_id)
 
@@ -73,7 +72,7 @@ class PatreonCache:
     # -------------------------
     # CHAPTERS CACHE
     # -------------------------
-    def get_cached_chapters(self, campaign_id: str) -> Optional[List[Dict]]:
+    def get_cached_chapters(self, campaign_id: str) -> list[dict] | None:
         """Get cached chapters for campaign"""
         metadata_file = self._get_metadata_file(campaign_id)
 
@@ -81,7 +80,7 @@ class PatreonCache:
             return None
 
         try:
-            with open(metadata_file, "r") as f:
+            with open(metadata_file) as f:
                 data = json.load(f)
 
             logger.info(
@@ -95,7 +94,7 @@ class PatreonCache:
             logger.warning("Failed to load chapter cache: %s", e)
             return None
 
-    def save_chapters(self, campaign_id: str, creator_name: str, chapters: List[Dict], url: str = ""):
+    def save_chapters(self, campaign_id: str, creator_name: str, chapters: list[dict], url: str = ""):
         """Save parsed chapters to cache"""
         metadata_file = self._get_metadata_file(campaign_id)
 
@@ -120,7 +119,7 @@ class PatreonCache:
     # -------------------------
     # CACHE MANAGEMENT
     # -------------------------
-    def get_last_fetch_time(self, campaign_id: str) -> Optional[datetime]:
+    def get_last_fetch_time(self, campaign_id: str) -> datetime | None:
         """Get when posts were last cached"""
         cache_file = self._get_campaign_file(campaign_id)
 
@@ -128,7 +127,7 @@ class PatreonCache:
             return None
 
         try:
-            with open(cache_file, "r") as f:
+            with open(cache_file) as f:
                 data = json.load(f)
 
             cached_at = data.get("cached_at")
@@ -177,7 +176,7 @@ class PatreonCache:
         except Exception as e:
             logger.error("Failed to clear all cache: %s", e)
 
-    def get_cache_stats(self) -> Dict:
+    def get_cache_stats(self) -> dict:
         """Get cache statistics"""
         stats = {
             "cache_dir": self.cache_dir,

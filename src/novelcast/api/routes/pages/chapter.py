@@ -158,10 +158,10 @@ async def update_chapter_settings(
 
     except ValueError as e:
         logger.warning(f"Validation error for user {current_user['id']}: {e}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
         logger.error(f"Error saving chapter settings for user {current_user['id']}: {e}")
-        raise HTTPException(status_code=500, detail="Failed to save settings")
+        raise HTTPException(status_code=500, detail="Failed to save settings") from e
 
 
 @router.post("/api/chapter-progress")

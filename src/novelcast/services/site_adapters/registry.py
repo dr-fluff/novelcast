@@ -1,15 +1,13 @@
 # novelcast/services/site_adapters/registry.py
 
-from typing import Optional
 
 from novelcast.core import setting_keys
 from novelcast.core.defaults import SETTINGS
 
 from .base import SiteAdapter
+from .patreon import PatreonAdapter
 from .royalroad import RoyalRoadAdapter
 from .scribblehub import ScribbleHubAdapter
-from .patreon import PatreonAdapter
-
 
 _ADAPTERS: dict[str, SiteAdapter] = {
     "royalroad": RoyalRoadAdapter(),
@@ -36,11 +34,11 @@ def all_sites() -> list[str]:
     return list(_ADAPTERS.keys())
 
 
-def get_adapter(site: str) -> Optional[SiteAdapter]:
+def get_adapter(site: str) -> SiteAdapter | None:
     return _ADAPTERS.get(site)
 
 
-def resolve_alias(token: str) -> Optional[str]:
+def resolve_alias(token: str) -> str | None:
     return ALIAS_MAP.get(token.lower())
 
 

@@ -1,6 +1,6 @@
 # novelcast/db/repositories/progress_repository.py
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.dialects.sqlite import insert
@@ -62,14 +62,14 @@ class ProgressRepository(BaseRepository):
                     story_id=story_id,
                     last_chapter_id=last_chapter_id,
                     last_position=last_position,
-                    updated_at=datetime.now(timezone.utc),
+                    updated_at=datetime.now(UTC),
                 )
                 .on_conflict_do_update(
                     index_elements=["user_id", "story_id"],
                     set_={
                         "last_chapter_id": last_chapter_id,
                         "last_position": last_position,
-                        "updated_at": datetime.now(timezone.utc),
+                        "updated_at": datetime.now(UTC),
                     },
                 )
             )
@@ -96,13 +96,13 @@ class ProgressRepository(BaseRepository):
                     story_id=story_id,
                     furthest_chapter_id=chapter_id,
                     last_position=last_position,
-                    updated_at=datetime.now(timezone.utc),
+                    updated_at=datetime.now(UTC),
                 )
                 .on_conflict_do_update(
                     index_elements=["user_id", "story_id"],
                     set_={
                         "furthest_chapter_id": chapter_id,
-                        "updated_at": datetime.now(timezone.utc),
+                        "updated_at": datetime.now(UTC),
                     },
                     where=(
                         (ReadingProgress.furthest_chapter_id.is_(None))
@@ -134,7 +134,7 @@ class ProgressRepository(BaseRepository):
                     set_={
                         "page": page,
                         "anchor": anchor,
-                        "updated_at": datetime.now(timezone.utc),
+                        "updated_at": datetime.now(UTC),
                     },
                 )
             )

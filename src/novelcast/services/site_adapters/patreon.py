@@ -1,4 +1,3 @@
-from typing import Optional
 from urllib.parse import parse_qs, urlparse
 
 from .base import SiteQueryMatch
@@ -9,7 +8,7 @@ from .base import SiteQueryMatch
 _RESERVED_SEGMENTS = {"home", "search", "login", "signup", "join", "settings", "explore"}
 
 
-def extract_creator(raw: str) -> Optional[str]:
+def extract_creator(raw: str) -> str | None:
     raw = (raw or "").strip()
     if not raw:
         return None
@@ -55,10 +54,10 @@ class PatreonAdapter:
     name = "patreon"
     query_prefixes = ("patreon", "p")
 
-    def match_fiction_url(self, raw: str) -> Optional[str]:
+    def match_fiction_url(self, raw: str) -> str | None:
         return None  # Patreon has no per-title URL distinct from the creator page
 
-    def match_author_url(self, raw: str) -> Optional[str]:
+    def match_author_url(self, raw: str) -> str | None:
         return extract_creator(raw)
 
     def fiction_url(self, identifier: str) -> str:
@@ -84,5 +83,5 @@ class PatreonAdapter:
         creator = extract_creator(remainder) or remainder.strip().lower()
         return SiteQueryMatch(target="author", lookup_type="id", identifier=creator)
 
-    def match_bare(self, raw: str) -> Optional[SiteQueryMatch]:
+    def match_bare(self, raw: str) -> SiteQueryMatch | None:
         return None  # bare creator names fall through to the generic auto-search

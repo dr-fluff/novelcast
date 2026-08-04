@@ -16,6 +16,7 @@ from novelcast.api.deps import (
     get_templates,
     get_users,
 )
+from novelcast.core import setting_keys
 from novelcast.services import (
     ChapterFilterService,
     HealthCheckService,
@@ -24,10 +25,7 @@ from novelcast.services import (
     StoryService,
     UserService,
 )
-
-from novelcast.core import setting_keys
 from novelcast.utils.password_validation import validate_password_strength
-
 
 router = APIRouter()
 
@@ -253,7 +251,7 @@ def create_pattern(
         result = chapter_filter.add_pattern(req.pattern, req.description)
         return result
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.post("/admin/chapter-patterns/test")
@@ -269,7 +267,7 @@ def test_pattern(
         results = chapter_filter.test_pattern(req.pattern, req.samples)
         return results
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.patch("/admin/chapter-patterns/{pattern_id}")
@@ -301,7 +299,7 @@ def delete_pattern(
         chapter_filter.delete_pattern(pattern_id)
         return {"success": True}
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.get("/admin/logs")

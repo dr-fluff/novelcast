@@ -28,8 +28,8 @@ class Chapter(Base):
     story_id: Mapped[int] = mapped_column(Integer, ForeignKey("stories.id", ondelete="CASCADE"), nullable=False)
 
     chapter_number: Mapped[int] = mapped_column(Integer, nullable=False)  # online index (1..N)
-    title: Mapped[Optional[str]] = mapped_column(String)
-    url: Mapped[Optional[str]] = mapped_column(String, unique=True)  # stable scrape key
+    title: Mapped[str | None] = mapped_column(String)
+    url: Mapped[str | None] = mapped_column(String, unique=True)  # stable scrape key
 
     # True once at least one ChapterFile exists and the canonical HTML is ready
     is_downloaded: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -38,7 +38,7 @@ class Chapter(Base):
     # is downloaded/parsed; used for reading-speed stats (words / read time).
     # NULL until computed, so existing chapters degrade gracefully rather
     # than reporting 0.
-    word_count: Mapped[Optional[int]] = mapped_column(Integer)
+    word_count: Mapped[int | None] = mapped_column(Integer)
 
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 

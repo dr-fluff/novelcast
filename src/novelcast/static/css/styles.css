@@ -1,36 +1,35 @@
-
 /* =========================
    HEADER
 ========================= */
 
 .reader-header {
-  position: sticky;
-  top: 0;
+    position: sticky;
+    top: 0;
 
-  background: var(--color-bg);
-  padding: 1rem 1.5rem;
+    background: var(--color-bg);
+    padding: 1rem 1.5rem;
 
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 
-  z-index: 100;
+    z-index: 100;
 }
 
 .book-info h1 {
-  font-size: 1.2rem;
-  margin: 0;
+    font-size: 1.2rem;
+    margin: 0;
 }
 
 .book-info p {
-  margin: 0;
-  font-size: 0.85rem;
-  color: var(--muted);
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--muted);
 }
 
 .reading-progress-text {
-  font-size: 0.85rem;
-  color: var(--muted);
+    font-size: 0.85rem;
+    color: var(--muted);
 }
 
 /* =========================
@@ -38,35 +37,35 @@
 ========================= */
 
 .chapter-content {
-  font-size: 1.1rem;
-  line-height: 1.9;
+    font-size: 1.1rem;
+    line-height: 1.9;
 
-  background: var(--card);
+    background: var(--card);
 
-  max-width: 42rem;
-  margin: 3rem auto;
-  padding: 2.5rem;
+    max-width: 42rem;
+    margin: 3rem auto;
+    padding: 2.5rem;
 
-  border-radius: 1rem;
+    border-radius: 1rem;
 
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
 }
 
 /* TITLE */
 
 .chapter-title {
-  font-size: 1.5rem;
-  margin-bottom: 1rem;
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
 
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 .chapter-content hr {
-  border: none;
-  border-top: 1px solid #e5e7eb;
-  margin: 1rem 0 2rem;
+    border: none;
+    border-top: 1px solid #e5e7eb;
+    margin: 1rem 0 2rem;
 }
 
 /* =========================
@@ -74,39 +73,39 @@
 ========================= */
 
 .desktop-nav {
-  position: fixed;
-  bottom: 1rem;
-  left: 50%;
-  transform: translateX(-50%);
+    position: fixed;
+    bottom: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
 
-  background: var(--card);
-  padding: 0.6rem;
+    background: var(--card);
+    padding: 0.6rem;
 
-  border-radius: 1rem;
+    border-radius: 1rem;
 
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
 
-  display: flex;
-  gap: 0.5rem;
+    display: flex;
+    gap: 0.5rem;
 }
 
 .nav-button {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
 
-  padding: 0.6rem 0.9rem;
+    padding: 0.6rem 0.9rem;
 
-  border-radius: 0.6rem;
+    border-radius: 0.6rem;
 
-  background: #f3f4f6;
-  color: var(--text);
+    background: #f3f4f6;
+    color: var(--text);
 
-  text-decoration: none;
+    text-decoration: none;
 }
 
 .nav-button:hover {
-  background: #e5e7eb;
+    background: #e5e7eb;
 }
 
 /* =========================
@@ -114,49 +113,49 @@
 ========================= */
 
 .reader-controls {
-  position: fixed;
-  right: 1rem;
-  top: 50%;
-  transform: translateY(-50%);
+    position: fixed;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
 
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
 }
 
 .reader-controls button {
-  min-width: 3rem;
-  height: 3rem;
-  padding: 0 0.8rem;
+    min-width: 3rem;
+    height: 3rem;
+    padding: 0 0.8rem;
 
-  border-radius: 0.8rem;
-  border: none;
+    border-radius: 0.8rem;
+    border: none;
 
-  background: var(--card);
-  color: var(--text);
+    background: var(--card);
+    color: var(--text);
 
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 
-  font-weight: bold;
-  cursor: pointer;
+    font-weight: bold;
+    cursor: pointer;
 }
 
 .reader-controls button.btn-primary {
-  background: #6366f1;
-  color: white;
+    background: #6366f1;
+    color: white;
 }
 
 .reader-controls button.btn-primary:hover {
-  background: #4f46e5;
+    background: #4f46e5;
 }
 
 .reader-controls button.btn-danger {
-  background: #dc2626;
-  color: white;
+    background: #dc2626;
+    color: white;
 }
 
 .reader-controls button.btn-danger:hover {
-  background: #b91c1c;
+    background: #b91c1c;
 }
 
 /* =========================
@@ -164,16 +163,16 @@
 ========================= */
 
 #progress-bar {
-  position: fixed;
-  top: 0;
-  left: 0;
+    position: fixed;
+    top: 0;
+    left: 0;
 
-  height: 4px;
-  width: 0%;
+    height: 4px;
+    width: 0%;
 
-  background: linear-gradient(90deg, #3b82f6, #60a5fa);
+    background: linear-gradient(90deg, #3b82f6, #60a5fa);
 
-  z-index: 9999;
+    z-index: 9999;
 }
 
 /* =========================
@@ -181,9 +180,9 @@
 ========================= */
 
 .reader-ui.hidden {
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.2s ease;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
 }
 
 /* =========================
@@ -191,15 +190,15 @@
 ========================= */
 
 .chapter-transition-out {
-  opacity: 0;
-  transform: translateY(10px);
-  transition: 0.25s ease;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: 0.25s ease;
 }
 
 .chapter-transition-in {
-  opacity: 1;
-  transform: translateY(0);
-  transition: 0.25s ease;
+    opacity: 1;
+    transform: translateY(0);
+    transition: 0.25s ease;
 }
 
 /* =========================
@@ -207,18 +206,18 @@
 ========================= */
 
 @media (max-width: 600px) {
-  .chapter-content {
-    margin: 1rem;
-    padding: 1.5rem;
-  }
+    .chapter-content {
+        margin: 1rem;
+        padding: 1.5rem;
+    }
 
-  .reader-controls {
-    right: 0.5rem;
-  }
+    .reader-controls {
+        right: 0.5rem;
+    }
 
-  .desktop-nav {
-    bottom: 0.5rem;
-    width: calc(100% - 1rem);
-    justify-content: space-around;
-  }
+    .desktop-nav {
+        bottom: 0.5rem;
+        width: calc(100% - 1rem);
+        justify-content: space-around;
+    }
 }

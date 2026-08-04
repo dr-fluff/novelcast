@@ -1,4 +1,4 @@
- /* novelcast/static/css/components/notifications.css */
+/* novelcast/static/css/components/notifications.css */
 
 .notification-container {
     position: fixed;
@@ -17,7 +17,7 @@
     color: white;
     padding: 12px 14px;
     border-radius: 12px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
     display: flex;
     justify-content: space-between;
     align-items: start;
@@ -27,9 +27,15 @@
     pointer-events: auto;
 }
 
-.notification.success { border-left: 4px solid #2ecc71; }
-.notification.error { border-left: 4px solid #e74c3c; }
-.notification.info { border-left: 4px solid #3498db; }
+.notification.success {
+    border-left: 4px solid #2ecc71;
+}
+.notification.error {
+    border-left: 4px solid #e74c3c;
+}
+.notification.info {
+    border-left: 4px solid #3498db;
+}
 
 .notification-content {
     font-size: 13px;

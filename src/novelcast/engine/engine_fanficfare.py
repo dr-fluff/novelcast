@@ -2,13 +2,13 @@ import json
 import logging
 import queue
 import subprocess
+import sys
 import threading
 import time
 from pathlib import Path
-import sys
 from urllib.parse import urlparse
 
-from .base import KEY_AUTHOR, KEY_RAW, KEY_TITLE, FORMAT_EPUB, StoryEngine, make_result
+from .base import FORMAT_EPUB, KEY_AUTHOR, KEY_RAW, KEY_TITLE, StoryEngine, make_result
 
 logger = logging.getLogger(__name__)
 
@@ -207,7 +207,7 @@ class FanFicFareEngine(StoryEngine):
         """
         stdout_chunks: list[bytes] = []
         stderr_chunks: list[bytes] = []
-        activity_q: "queue.Queue" = queue.Queue()
+        activity_q: queue.Queue = queue.Queue()
 
         def read_stdout():
             try:

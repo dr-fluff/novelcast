@@ -1,117 +1,128 @@
 {# novelcast/templates/partials/search_results.html #}
-
 {% if error %}
     <p class="search-error">{{ error }}</p>
-
 {% elif not query %}
     {# empty state #}
-
 {% elif parsed %}
-
     <div class="search-meta">
-        Searching for <strong>{{ parsed.identifier }}</strong>
-        {% if parsed.site %}
-            on <span class="site-badge site-badge--{{ parsed.site }}">{{ parsed.site }}</span>
+        Searching for <strong>{{ parsed.identifier }}</strong> {% if parsed.site %}
+            on
+            <span class="site-badge site-badge--{{ parsed.site }}">{{ parsed.site }}</span>
         {% else %}
-            on <span class="site-badge">all sites</span>
+            on
+            <span class="site-badge">all sites</span>
         {% endif %}
         &mdash;
-        {% if parsed.id_type == "numeric_id" %}direct ID
-        {% elif parsed.id_type == "author_id" %}author ID
-        {% elif parsed.id_type == "author" %}author search
-        {% elif parsed.id_type == "title_and_author" %}title &amp; author search
-        {% else %}title search
+        {% if parsed.id_type == "numeric_id" %}
+            direct ID
+        {% elif parsed.id_type == "author_id" %}
+            author ID
+        {% elif parsed.id_type == "author" %}
+            author search
+        {% elif parsed.id_type == "title_and_author" %}
+            title &amp; author search
+        {% else %}
+            title search
         {% endif %}
     </div>
 
     {% if results %}
-    <p class="result-count">{{ results|length }} result{{ 's' if results|length != 1 }}</p>
-    <div class="results-grid">
-        {% for r in results %}
-        <a href="#" class="result-card" 
-           data-url="{{ r.url }}" 
-           data-title="{{ r.title }}" 
-           data-author="{{ r.author or '' }}"
-           data-patreon="{{ r.patreon_url or '' }}">
-            <div class="result-card__cover">
-                {% if r.cover_url %}
-                    <img src="{{ r.cover_url }}" alt="{{ r.title }}" loading="lazy" />
-                {% else %}
-                    <div class="result-card__cover-placeholder">
-                        <i class="fa-solid fa-{% if r.kind == 'author' %}user{% else %}book{% endif %}"></i>
+        <p class="result-count">{{ results|length }} result{{ 's' if results|length != 1 }}</p>
+        <div class="results-grid">
+            {% for r in results %}
+                <a
+                    href="#"
+                    class="result-card"
+                    data-url="{{ r.url }}"
+                    data-title="{{ r.title }}"
+                    data-author="{{ r.author or '' }}"
+                    data-patreon="{{ r.patreon_url or '' }}"
+                >
+                    <div class="result-card__cover">
+                        {% if r.cover_url %}
+                            <img src="{{ r.cover_url }}" alt="{{ r.title }}" loading="lazy" />
+                        {% else %}
+                            <div class="result-card__cover-placeholder">
+                                <i class="fa-solid fa-{% if r.kind == 'author' %}user{% else %}book{% endif %}"></i>
+                            </div>
+                        {% endif %}
+                        <span class="result-card__site-badge site-badge--{{ r.site }}">{{ r.site }}</span>
                     </div>
-                {% endif %}
-                <span class="result-card__site-badge site-badge--{{ r.site }}">{{ r.site }}</span>
-            </div>
-            <div class="result-card__body">
-                <h3 class="result-card__title">{{ r.title }}</h3>
-                {% if r.author %}
-                    <p class="result-card__author">{{ r.author }}</p>
-                {% endif %}
-                {% if r.description %}
-                    <p class="result-card__desc">{{ r.description }}</p>
-                {% endif %}
-                {% if r.patreon_url %}
-                    <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(0,0,0,0.1);">
-                        <a href="{{ r.patreon_url }}" target="_blank" rel="noopener" class="result-card__link" onclick="event.stopPropagation()">
-                            <i class="fa-brands fa-patreon"></i> Patreon
-                        </a>
+                    <div class="result-card__body">
+                        <h3 class="result-card__title">{{ r.title }}</h3>
+                        {% if r.author %}
+                            <p class="result-card__author">{{ r.author }}</p>
+                        {% endif %}
+                        {% if r.description %}
+                            <p class="result-card__desc">{{ r.description }}</p>
+                        {% endif %}
+                        {% if r.patreon_url %}
+                            <div
+                                style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(0, 0, 0, 0.1)"
+                            >
+                                <a
+                                    href="{{ r.patreon_url }}"
+                                    target="_blank"
+                                    rel="noopener"
+                                    class="result-card__link"
+                                    onclick="event.stopPropagation()"
+                                >
+                                    <i class="fa-brands fa-patreon"></i> Patreon
+                                </a>
+                            </div>
+                        {% endif %}
                     </div>
-                {% endif %}
-            </div>
-        </a>
-        {% endfor %}
-    </div>
+                </a>
+            {% endfor %}
+        </div>
 
-    <script>
-        (function () {
-            document.querySelectorAll(".result-card").forEach(card => {
-                card.addEventListener("click", e => {
-                    e.preventDefault();
+        <script>
+            (function () {
+                document.querySelectorAll('.result-card').forEach((card) => {
+                    card.addEventListener('click', (e) => {
+                        e.preventDefault();
 
-                    const url = card.dataset.url;
-                    const title = card.dataset.title;
-                    const author = card.dataset.author;
-                    const patreonUrl = card.dataset.patreon;
+                        const url = card.dataset.url;
+                        const title = card.dataset.title;
+                        const author = card.dataset.author;
+                        const patreonUrl = card.dataset.patreon;
 
-                    // Open panel and set URL
-                    UnifiedPanel.open('add_story', 'addStoryPanel');
-                    
-                    // Populate and auto-preview
-                    setTimeout(() => {
-                        document.getElementById('addStoryUrl-addStoryPanel').value = url;
-                        
-                        // Store Patreon URL for reference (optional - can be used for auto-fill if needed)
-                        if (patreonUrl) {
-                            console.log('[Search] Patreon URL available:', patreonUrl);
-                        }
-                        
-                        UnifiedPanel.previewMetadata('addStoryPanel');
-                    }, 100);
+                        // Open panel and set URL
+                        UnifiedPanel.open('add_story', 'addStoryPanel');
+
+                        // Populate and auto-preview
+                        setTimeout(() => {
+                            document.getElementById('addStoryUrl-addStoryPanel').value = url;
+
+                            // Store Patreon URL for reference (optional - can be used for auto-fill if needed)
+                            if (patreonUrl) {
+                                console.log('[Search] Patreon URL available:', patreonUrl);
+                            }
+
+                            UnifiedPanel.previewMetadata('addStoryPanel');
+                        }, 100);
+                    });
                 });
-            });
-        })();
-    </script>
-
-{% else %}
-    <p class="search-empty">No results found for "<strong>{{ parsed.identifier }}</strong>".</p>
-{% endif %}
-
+            })();
+        </script>
+    {% else %}
+        <p class="search-empty">No results found for "<strong>{{ parsed.identifier }}</strong>".</p>
+    {% endif %}
 {% endif %}
 
 <style>
-.result-card__link {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    font-size: 0.85rem;
-    color: var(--color-primary, #ff424f);
-    text-decoration: none;
-    font-weight: 500;
-    transition: opacity 0.2s;
-}
+    .result-card__link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-size: 0.85rem;
+        color: var(--color-primary, #ff424f);
+        text-decoration: none;
+        font-weight: 500;
+        transition: opacity 0.2s;
+    }
 
-.result-card__link:hover {
-    opacity: 0.8;
-}
+    .result-card__link:hover {
+        opacity: 0.8;
+    }
 </style>

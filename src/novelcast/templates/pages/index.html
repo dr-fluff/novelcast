@@ -1,177 +1,49 @@
 <!-- novelcast/templates/pages/index.html -->
-{% extends "layouts/base.html" %}
-
-{% block title %}NovelCast{% endblock %}
-
-{% block head %}
-    <link rel="stylesheet" href="/static/css/pages/index.css" />
-{% endblock %}
-
-{% block content %}
-
-{% from "macros/grid_toolbar.html" import render_grid_toolbar %}
-{% include "partials/library_header.html" %}
-
-{{ render_grid_toolbar(
-    "/",
-    query,
-    sort,
-    sort_options,
-    filter_options={
-        "statuses": status_options,
-        "genres": filter_options.genres,
-        "tags": filter_options.tags,
-        "series": filter_options.series,
-        "languages": filter_options.languages,
-    },
-    status=status,
-    genre=genre,
-    tag=tag,
-    series=series,
-    language=language,
-    persist_key="library.index"
-) }}
+{% extends "layouts/base.html" %} {% block title %}NovelCast{% endblock %} {% block head %}
+<link rel="stylesheet" href="/static/css/pages/index.css" />
+{% endblock %} {% block content %} {% from "macros/grid_toolbar.html" import render_grid_toolbar %} {% include
+"partials/library_header.html" %} {{ render_grid_toolbar( "/", query, sort, sort_options, filter_options={ "statuses":
+status_options, "genres": filter_options.genres, "tags": filter_options.tags, "series": filter_options.series,
+"languages": filter_options.languages, }, status=status, genre=genre, tag=tag, series=series, language=language,
+persist_key="library.index" ) }}
 
 <section class="grid">
-    {% if stories %}
-        {% for s in stories %}
-            <a class="card" href="{{ s.url }}">
-                <div class="card-cover">
-                    <img
-                        src="{{ s.cover_url or '/static/images/cover-placeholder.svg' }}"
-                        alt="{{ s.display_title }} cover"
-                    />
-                    <div class="card-letter">{{ s.thumbnail_letter }}</div>
-                    {% if not s.has_unread %}<div class="card-badge"><i class="fa-solid fa-check"></i></div>{% endif %}
-                </div>
-
-                <div class="card-info">
-                    <h3>{{ s.display_title }}</h3>
-                    <p class="card-meta">{% if s.author %}{{ s.author }}{% endif %}</p>
-                    <p class="card-meta">{{ s.last_chapter }} Chapters</p>
-                    <p class="card-meta">{{ s.last_chapter_name }}</p>
-                    </div>
-                </div>
-            </a>
-        {% endfor %}
-    {% else %}
-        <div class="empty-state">
-            <p>No stories found in your library.</p>
+    {% if stories %} {% for s in stories %}
+    <a class="card" href="{{ s.url }}">
+        <div class="card-cover">
+            <img src="{{ s.cover_url or '/static/images/cover-placeholder.svg' }}" alt="{{ s.display_title }} cover" />
+            <div class="card-letter">{{ s.thumbnail_letter }}</div>
+            {% if not s.has_unread %}
+            <div class="card-badge"><i class="fa-solid fa-check"></i></div>
+            {% endif %}
         </div>
+
+        <div class="card-info">
+            <h3>{{ s.display_title }}</h3>
+            <p class="card-meta">{% if s.author %}{{ s.author }}{% endif %}</p>
+            <p class="card-meta">{{ s.last_chapter }} Chapters</p>
+            <p class="card-meta">{{ s.last_chapter_name }}</p>
+        </div>
+    </a>
+    {% endfor %} {% else %}
+    <div class="empty-state">
+        <p>No stories found in your library.</p>
+    </div>
     {% endif %}
 </section>
 
-{% endblock %}
-
+{% endblock %} 
 {% block scripts %}
 <script>
-(function () {
-    function getNovelcastDeviceId() {
-        const key = "novelcastDeviceId";
-        let id = localStorage.getItem(key);
-        if (!id) {
-            const random = window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-            id = random.replace(/[^A-Za-z0-9_-]/g, "_");
-            localStorage.setItem(key, id);
-        }
-        document.cookie = `novelcast_device_id=${encodeURIComponent(id)}; Path=/; Max-Age=31536000; SameSite=Lax`;
-        return id;
-    }
-
-    const deviceId = getNovelcastDeviceId();
-    const toolbar = document.querySelector(".grid-toolbar[data-persist-key]");
-    if (toolbar) {
-        let submitter = null;
-
-        toolbar.querySelectorAll("button[type='submit']").forEach(button => {
-            button.addEventListener("click", () => {
-                submitter = button;
-            });
-        });
-
-        toolbar.addEventListener("submit", event => {
-            event.preventDefault();
-
-            const params = new URLSearchParams(new FormData(toolbar));
-            if (submitter?.name) {
-                params.set(submitter.name, submitter.value);
-            }
-            const current = {
-                sort: {{ sort | tojson }},
-                genre: {{ genre | tojson }},
-                tag: {{ tag | tojson }},
-                series: {{ series | tojson }},
-                language: {{ language | tojson }},
-                status: {{ status | tojson }},
-            };
-            Object.entries(current).forEach(([key, value]) => {
-                if (submitter?.name === key) return;
-                if (!params.has(key) && value) {
-                    params.set(key, value);
-                }
-            });
-            if (!params.has("sort")) {
-                params.set("sort", current.sort || "title");
-            }
-
-            const value = {
-                q: params.get("q") || "",
-                sort: params.get("sort") || current.sort || "title",
-                genre: params.get("genre") || "",
-                tag: params.get("tag") || "",
-                series: params.get("series") || "",
-                language: params.get("language") || "",
-                status: params.get("status") || "",
-            };
-
-            fetch("/api/user-preferences", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    deviceId,
-                    name: toolbar.dataset.persistKey,
-                    value,
-                }),
-                keepalive: true,
-            }).catch(() => {}).finally(() => {
-                const query = params.toString();
-                window.location.href = `${toolbar.action}${query ? `?${query}` : ""}`;
-            });
-        });
-
-        document.querySelector(".grid-toolbar-clear")?.addEventListener("click", () => {
-            fetch("/api/user-preferences", {
-                method: "DELETE",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    deviceId,
-                    name: toolbar.dataset.persistKey,
-                }),
-                keepalive: true,
-            }).catch(() => {});
-        });
-    }
-
-    let refreshTimer = null;
-    const refreshEvents = new Set([
-        "download_finished",
-        "sync_story_updated",
-        "sync_finished",
-    ]);
-
-    window.addEventListener("novelcast:notification", (event) => {
-        const payload = event.detail || {};
-        if (!refreshEvents.has(payload.type)) return;
-
-        if (payload.type === "sync_finished" && !Number(payload.new_chapters || 0)) {
-            return;
-        }
-
-        clearTimeout(refreshTimer);
-        refreshTimer = setTimeout(() => {
-            window.location.reload();
-        }, 900);
-    });
-})();
+    window.novelcastPageData = {{ {
+        "sort": sort,
+        "genre": genre,
+        "tag": tag,
+        "series": series,
+        "language": language,
+        "status": status
+    } | tojson }};
 </script>
+
+<script src="/static/js/pages/index.js"></script>
 {% endblock %}

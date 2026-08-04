@@ -1,12 +1,11 @@
 # novelcast/parser/registry.py
 
-from typing import Dict
 
 from novelcast.parser.base import BaseParser
 
 
 class ParserRegistry:
-    def __init__(self, parsers: Dict[str, BaseParser] | None = None):
+    def __init__(self, parsers: dict[str, BaseParser] | None = None):
         self._parsers = parsers or {}
 
     def register(self, name: str, parser: BaseParser) -> None:

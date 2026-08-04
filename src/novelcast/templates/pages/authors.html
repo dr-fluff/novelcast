@@ -1,66 +1,65 @@
-{# novelcast/templates/pages/authors.html #}
-{% extends "layouts/base.html" %}
-
-{% block title %}Authors · NovelCast{% endblock %}
-
+{# novelcast/templates/pages/authors.html #} {% extends "layouts/base.html" %}
+{% block title %}
+    Authors · NovelCast
+{% endblock %}
 {% block head %}
     <link rel="stylesheet" href="/static/css/pages/index.css" />
     <link rel="stylesheet" href="/static/css/authors.css" />
 {% endblock %}
-
 {% block content %}
+    {% from "macros/grid_toolbar.html" import render_grid_toolbar %}
+    {%
+        include
+        "partials/library_header.html"
+    %}
+    {{ render_grid_toolbar("/authors", query, sort, sort_options) }}
 
-{% from "macros/grid_toolbar.html" import render_grid_toolbar %}
-{% include "partials/library_header.html" %}
-
-{{ render_grid_toolbar("/authors", query, sort, sort_options) }}
-
-<section class="grid grid-compact">
-    {% if authors %}
-        {% for author in authors %}
-            <a class="card author-card" href="/authors/{{ author.id }}">
-
-                <div class="card-cover author-card-cover">
-                    {% if author.picture_url %}
-                        <img src="{{ author.picture_url }}" alt="{{ author.name }}" />
-                    {% else %}
-                        <div class="author-card-placeholder">
-                            <span>{{ author.name[0].upper() }}</span>
-                        </div>
-                    {% endif %}
-                    <div class="card-letter">{{ author.name[0].upper() }}</div>
-                </div>
-
-                <div class="card-info">
-                    <h3>{{ author.name }}</h3>
-                    <p class="card-meta">
-                        {{ author.story_count }} {{ "story" if author.story_count == 1 else "stories" }}
-                        {% if author.last_updated %}
-                            · {{ author.last_updated.strftime("%b %Y") }}
+    <section class="grid grid-compact">
+        {% if authors %}
+            {% for author in authors %}
+                <a class="card author-card" href="/authors/{{ author.id }}">
+                    <div class="card-cover author-card-cover">
+                        {% if author.picture_url %}
+                            <img src="{{ author.picture_url }}" alt="{{ author.name }}" />
+                        {% else %}
+                            <div class="author-card-placeholder">
+                                <span>{{ author.name[0].upper() }}</span>
+                            </div>
                         {% endif %}
-                    </p>
-                    {% if author.bio %}
-                        <p class="author-card-bio">{{ author.bio }}</p>
-                    {% endif %}
-                </div>
+                        <div class="card-letter">{{ author.name[0].upper() }}</div>
+                    </div>
 
-                <i class="fa-solid fa-chevron-right author-card-chevron"></i>
+                    <div class="card-info">
+                        <h3>{{ author.name }}</h3>
+                        <p class="card-meta">
+                            {{ author.story_count }} {{ "story" if author.story_count == 1 else "stories" }}
+                            {%
+                                if
+                                author.last_updated
+                            %}
+                                · {{ author.last_updated.strftime("%b %Y") }}
+                            {% endif %}
+                        </p>
+                        {% if author.bio %}
+                            <p class="author-card-bio">{{ author.bio }}</p>
+                        {% endif %}
+                    </div>
 
-            </a>
-        {% endfor %}
-    {% else %}
-        <div class="empty-state authors-empty">
-            {% if query %}
-                <i class="fa-solid fa-magnifying-glass"></i>
-                <p>No authors matching <strong>{{ query }}</strong>.</p>
-                <a href="/authors" class="btn-secondary">Clear search</a>
-            {% else %}
-                <i class="fa-solid fa-user-pen"></i>
-                <p>No authors in your library yet.</p>
-                <p class="empty-hint">Authors are added automatically when you download a story.</p>
-            {% endif %}
-        </div>
-    {% endif %}
-</section>
-
+                    <i class="fa-solid fa-chevron-right author-card-chevron"></i>
+                </a>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state authors-empty">
+                {% if query %}
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <p>No authors matching <strong>{{ query }}</strong>.</p>
+                    <a href="/authors" class="btn-secondary">Clear search</a>
+                {% else %}
+                    <i class="fa-solid fa-user-pen"></i>
+                    <p>No authors in your library yet.</p>
+                    <p class="empty-hint">Authors are added automatically when you download a story.</p>
+                {% endif %}
+            </div>
+        {% endif %}
+    </section>
 {% endblock %}

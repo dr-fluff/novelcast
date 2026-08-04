@@ -5,7 +5,6 @@ import logging
 import os
 import re
 from pathlib import Path
-from typing import Dict, List, Optional
 
 from bs4 import BeautifulSoup
 from ebooklib import ITEM_DOCUMENT, epub
@@ -27,7 +26,7 @@ _EPUB_SKIP_MARKERS = ("cover", "nav", "toc", "titlepage", "title_page")
 
 
 class PatreonParser(BaseParser):
-    def parse(self, data: dict, settings: Optional[dict] = None) -> Story:
+    def parse(self, data: dict, settings: dict | None = None) -> Story:
         raw = data.get("raw", {})
         post_records = raw.get("post_records", [])
         settings = settings or {}
@@ -49,7 +48,7 @@ class PatreonParser(BaseParser):
 
     # ── per-post resolution ──────────────────────────────────────────
 
-    def _parse_post_record(self, record: Dict, settings: Dict) -> List[Dict]:
+    def _parse_post_record(self, record: dict, settings: dict) -> list[dict]:
         content_source = settings.get("content_source") or "file"
         filename_pattern = settings.get("filename_pattern")
 
@@ -94,7 +93,7 @@ class PatreonParser(BaseParser):
 
         return self._text_only_chapter(record, post_title, embed_images=True)
 
-    def _text_only_chapter(self, record: Dict, post_title: str, embed_images: bool) -> List[Dict]:
+    def _text_only_chapter(self, record: dict, post_title: str, embed_images: bool) -> list[dict]:
         content_html = self._post_content_to_html(record, embed_images=embed_images)
 
         image_files = [f for f in record.get("files", []) if f.get("type") == "image"]
@@ -110,7 +109,7 @@ class PatreonParser(BaseParser):
 
     # ── content format conversion ────────────────────────────────────
 
-    def _post_content_to_html(self, record: Dict, embed_images: bool) -> str:
+    def _post_content_to_html(self, record: dict, embed_images: bool) -> str:
         content_format = record.get("content_format", "html")
         raw_content = record.get("raw_content", "")
         if not raw_content:
@@ -127,7 +126,7 @@ class PatreonParser(BaseParser):
 
         return raw_content  # already HTML — keep raw, per original "DO NOT STRIP IT" note
 
-    def _tiptap_to_html(self, node, inline_images: Optional[Dict] = None, embed_images: bool = True) -> str:
+    def _tiptap_to_html(self, node, inline_images: dict | None = None, embed_images: bool = True) -> str:
         inline_images = inline_images or {}
 
         if isinstance(node, dict):
@@ -189,7 +188,7 @@ class PatreonParser(BaseParser):
 
         return ""
 
-    def _file_to_img_tag(self, file_ref: Dict) -> str:
+    def _file_to_img_tag(self, file_ref: dict) -> str:
         path = file_ref.get("path")
         filename = file_ref.get("filename", "")
         if not path or not os.path.exists(path):
@@ -261,7 +260,7 @@ class PatreonParser(BaseParser):
 
     # ── filename → chapter number/title ──────────────────────────────
 
-    def _extract_number_title_from_filename(self, filename: str, pattern: Optional[str]) -> tuple[Optional[int], str]:
+    def _extract_number_title_from_filename(self, filename: str, pattern: str | None) -> tuple[int | None, str]:
         stem = Path(filename).stem
 
         if pattern:
@@ -303,7 +302,7 @@ class PatreonParser(BaseParser):
         match = re.search(r"\b(\d+)\b", title)
         return int(match.group(1)) if match else 1
 
-    def _normalize_chapters(self, chapters: List[Dict]) -> List[Dict]:
+    def _normalize_chapters(self, chapters: list[dict]) -> list[dict]:
         chapters.sort(key=lambda x: x.get("number", 0))
         for idx, ch in enumerate(chapters, 1):
             ch["number"] = idx

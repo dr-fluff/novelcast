@@ -1,271 +1,347 @@
-{# novelcast/templates/pages/story.html #}
-{% extends "layouts/base.html" %}
-
-{% block title %}{{ story["title"] }} · NovelCast{% endblock %}
-
+{# novelcast/templates/pages/story.html #} {% extends "layouts/base.html" %}
+{% block title %}
+    {{ story["title"] }}
+    · NovelCast
+{% endblock %}
 {% block head %}
     <link rel="stylesheet" href="/static/css/pages/story.css" />
     <link rel="stylesheet" href="/static/css/components/metadata_panel.css" />
 {% endblock %}
-
 {% block content %}
+    {% include "partials/library_header.html" %}
 
-{% include "partials/library_header.html" %}
-
-<section class="story-page"
-    data-story-id="{{ story['id'] }}"
-    data-first-unread-id="{{ first_unread_chapter_id | default('') }}"
-    data-last-chapter-id="{{ last_chapter_id | default('') }}"
-    data-chapter-sort="{{ story_preferences.chapter_sort | default('asc') }}"
-    data-file-sort="{{ story_preferences.file_sort | default('asc') }}">
-
-    {# ── Hero ─────────────────────────────────────────────────────────── #}
-    <div class="story-hero">
-
-        <div class="story-cover-wrap">
-            {% if story["cover_url"] %}
-                <img class="story-cover" src="{{ story['cover_url'] }}" alt="Cover for {{ story['title'] }}" />
-            {% else %}
-                <div class="story-cover story-cover-placeholder">
-                    <i class="fa-solid fa-book-open"></i>
-                </div>
-            {% endif %}
-        </div>
-
-        <div class="story-info">
-            <h1 class="story-title">{{ story["title"] }}</h1>
-
-            {% if story["subtitle"] %}
-                <p class="story-subtitle">{{ story["subtitle"] }}</p>
-            {% endif %}
-
-            {% if story["series"] %}
-                <p class="story-subtitle">{{ story["series"] }}</p>
-            {% endif %}
-
-            <p class="story-author">
-                by
-                {% if story_authors %}
-                    {% for author in story_authors %}
-                        <a class="story-author-link" href="/authors/{{ author.id }}">{{ author.name }}</a>{% if not loop.last %}, {% endif %}
-                    {% endfor %}
+    <section
+        class="story-page"
+        data-story-id="{{ story['id'] }}"
+        data-first-unread-id="{{ first_unread_chapter_id | default('') }}"
+        data-last-chapter-id="{{ last_chapter_id | default('') }}"
+        data-chapter-sort="{{ story_preferences.chapter_sort | default('asc') }}"
+        data-file-sort="{{ story_preferences.file_sort | default('asc') }}"
+    >
+        {# ── Hero ─────────────────────────────────────────────────────────── #}
+        <div class="story-hero">
+            <div class="story-cover-wrap">
+                {% if story["cover_url"] %}
+                    <img class="story-cover" src="{{ story['cover_url'] }}" alt="Cover for {{ story['title'] }}" />
                 {% else %}
-                    <span class="story-author-name">{{ story["author"] or "Unknown author" }}</span>
+                    <div class="story-cover story-cover-placeholder">
+                        <i class="fa-solid fa-book-open"></i>
+                    </div>
                 {% endif %}
-            </p>
-
-            <dl class="story-meta-grid">
-                {% if story["narrators"] %}
-                <div class="meta-row"><dt>Narrators</dt><dd>{{ story["narrators"] }}</dd></div>
-                {% endif %}
-                {% if story["publish_year"] %}
-                <div class="meta-row"><dt>Publish year</dt><dd>{{ story["publish_year"] }}</dd></div>
-                {% endif %}
-                {% if story["publisher"] %}
-                <div class="meta-row"><dt>Publisher</dt><dd>{{ story["publisher"] }}</dd></div>
-                {% endif %}
-                {% if story["genres"] %}
-                <div class="meta-row"><dt>Genres</dt><dd>{{ story["genres"] }}</dd></div>
-                {% endif %}
-                {% if story["tags"] %}
-                <div class="meta-row"><dt>Tags</dt><dd>{{ story["tags"] }}</dd></div>
-                {% endif %}
-                {% if story["language"] %}
-                <div class="meta-row"><dt>Language</dt><dd>{{ story["language"] }}</dd></div>
-                {% endif %}
-                {% if story["size"] %}
-                <div class="meta-row"><dt>Size</dt><dd>{{ story["size"] }}</dd></div>
-                {% endif %}
-                {% if story["source_url"] %}
-                <div class="meta-row">
-                    <dt>Source</dt>
-                    <dd><a href="{{ story['source_url'] }}" target="_blank" rel="noreferrer" class="meta-link">{{ story["source_url"] }}</a></dd>
-                </div>
-                {% elif not story["narrators"] and not story["publish_year"] %}
-                <div class="meta-row">
-                    <dt>Source</dt>
-                    <dd class="meta-muted">No source URL available.</dd>
-                </div>
-                {% endif %}
-            </dl>
-
-            <div class="story-action-row">
-                {% if last_chapter_id or first_unread_chapter_id %}
-                    <button class="btn-play" onclick="goToReading()">
-                        <i class="fa-solid fa-play"></i> Read
-                    </button>
-                {% endif %}
-                {% if current_user and current_user.is_root %}
-                    <button class="btn-action-icon" onclick="UnifiedPanel.open('metadata', 'metaPanel', {{ story['id'] }})" title="Edit metadata">
-                        <i class="fa-solid fa-pen-to-square"></i>
-                    </button>
-                
-                    <button class="btn-action-icon btn-action-danger" onclick="confirmDeleteStory()" title="Delete story">
-                        <i class="fa-solid fa-trash"></i>
-                    </button>
-                {% endif %}
-                <div class="file-menu-wrapper">
-                    <button class="btn-action-icon" title="More options" onclick="event.stopPropagation(); openStoryMenu(this)">
-                        <i class="fa-solid fa-ellipsis"></i>
-                    </button>
-                </div>
             </div>
 
-            {% if story["description"] %}
-            <div class="story-description-block">
-                <p class="story-description" id="storyDescription">{{ story["description"] }}</p>
-                <button class="read-more-btn" id="readMoreBtn" onclick="toggleDescription()">
-                    Read more <i class="fa-solid fa-chevron-down"></i>
-                </button>
+            <div class="story-info">
+                <h1 class="story-title">{{ story["title"] }}</h1>
+
+                {% if story["subtitle"] %}
+                    <p class="story-subtitle">{{ story["subtitle"] }}</p>
+                {% endif %}
+                {% if story["series"] %}
+                    <p class="story-subtitle">{{ story["series"] }}</p>
+                {% endif %}
+
+                <p class="story-author">
+                    by
+                    {% if story_authors %}
+                        {% for author in story_authors %}
+                            <a class="story-author-link" href="/authors/{{ author.id }}">{{ author.name }}</a
+                            >{% if not loop.last %}
+                                ,
+                            {% endif %}
+                        {% endfor %}
+                    {% else %}
+                        <span class="story-author-name">{{ story["author"] or "Unknown author" }}</span>
+                    {% endif %}
+                </p>
+
+                <dl class="story-meta-grid">
+                    {% if story["narrators"] %}
+                        <div class="meta-row">
+                            <dt>Narrators</dt>
+                            <dd>{{ story["narrators"] }}</dd>
+                        </div>
+                    {% endif %}
+                    {% if story["publish_year"] %}
+                        <div class="meta-row">
+                            <dt>Publish year</dt>
+                            <dd>{{ story["publish_year"] }}</dd>
+                        </div>
+                    {% endif %}
+                    {% if story["publisher"] %}
+                        <div class="meta-row">
+                            <dt>Publisher</dt>
+                            <dd>{{ story["publisher"] }}</dd>
+                        </div>
+                    {% endif %}
+                    {% if story["genres"] %}
+                        <div class="meta-row">
+                            <dt>Genres</dt>
+                            <dd>{{ story["genres"] }}</dd>
+                        </div>
+                    {% endif %}
+                    {% if story["tags"] %}
+                        <div class="meta-row">
+                            <dt>Tags</dt>
+                            <dd>{{ story["tags"] }}</dd>
+                        </div>
+                    {% endif %}
+                    {% if story["language"] %}
+                        <div class="meta-row">
+                            <dt>Language</dt>
+                            <dd>{{ story["language"] }}</dd>
+                        </div>
+                    {% endif %}
+                    {% if story["size"] %}
+                        <div class="meta-row">
+                            <dt>Size</dt>
+                            <dd>{{ story["size"] }}</dd>
+                        </div>
+                    {% endif %}
+                    {% if story["source_url"] %}
+                        <div class="meta-row">
+                            <dt>Source</dt>
+                            <dd>
+                                <a href="{{ story['source_url'] }}" target="_blank" rel="noreferrer" class="meta-link"
+                                    >{{ story["source_url"] }}</a
+                                >
+                            </dd>
+                        </div>
+                    {% elif not story["narrators"] and not story["publish_year"] %}
+                        <div class="meta-row">
+                            <dt>Source</dt>
+                            <dd class="meta-muted">No source URL available.</dd>
+                        </div>
+                    {% endif %}
+                </dl>
+
+                <div class="story-action-row">
+                    {% if last_chapter_id or first_unread_chapter_id %}
+                        <button class="btn-play" onclick="goToReading()"><i class="fa-solid fa-play"></i> Read</button>
+                    {% endif %}
+                    {% if current_user and current_user.is_root %}
+                        <button
+                            class="btn-action-icon"
+                            onclick="UnifiedPanel.open('metadata', 'metaPanel', {{ story['id'] }})"
+                            title="Edit metadata"
+                        >
+                            <i class="fa-solid fa-pen-to-square"></i>
+                        </button>
+
+                        <button
+                            class="btn-action-icon btn-action-danger"
+                            onclick="confirmDeleteStory()"
+                            title="Delete story"
+                        >
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    {% endif %}
+                    <div class="file-menu-wrapper">
+                        <button
+                            class="btn-action-icon"
+                            title="More options"
+                            onclick="
+                            event.stopPropagation();
+                            openStoryMenu(this);
+                        "
+                        >
+                            <i class="fa-solid fa-ellipsis"></i>
+                        </button>
+                    </div>
+                </div>
+
+                {% if story["description"] %}
+                    <div class="story-description-block">
+                        <p class="story-description" id="storyDescription">{{ story["description"] }}</p>
+                        <button class="read-more-btn" id="readMoreBtn" onclick="toggleDescription()">
+                            Read more <i class="fa-solid fa-chevron-down"></i>
+                        </button>
+                    </div>
+                {% endif %}
             </div>
-            {% endif %}
         </div>
-    </div>
 
-    {# ── Chapters ─────────────────────────────────────────────────────── #}
-    <div class="collapsible-card">
-        <div class="collapsible-header" onclick="toggleSection('chapters')">
-            <div class="collapsible-header-left">
-                <span class="collapsible-title">Chapters</span>
-                <span class="collapsible-badge">{{ chapters | length }}</span>
+        {# ── Chapters ─────────────────────────────────────────────────────── #}
+        <div class="collapsible-card">
+            <div class="collapsible-header" onclick="toggleSection('chapters')">
+                <div class="collapsible-header-left">
+                    <span class="collapsible-title">Chapters</span>
+                    <span class="collapsible-badge">{{ chapters | length }}</span>
+                </div>
+                <div class="collapsible-header-right">
+                    <button
+                        class="btn-header-action"
+                        onclick="
+                        event.stopPropagation();
+                        cycleSort();
+                    "
+                        id="sortBtn"
+                        title="Sort order"
+                    >
+                        <i class="fa-solid fa-arrow-up-wide-short" id="sortIcon"></i>
+                    </button>
+                    <button class="btn-header-action" onclick="event.stopPropagation()">Edit Chapters</button>
+                    <i class="fa-solid fa-chevron-down collapsible-chevron" id="chaptersChevron"></i>
+                </div>
             </div>
-            <div class="collapsible-header-right">
-                <button class="btn-header-action" onclick="event.stopPropagation(); cycleSort()" id="sortBtn" title="Sort order">
-                    <i class="fa-solid fa-arrow-up-wide-short" id="sortIcon"></i>
-                </button>
-                <button class="btn-header-action" onclick="event.stopPropagation();">Edit Chapters</button>
-                <i class="fa-solid fa-chevron-down collapsible-chevron" id="chaptersChevron"></i>
+
+            <div class="collapsible-body" id="chaptersBody">
+                {% if chapters %}
+                    <ul class="chapter-list" id="chapterList">
+                        {% for chapter in chapters %}
+                            <li
+                                class="chapter-item {% if chapter['id'] in read_chapters %}chapter-read{% endif %} {% if last_chapter_id and chapter['id'] == last_chapter_id %}chapter-current{% endif %}"
+                                data-chapter-number="{{ chapter['chapter_number'] }}"
+                            >
+                                <a
+                                    href="/chapter?story_id={{ story['id'] }}&chapter_id={{ chapter['id'] }}"
+                                    class="chapter-link"
+                                >
+                                    <div class="chapter-main">
+                                        <span class="chapter-number">Chapter {{ chapter["chapter_number"] }}</span>
+                                        <span class="chapter-name">{{ chapter["title"] or "Untitled chapter" }}</span>
+                                        {% if last_chapter_id and chapter['id'] == last_chapter_id %}
+                                            <span
+                                                class="chapter-current-badge"
+                                                title="You're currently reading this chapter"
+                                            >
+                                                <i class="fa-solid fa-bookmark"></i> Continue
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                    <span
+                                        class="chapter-status {% if chapter['id'] in read_chapters %}status-read{% endif %}"
+                                    >
+                                        {% if chapter["id"] in read_chapters %}Read{% else %}Unread{% endif %}
+                                    </span>
+                                </a>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <div class="empty-state">
+                        <p>No downloaded chapters found for this story yet.</p>
+                    </div>
+                {% endif %}
             </div>
         </div>
 
-        <div class="collapsible-body" id="chaptersBody">
-            {% if chapters %}
-                <ul class="chapter-list" id="chapterList">
-                    {% for chapter in chapters %}
-                        <li class="chapter-item
-                                {% if chapter['id'] in read_chapters %}chapter-read{% endif %}
-                                {% if last_chapter_id and chapter['id'] == last_chapter_id %}chapter-current{% endif %}"
-                            data-chapter-number="{{ chapter['chapter_number'] }}">
-                            <a href="/chapter?story_id={{ story['id'] }}&chapter_id={{ chapter['id'] }}" class="chapter-link">
-                                <div class="chapter-main">
-                                    <span class="chapter-number">Chapter {{ chapter["chapter_number"] }}</span>
-                                    <span class="chapter-name">{{ chapter["title"] or "Untitled chapter" }}</span>
-                                    {% if last_chapter_id and chapter['id'] == last_chapter_id %}
-                                        <span class="chapter-current-badge" title="You're currently reading this chapter">
-                                            <i class="fa-solid fa-bookmark"></i> Continue
+        {# ── Library Files ────────────────────────────────────────────────── #}
+        <div class="collapsible-card">
+            <div class="collapsible-header" onclick="toggleSection('files')">
+                <div class="collapsible-header-left">
+                    <span class="collapsible-title">Library Files</span>
+                    <span class="collapsible-badge"
+                        >{{ story_files | length if story_files else story["file_count"] or 0 }}</span
+                    >
+                </div>
+                <div class="collapsible-header-right">
+                    <button
+                        class="btn-header-action"
+                        onclick="
+                        event.stopPropagation();
+                        cycleFileSort();
+                    "
+                        id="fileSortBtn"
+                        title="Sort files"
+                    >
+                        <i class="fa-solid fa-arrow-up-wide-short" id="fileSortIcon"></i>
+                    </button>
+                    <button
+                        class="btn-header-action"
+                        id="fullPathBtn"
+                        onclick="
+                        event.stopPropagation();
+                        toggleFullPath();
+                    "
+                    >
+                        Full Path
+                    </button>
+                    <i class="fa-solid fa-chevron-down collapsible-chevron collapsed" id="filesChevron"></i>
+                </div>
+            </div>
+            <div class="collapsible-body collapsed" id="filesBody">
+                {% if story_files %}
+                    <table class="file-table">
+                        <thead>
+                            <tr>
+                                <th class="file-col-path">Path</th>
+                                <th class="file-col-size">Size</th>
+                                <th class="file-col-type">Type</th>
+                                <th class="file-col-actions"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for file in story_files %}
+                                {%
+                                    set ext = file.relative_path.rsplit('.', 1)[-1] | lower if '.' in
+                                    file.relative_path else ''
+                                %}
+                                {% set ftype = file.type | lower if file.type is defined else ext %}
+                                <tr class="file-row">
+                                    <td class="file-col-path">
+                                        <span
+                                            class="file-path-text"
+                                            data-full="{{ file.path | default(file.relative_path) }}"
+                                            data-relative="{{ file.relative_path }}"
+                                        >
+                                            {{ file.relative_path }}
                                         </span>
-                                    {% endif %}
-                                </div>
-                                <span class="chapter-status {% if chapter['id'] in read_chapters %}status-read{% endif %}">
-                                    {% if chapter["id"] in read_chapters %}Read{% else %}Unread{% endif %}
-                                </span>
-                            </a>
-                        </li>
-                    {% endfor %}
-                </ul>
-            {% else %}
-                <div class="empty-state">
-                    <p>No downloaded chapters found for this story yet.</p>
-                </div>
-            {% endif %}
-        </div>
-    </div>
-
-    {# ── Library Files ────────────────────────────────────────────────── #}
-    <div class="collapsible-card">
-        <div class="collapsible-header" onclick="toggleSection('files')">
-            <div class="collapsible-header-left">
-                <span class="collapsible-title">Library Files</span>
-                <span class="collapsible-badge">{{ story_files | length if story_files else story["file_count"] or 0 }}</span>
-            </div>
-            <div class="collapsible-header-right">
-                <button class="btn-header-action" onclick="event.stopPropagation(); cycleFileSort()" id="fileSortBtn" title="Sort files">
-                    <i class="fa-solid fa-arrow-up-wide-short" id="fileSortIcon"></i>
-                </button>
-                <button class="btn-header-action" id="fullPathBtn" onclick="event.stopPropagation(); toggleFullPath()">Full Path</button>
-                <i class="fa-solid fa-chevron-down collapsible-chevron collapsed" id="filesChevron"></i>
-            </div>
-        </div>
-        <div class="collapsible-body collapsed" id="filesBody">
-            {% if story_files %}
-                <table class="file-table">
-                    <thead>
-                        <tr>
-                            <th class="file-col-path">Path</th>
-                            <th class="file-col-size">Size</th>
-                            <th class="file-col-type">Type</th>
-                            <th class="file-col-actions"></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for file in story_files %}
-                        {% set ext = file.relative_path.rsplit('.', 1)[-1] | lower if '.' in file.relative_path else '' %}
-                        {% set ftype = file.type | lower if file.type is defined else ext %}
-                        <tr class="file-row">
-                            <td class="file-col-path">
-                                <span class="file-path-text"
-                                    data-full="{{ file.path | default(file.relative_path) }}"
-                                    data-relative="{{ file.relative_path }}">
-                                    {{ file.relative_path }}
-                                </span>
-                            </td>
-                            <td class="file-col-size">{{ file.size }}</td>
-                            <td class="file-col-type">
-                                <span class="file-type-badge file-type-{{ ftype }}">{{ file.type if file.type is defined else ext }}</span>
-                            </td>
-                            <td class="file-col-actions">
-                                <div class="file-menu-wrapper">
-                                    <button class="btn-file-menu"
-                                        title="More options"
-                                        onclick="event.stopPropagation(); openFileMenu(
+                                    </td>
+                                    <td class="file-col-size">{{ file.size }}</td>
+                                    <td class="file-col-type">
+                                        <span class="file-type-badge file-type-{{ ftype }}"
+                                            >{{ file.type if file.type is defined else ext }}</span
+                                        >
+                                    </td>
+                                    <td class="file-col-actions">
+                                        <div class="file-menu-wrapper">
+                                            <button
+                                                class="btn-file-menu"
+                                                title="More options"
+                                                onclick="event.stopPropagation(); openFileMenu(
                                             this,
                                             {{ (file.path | default(file.relative_path)) | tojson }},
                                             {{ (file.type | default(ext)) | tojson }}
-                                        )">
-                                        <i class="fa-solid fa-ellipsis-vertical"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            {% else %}
-                <div class="empty-state">
-                    <p>No files available for this story.</p>
+                                        )"
+                                            >
+                                                <i class="fa-solid fa-ellipsis-vertical"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <div class="empty-state">
+                        <p>No files available for this story.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+
+    {# ── File More Info Modal ──────────────────────────────────────────────── #}
+    <div class="file-info-overlay" id="fileInfoOverlay" onclick="closeFileInfo(event)">
+        <div class="file-info-modal" id="fileInfoModal">
+            <div class="file-info-header">
+                <span class="file-info-title" id="fileInfoTitle"></span>
+                <div class="file-info-header-actions">
+                    <button class="btn-probe" id="fileInfoProbeBtn" style="display: none">
+                        <i class="fa-solid fa-waveform-lines"></i> Probe Audio File
+                    </button>
+                    <button class="btn-modal-close" onclick="closeFileInfoModal()">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
                 </div>
-            {% endif %}
-        </div>
-    </div>
-
-</section>
-
-{# ── File More Info Modal ──────────────────────────────────────────────── #}
-<div class="file-info-overlay" id="fileInfoOverlay" onclick="closeFileInfo(event)">
-    <div class="file-info-modal" id="fileInfoModal">
-        <div class="file-info-header">
-            <span class="file-info-title" id="fileInfoTitle"></span>
-            <div class="file-info-header-actions">
-                <button class="btn-probe" id="fileInfoProbeBtn" style="display:none">
-                    <i class="fa-solid fa-waveform-lines"></i> Probe Audio File
-                </button>
-                <button class="btn-modal-close" onclick="closeFileInfoModal()">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
             </div>
-        </div>
-        <div class="file-info-body" id="fileInfoBody">
-            <div class="file-info-loading">
-                <i class="fa-solid fa-spinner fa-spin"></i> Loading…
+            <div class="file-info-body" id="fileInfoBody">
+                <div class="file-info-loading"><i class="fa-solid fa-spinner fa-spin"></i> Loading…</div>
             </div>
         </div>
     </div>
-</div>
-
-
 {% endblock %}
-
 {% block scripts %}
-<script src="/static/js/story_page.js" defer></script>
-<script src="/static/js/pagination.js" defer></script>
+    <script src="/static/js/story_page.js" defer></script>
+    <script src="/static/js/pagination.js" defer></script>
 {% endblock %}

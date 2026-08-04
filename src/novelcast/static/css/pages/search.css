@@ -33,14 +33,16 @@
 
 .search-input {
     width: 100%;
-    padding: 0.75rem 2.8rem;   /* space for icon left, spinner right */
+    padding: 0.75rem 2.8rem; /* space for icon left, spinner right */
     background: var(--color-surface, lightgray);
     border: 1px solid var(--color-border, #30363d);
     border-radius: 8px;
     color: var(--color-text, #000000);
     font-size: 1rem;
     outline: none;
-    transition: border-color 0.15s, box-shadow 0.15s;
+    transition:
+        border-color 0.15s,
+        box-shadow 0.15s;
 }
 
 .search-input:focus {
@@ -78,7 +80,9 @@
 }
 
 @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 /* ── Results area ───────────────────────────────────────── */
@@ -110,12 +114,27 @@
     letter-spacing: 0.04em;
 }
 
-.site-badge--royalroad  { background: #1a3a1a; color: #4ade80; }
-.site-badge--scribblehub { background: #3a1a1a; color: #fb923c; }
-.site-badge             { background: #1e293b; color: #94a3b8; }  /* fallback */
+.site-badge--royalroad {
+    background: #1a3a1a;
+    color: #4ade80;
+}
+.site-badge--scribblehub {
+    background: #3a1a1a;
+    color: #fb923c;
+}
+.site-badge {
+    background: #1e293b;
+    color: #94a3b8;
+} /* fallback */
 
-.kind-badge--fiction { background: #1e2a3a; color: #60a5fa; }
-.kind-badge--author  { background: #2a1e3a; color: #c084fc; }
+.kind-badge--fiction {
+    background: #1e2a3a;
+    color: #60a5fa;
+}
+.kind-badge--author {
+    background: #2a1e3a;
+    color: #c084fc;
+}
 
 /* ── Direct match ───────────────────────────────────────── */
 
@@ -166,7 +185,9 @@
     text-decoration: none;
 }
 
-.search-url:hover { text-decoration: underline; }
+.search-url:hover {
+    text-decoration: underline;
+}
 
 .search-hint {
     margin-top: 0.75rem;
@@ -205,7 +226,9 @@
     overflow: hidden;
     text-decoration: none;
     color: inherit;
-    transition: border-color 0.15s, transform 0.15s;
+    transition:
+        border-color 0.15s,
+        transform 0.15s;
 }
 
 .result-card:hover {

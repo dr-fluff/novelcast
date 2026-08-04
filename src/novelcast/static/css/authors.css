@@ -72,7 +72,6 @@
     margin: 0;
 }
 
-
 /* ═══════════════════════════════════════════════
    AUTHOR DETAIL PAGE
 ═══════════════════════════════════════════════ */
@@ -171,7 +170,9 @@
     font-size: 0.875rem;
     font-weight: 600;
     text-decoration: none;
-    transition: background 0.15s ease, transform 0.15s ease;
+    transition:
+        background 0.15s ease,
+        transform 0.15s ease;
 }
 
 .author-link-pill:hover {
@@ -229,5 +230,4 @@
         width: 100%;
         justify-content: center;
     }
-
 }

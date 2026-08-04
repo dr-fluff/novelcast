@@ -1,7 +1,6 @@
 # novelcast/db/models/chapter_pattern.py
 
 from datetime import datetime
-from typing import Optional
 
 from sqlalchemy import Boolean, DateTime, String
 from sqlalchemy.orm import Mapped, mapped_column
@@ -14,7 +13,7 @@ class ChapterPattern(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     pattern: Mapped[str] = mapped_column(String, nullable=False, unique=True)
-    description: Mapped[Optional[str]] = mapped_column(String)
+    description: Mapped[str | None] = mapped_column(String)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     is_builtin: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

@@ -7,10 +7,10 @@ import asyncio
 
 import httpx
 
+from novelcast.core import setting_keys
 from novelcast.services.search_service import SearchResult
 from novelcast.services.site_adapters import registry
 from novelcast.services.site_adapters.patreon import extract_creator as extract_patreon_creator
-from novelcast.core import setting_keys
 
 from . import patreon, royalroad, scribblehub
 from .base import ScrapedResult

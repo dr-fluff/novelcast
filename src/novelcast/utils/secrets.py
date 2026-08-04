@@ -68,4 +68,4 @@ def _keystream(key: bytes, nonce: bytes, length: int) -> bytes:
 
 
 def _xor_bytes(left: bytes, right: bytes) -> bytes:
-    return bytes(a ^ b for a, b in zip(left, right))
+    return bytes(a ^ b for a, b in zip(left, right, strict=True))

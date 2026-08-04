@@ -1,6 +1,6 @@
 # novelcast/db/repositories/stats_repository.py
 
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 
 from sqlalchemy import func, select
 from sqlalchemy.dialects.sqlite import insert
@@ -20,7 +20,7 @@ class StatsRepository(BaseRepository):
         creating the day's row if it doesn't exist yet. `on` is exposed
         for tests; callers should normally omit it and let it default
         to today."""
-        activity_date = on or datetime.now(timezone.utc).date()
+        activity_date = on or datetime.now(UTC).date()
         with self.session() as db:
             stmt = (
                 insert(UserDailyActivity)
@@ -33,7 +33,7 @@ class StatsRepository(BaseRepository):
                     index_elements=["user_id", "activity_date"],
                     set_={
                         "read_seconds": UserDailyActivity.read_seconds + seconds,
-                        "updated_at": datetime.now(timezone.utc),
+                        "updated_at": datetime.now(UTC),
                     },
                 )
             )
@@ -52,7 +52,7 @@ class StatsRepository(BaseRepository):
         """Returns one dict per active day in the last `days` days:
         {"date": date, "read_seconds": int}. Days with no activity simply
         don't appear — the caller fills gaps for display."""
-        since = datetime.now(timezone.utc).date() - timedelta(days=days)
+        since = datetime.now(UTC).date() - timedelta(days=days)
         with self.session_no_commit() as db:
             rows = db.execute(
                 select(UserDailyActivity.activity_date, UserDailyActivity.read_seconds)
@@ -75,7 +75,7 @@ class StatsRepository(BaseRepository):
             if label is not None:
                 values["label"] = label
 
-            update_set = {"last_seen_at": datetime.now(timezone.utc)}
+            update_set = {"last_seen_at": datetime.now(UTC)}
             if label is not None:
                 update_set["label"] = label
 
@@ -91,9 +91,7 @@ class StatsRepository(BaseRepository):
 
     def get_device_count(self, user_id: int) -> int:
         with self.session_no_commit() as db:
-            return db.scalar(
-                select(func.count()).select_from(UserDevice).where(UserDevice.user_id == user_id)
-            ) or 0
+            return db.scalar(select(func.count()).select_from(UserDevice).where(UserDevice.user_id == user_id)) or 0
 
     # ── derived: chapters / stories read, reading speed ────────────────
 
@@ -113,14 +111,17 @@ class StatsRepository(BaseRepository):
 
     def get_stories_read(self, user_id: int) -> int:
         with self.session_no_commit() as db:
-            return db.scalar(
-                select(func.count())
-                .select_from(ReadingProgress)
-                .where(
-                    ReadingProgress.user_id == user_id,
-                    ReadingProgress.furthest_chapter_id.is_not(None),
+            return (
+                db.scalar(
+                    select(func.count())
+                    .select_from(ReadingProgress)
+                    .where(
+                        ReadingProgress.user_id == user_id,
+                        ReadingProgress.furthest_chapter_id.is_not(None),
+                    )
                 )
-            ) or 0
+                or 0
+            )
 
     def get_words_read(self, user_id: int) -> int:
         """Sum of word_count for every chapter at or before the furthest

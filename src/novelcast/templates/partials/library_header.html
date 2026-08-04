@@ -1,50 +1,51 @@
 <header class="library-header">
-  <div class="library-header-inner">
-
-    <!-- LEFT: BRAND -->
-    <a class="library-brand" href="/">
-        <i class="fa-solid fa-book"></i>
-        <span>NovelCast</span>
-    </a>
-
-    <!-- CENTER: NAV LINKS -->
-    <nav class="library-nav">
-        <a class="library-nav-link {% if request.url.path == '/' %}library-nav-link--active{% endif %}" href="/">
-            Library
+    <div class="library-header-inner">
+        <!-- LEFT: BRAND -->
+        <a class="library-brand" href="/">
+            <i class="fa-solid fa-book"></i>
+            <span>NovelCast</span>
         </a>
-        <a class="library-nav-link {% if request.url.path == '/authors' %}library-nav-link--active{% endif %}" href="/authors">
-            Authors
-        </a>
-        <a class="library-nav-link {% if request.url.path == '/search' %}library-nav-link--active{% endif %}" href="/search">
-            Search
-        </a>
-    </nav>
 
-    <!-- RIGHT: ACTIONS -->
-    <div class="library-actions">
+        <!-- CENTER: NAV LINKS -->
+        <nav class="library-nav">
+            <a class="library-nav-link {% if request.url.path == '/' %}library-nav-link--active{% endif %}" href="/">
+                Library
+            </a>
+            <a
+                class="library-nav-link {% if request.url.path == '/authors' %}library-nav-link--active{% endif %}"
+                href="/authors"
+            >
+                Authors
+            </a>
+            <a
+                class="library-nav-link {% if request.url.path == '/search' %}library-nav-link--active{% endif %}"
+                href="/search"
+            >
+                Search
+            </a>
+        </nav>
 
-        {% if current_user and current_user.get("is_root") %}
-        <a class="icon-button" href="/admin" title="Admin settings">
-            <i class="fa-solid fa-gear"></i>
-        </a>
-        {% endif %}
-
-        {% if current_user %}
-        <button class="library-user-btn" onclick="toggleUserMenu()" title="User menu">
-            <span class="library-username">{{ current_user.get("username", "") }}</span>
-            {% if current_user.get("is_root") %}
-                <span class="badge badge--admin">Admin</span>
-            {% else %}
-                <span class="badge badge--user">User</span>
+        <!-- RIGHT: ACTIONS -->
+        <div class="library-actions">
+            {% if current_user and current_user.get("is_root") %}
+                <a class="icon-button" href="/admin" title="Admin settings">
+                    <i class="fa-solid fa-gear"></i>
+                </a>
             {% endif %}
-        </button>
-        {% endif %}
+            {% if current_user %}
+                <button class="library-user-btn" onclick="toggleUserMenu()" title="User menu">
+                    <span class="library-username">{{ current_user.get("username", "") }}</span>
+                    {% if current_user.get("is_root") %}
+                        <span class="badge badge--admin">Admin</span>
+                    {% else %}
+                        <span class="badge badge--user">User</span>
+                    {% endif %}
+                </button>
+            {% endif %}
 
-        <div class="status-dot" id="sync-status" title="Idle"></div>
-
+            <div class="status-dot" id="sync-status" title="Idle"></div>
+        </div>
     </div>
-
-  </div>
 </header>
 
 <!-- USER MENU SLIDE-OUT PANEL -->
@@ -52,19 +53,22 @@
 
 <aside class="user-menu-panel" id="user-menu-panel">
     <div class="user-menu-panel-header">
-        <span class="user-menu-panel-title">
-            {{ current_user.get("username", "") if current_user else "" }}
-        </span>
+        <span class="user-menu-panel-title"> {{ current_user.get("username", "") if current_user else "" }} </span>
         <button class="icon-button" onclick="closeUserMenu()" title="Close">
             <i class="fa-solid fa-xmark"></i>
         </button>
     </div>
 
     <div class="user-menu-panel-body">
-        <button class="user-menu-item" disabled title="Coming soon">
+        <a class="user-menu-item" href="/stats">
             <i class="fa-solid fa-chart-simple"></i>
             <span>Stats</span>
-        </button>
+        </a>
+
+        <a class="user-menu-item" href="/account/password">
+            <i class="fa-solid fa-key"></i>
+            <span>Change password</span>
+        </a>
 
         <button class="user-menu-item user-menu-item--danger" onclick="logoutUser()">
             <i class="fa-solid fa-right-from-bracket"></i>

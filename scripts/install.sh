@@ -122,6 +122,10 @@ echo "Installing frontend dependencies"
 
 npm install
 
+echo "Installing Prettier"
+
+npm install --save-dev prettier
+
 
 
 echo ""

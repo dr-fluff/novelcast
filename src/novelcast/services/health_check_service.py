@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import shutil
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Callable, Literal
+from typing import Literal
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session

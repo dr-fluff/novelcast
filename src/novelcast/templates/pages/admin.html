@@ -1,99 +1,96 @@
 <!-- novelcast/templates/pages/admin.html -->
-{% extends "layouts/base.html" %}
-{% block title %}Admin - NovelCast{% endblock %}
-
+{% extends "layouts/base.html" %} {% block title %}Admin - NovelCast{% endblock %}
 {% block head %}
     <link rel="stylesheet" href="/static/css/pages/settings.css" />
 {% endblock %}
-
 {% block content %}
+    {% include "partials/library_header.html" %}
 
-{% include "partials/library_header.html" %}
-
-<div class="pg-admin">
-
-  <!-- PAGE HEADER -->
-  <div class="pg-header">
-    <h1 class="pg-title">Admin Dashboard</h1>
-    <button class="btn-ghost" onclick="syncStory()">Sync all</button>
-  </div>
-
-  <!-- STAT CARDS -->
-  <div class="stat-grid">
-    <div class="stat-card">
-      <span class="stat-label">Total Users</span>
-      <span class="stat-value stat-value--blue">{{ stats.total_users | default(0) }}</span>
-    </div>
-    <div class="stat-card">
-      <span class="stat-label">Total Stories</span>
-      <span class="stat-value stat-value--green">{{ stats.total_stories | default(0) }}</span>
-    </div>
-    <div class="stat-card">
-      <span class="stat-label">Pending Syncs</span>
-      <span
-        class="stat-value stat-value--purple"
-        id="pending-syncs"
-        title="{{ stats.pending_chapters | default(0) }} new chapters available">
-        {{ stats.pending_syncs | default(0) }}
-      </span>
-    </div>
-    <div class="stat-card">
-      <span class="stat-label">Need Attention</span>
-      <span class="stat-value stat-value--gray">{{ stats.need_attention | default(0) }}</span>
-    </div>
-  </div>
-
-  <!-- MAIN GRID -->
-  <div class="admin-grid">
-
-    <!-- SYSTEM HEALTH -->
-    <div class="panel">
-      <div class="panel__head">
-        <h2 class="panel__title">System Health</h2>
-        <button class="btn-ghost btn-ghost--sm" onclick="runHealthCheck()">Run Check</button>
-      </div>
-      <div class="health-list">
-        {% for check in health_checks | default([
-          {"name": "Database",    "status": "healthy",       "detail": "Connection successful"},
-          {"name": "Sync Worker", "status": "healthy",       "detail": "Running"},
-          {"name": "Storage",     "status": "not_configured","detail": "Not configured"},
-        ]) %}
-        <div class="health-row">
-          <div class="health-row__info">
-            <span class="health-row__name">{{ check.name }}</span>
-            <span class="health-row__detail">{{ check.detail }}</span>
-          </div>
-          <span class="health-badge health-badge--{{ check.status }}">
-            {% if check.status == "healthy" %}Healthy
-            {% elif check.status == "not_healthy" %} Not Healthy
-            {% elif check.status == "not_configured" %}Not Configured
-            {% else %}Error{% endif %}
-          </span>
+    <div class="pg-admin">
+        <!-- PAGE HEADER -->
+        <div class="pg-header">
+            <h1 class="pg-title">Admin Dashboard</h1>
+            <button class="btn-ghost" onclick="syncStory()">Sync all</button>
         </div>
-        {% endfor %}
-      </div>
+
+        <!-- STAT CARDS -->
+        <div class="stat-grid">
+            <div class="stat-card">
+                <span class="stat-label">Total Users</span>
+                <span class="stat-value stat-value--blue">{{ stats.total_users | default(0) }}</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">Total Stories</span>
+                <span class="stat-value stat-value--green">{{ stats.total_stories | default(0) }}</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">Pending Syncs</span>
+                <span
+                    class="stat-value stat-value--purple"
+                    id="pending-syncs"
+                    title="{{ stats.pending_chapters | default(0) }} new chapters available"
+                >
+                    {{ stats.pending_syncs | default(0) }}
+                </span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">Need Attention</span>
+                <span class="stat-value stat-value--gray">{{ stats.need_attention | default(0) }}</span>
+            </div>
+        </div>
+
+        <!-- MAIN GRID -->
+        <div class="admin-grid">
+            <!-- SYSTEM HEALTH -->
+            <div class="panel">
+                <div class="panel__head">
+                    <h2 class="panel__title">System Health</h2>
+                    <button class="btn-ghost btn-ghost--sm" onclick="runHealthCheck()">Run Check</button>
+                </div>
+                <div class="health-list">
+                    {%
+                        for check in health_checks | default([ {"name": "Database", "status": "healthy", "detail":
+                        "Connection successful"}, {"name": "Sync Worker", "status": "healthy", "detail": "Running"}, {"name":
+                        "Storage", "status": "not_configured","detail": "Not configured"}, ])
+                    %}
+                        <div class="health-row">
+                            <div class="health-row__info">
+                                <span class="health-row__name">{{ check.name }}</span>
+                                <span class="health-row__detail">{{ check.detail }}</span>
+                            </div>
+                            <span class="health-badge health-badge--{{ check.status }}">
+                                {% if check.status == "healthy" %}
+                                    Healthy
+                                {% elif check.status == "not_healthy" %}
+                                    Not Healthy
+                                {% elif check.status == "not_configured" %}
+                                    Not Configured
+                                {% else %}
+                                    Error
+                                {% endif %}
+                            </span>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- QUICK LINKS -->
+            <div class="panel">
+                <div class="panel__head">
+                    <h2 class="panel__title">Quick Links</h2>
+                </div>
+                <div class="quicklinks">
+                    <a href="/admin/users" class="quicklink">Manage Users</a>
+                    <a href="/admin/chapter-patterns" class="quicklink">Chapter Patterns</a>
+                    <a href="/settings" class="quicklink">Settings</a>
+                    <a href="/admin/logs" class="quicklink">Application Logs</a>
+                    <a href="/" class="quicklink">Back to Library</a>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- QUICK LINKS -->
-    <div class="panel">
-      <div class="panel__head">
-        <h2 class="panel__title">Quick Links</h2>
-      </div>
-      <div class="quicklinks">
-        <a href="/admin/users"            class="quicklink">Manage Users</a>
-        <a href="/admin/chapter-patterns" class="quicklink">Chapter Patterns</a>
-        <a href="/settings"               class="quicklink">Settings</a>
-        <a href="/admin/logs"             class="quicklink">Application Logs</a>
-        <a href="/"                       class="quicklink">Back to Library</a>
-      </div>
-    </div>
-
-  </div>
-
-</div>
-
-{% block scripts %}
-  <script src="/static/js/admin_page.js" defer></script>
-{% endblock %}
-
+    {% block scripts %}
+        <script src="/static/js/admin_page.js" defer></script>
+    {% endblock %}
 {% endblock %}

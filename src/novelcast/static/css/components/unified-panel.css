@@ -49,7 +49,9 @@
 
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.2s ease, transform 0.2s ease;
+    transition:
+        opacity 0.2s ease,
+        transform 0.2s ease;
 }
 
 .unified-panel.open {
@@ -96,7 +98,9 @@
     cursor: pointer;
     font-size: 1rem;
     font-family: inherit;
-    transition: background 0.12s ease, color 0.12s ease;
+    transition:
+        background 0.12s ease,
+        color 0.12s ease;
 }
 
 .unified-panel-close:hover {
@@ -124,7 +128,9 @@
     cursor: pointer;
     border-bottom: 2px solid transparent;
     margin-bottom: -1px;
-    transition: color 0.12s ease, border-color 0.12s ease;
+    transition:
+        color 0.12s ease,
+        border-color 0.12s ease;
     font-family: inherit;
     white-space: nowrap;
 }
@@ -147,8 +153,8 @@
     display: flex;
     flex-direction: column;
     gap: 0.85rem;
-    
-    height: 65vh;      /* 65% of screen height */
+
+    height: 65vh; /* 65% of screen height */
     /* min-height: 400px;     Don't shrink below 400px */
 }
 
@@ -160,7 +166,7 @@
     gap: 0.85rem;
 }
 
-.unified-panel-content[style*="display:none"] {
+.unified-panel-content[style*='display:none'] {
     display: none !important;
 }
 
@@ -196,8 +202,12 @@
 }
 
 @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .panel-center h3 {
@@ -241,7 +251,9 @@
     color: #0f172a;
     font-size: 0.9rem;
     font-family: inherit;
-    transition: border-color 0.12s ease, box-shadow 0.12s ease;
+    transition:
+        border-color 0.12s ease,
+        box-shadow 0.12s ease;
     box-sizing: border-box;
 }
 
@@ -367,7 +379,9 @@ textarea.form-input {
     cursor: pointer;
     font-size: 0.65rem;
     font-family: inherit;
-    transition: border-color 0.12s, color 0.12s;
+    transition:
+        border-color 0.12s,
+        color 0.12s;
 }
 
 .tag-add:hover {
@@ -386,7 +400,7 @@ textarea.form-input {
     color: #334155;
 }
 
-.form-checkbox-label input[type="checkbox"] {
+.form-checkbox-label input[type='checkbox'] {
     width: 1.1rem;
     height: 1.1rem;
     accent-color: #6366f1;
@@ -399,7 +413,7 @@ textarea.form-input {
     gap: 0.75rem;
 }
 
-.form-switch input[type="checkbox"] {
+.form-switch input[type='checkbox'] {
     width: 1.1rem;
     height: 1.1rem;
     accent-color: #6366f1;
@@ -437,7 +451,9 @@ textarea.form-input {
     font-size: 0.82rem;
     cursor: pointer;
     font-family: inherit;
-    transition: background 0.1s, color 0.1s;
+    transition:
+        background 0.1s,
+        color 0.1s;
 }
 
 .toolbar-btn:hover {
@@ -491,7 +507,7 @@ textarea.form-input {
     border-bottom: none;
 }
 
-.chapter-item input[type="checkbox"] {
+.chapter-item input[type='checkbox'] {
     width: 1rem;
     height: 1rem;
     accent-color: #6366f1;
@@ -598,7 +614,9 @@ textarea.form-input {
     font-weight: 600;
     cursor: pointer;
     font-family: inherit;
-    transition: background 0.12s, color 0.12s;
+    transition:
+        background 0.12s,
+        color 0.12s;
 }
 
 .btn:disabled {

@@ -14,16 +14,18 @@ the corrected code can start writing clean device-scoped rows going
 forward. There is no meaningful downgrade for a data deletion, so
 downgrade() is a no-op.
 """
-from typing import Sequence, Union
 
-from alembic import op
+from collections.abc import Sequence
+
 import sqlalchemy as sa
 
+from alembic import op
+
 # revision identifiers, used by Alembic.
-revision: str = '7f2a9c1d3e5b'
-down_revision: Union[str, Sequence[str], None] = '4b37554c602a'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+revision: str = "7f2a9c1d3e5b"
+down_revision: str | Sequence[str] | None = "4b37554c602a"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 _LEGACY_READING_SETTING_NAMES = (
     "chapter_theme",
@@ -40,9 +42,7 @@ def upgrade() -> None:
     """Delete legacy global (non-device-scoped) reading setting rows."""
     conn = op.get_bind()
     conn.execute(
-        sa.text(
-            "DELETE FROM user_settings WHERE name IN :names"
-        ).bindparams(sa.bindparam("names", expanding=True)),
+        sa.text("DELETE FROM user_settings WHERE name IN :names").bindparams(sa.bindparam("names", expanding=True)),
         {"names": list(_LEGACY_READING_SETTING_NAMES)},
     )
 

@@ -1,363 +1,443 @@
 <!-- novelcast/templates/pages/chapter_patterns.html -->
-{% extends "layouts/base.html" %}
-{% block title %}Chapter Patterns - NovelCast{% endblock %}
-
+{% extends "layouts/base.html" %} {% block title %}Chapter Patterns - NovelCast{% endblock %}
 {% block head %}
     <link rel="stylesheet" href="/static/css/pages/settings.css" />
 {% endblock %}
-
 {% block content %}
+    {% include "partials/library_header.html" %}
 
-{% include "partials/library_header.html" %}
-
-<div class="pg-settings">
-
-  <div class="pg-header">
-    <h1 class="pg-title">Chapter Patterns</h1>
-    <a href="/admin" class="btn-ghost">← Back to Admin</a>
-  </div>
-
-  <!-- Add new pattern -->
-  <div class="section-card">
-    <div class="section-card__head">
-      <span class="section-card__title">Add pattern</span>
-    </div>
-
-    <div class="field-card">
-      <div class="field-card__label-col">
-        <span class="field-label">Pattern builder (optional)</span>
-        <span class="field-hint">Or scroll down to write regex manually.</span>
-      </div>
-
-      <div class="field-card__input-col" style="display:flex;flex-direction:column;gap:8px">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          <button type="button" class="btn-ghost btn-ghost--sm" onclick="useQuickPattern('\\bchapter\\s*:?\\s*(\\d+)', 'Chapter X')">Chapter X</button>
-          <button type="button" class="btn-ghost btn-ghost--sm" onclick="useQuickPattern('^(\\d+)\\s*[-–—-−]', 'Number —')">Number —</button>
-          <button type="button" class="btn-ghost btn-ghost--sm" onclick="useQuickPattern('\\bprologue\\b', 'Prologue')">Prologue</button>
-          <button type="button" class="btn-ghost btn-ghost--sm" onclick="useQuickPattern('\\bepilogue\\b', 'Epilogue')">Epilogue</button>
-          <button type="button" class="btn-ghost btn-ghost--sm" onclick="useQuickPattern('\\binterlude\\b', 'Interlude')">Interlude</button>
-          <button type="button" class="btn-ghost btn-ghost--sm" onclick="useQuickPattern('\\bpart\\s*(\\d+)', 'Part X')">Part X</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="field-card">
-      <div class="field-card__label-col">
-        <span class="field-label">Regex pattern</span>
-        <span class="field-hint">
-          Case-insensitive. Matched against the chapter title from the epub spine.<br>
-          A spine item is kept only if its title matches at least one pattern.
-        </span>
-      </div>
-
-      <div class="field-card__input-col" style="display:flex;flex-direction:column;gap:8px">
-        <input
-          id="new-pattern"
-          type="text"
-          class="input"
-          placeholder="\bprologue\b"
-          style="font-family:var(--font-mono);font-size:13px"
-          onchange="explainPattern()"
-          oninput="explainPattern()"
-        />
-
-        <div
-          id="pattern-explain"
-          style="display:none;background:var(--color-bg-secondary);padding:8px;border-radius:4px;font-size:12px;line-height:1.5"
-        >
-          <div style="font-weight:500;margin-bottom:4px">Pattern breakdown:</div>
-          <div id="pattern-explain-text"></div>
+    <div class="pg-settings">
+        <div class="pg-header">
+            <h1 class="pg-title">Chapter Patterns</h1>
+            <a href="/admin" class="btn-ghost">← Back to Admin</a>
         </div>
 
-        <input
-          id="new-description"
-          type="text"
-          class="input"
-          placeholder="Description (e.g. Prologue / Epilogue)"
-        />
-
-        <div id="preview-wrap" style="display:none">
-          <p class="field-hint" style="margin-bottom:4px">Preview against common titles:</p>
-          <div
-            id="preview-results"
-            style="display:flex;flex-direction:column;gap:3px;font-size:13px;font-family:var(--font-mono)"
-          ></div>
-        </div>
-
-        <div style="display:flex;gap:8px;margin-top:4px">
-          <button type="button" class="btn-ghost btn-ghost--sm" onclick="previewPattern()">Preview</button>
-          <button type="button" class="btn-primary" style="font-size:13px;padding:6px 14px" onclick="addPattern()">Add pattern</button>
-        </div>
-
-        <p id="add-error" class="field-hint" style="color:var(--color-text-danger);display:none"></p>
-      </div>
-    </div>
-  </div>
-
-  <!-- All patterns (builtin + custom) -->
-  <div class="section-card">
-    <div class="section-card__head">
-      <span class="section-card__title">Patterns</span>
-      <span class="field-hint" style="margin-left:auto">Built-in patterns cannot be deleted.</span>
-    </div>
-
-    <div id="patterns-list">
-      {% if chapter_patterns %}
-        {% for p in chapter_patterns %}
-        <div class="field-card pattern-row" id="pattern-row-{{ p.id }}" style="{% if p.is_builtin %}opacity:0.7{% endif %}">
-          <div style="flex:1;min-width:0">
-            <div style="display:flex;align-items:center;gap:6px">
-              <code style="font-size:13px;word-break:break-all">{{ p.pattern }}</code>
-              {% if p.is_builtin %}
-              <span class="badge badge--subtle">Built-in</span>
-              {% endif %}
+        <!-- Add new pattern -->
+        <div class="section-card">
+            <div class="section-card__head">
+                <span class="section-card__title">Add pattern</span>
             </div>
-            {% if p.description %}
-            <span class="field-hint" style="display:block;margin-top:2px">{{ p.description }}</span>
-            {% endif %}
-          </div>
 
-          <div style="display:flex;align-items:center;gap:12px;flex-shrink:0">
-            <label class="toggle-label" title="{{ 'Enabled' if p.enabled else 'Disabled' }}">
-              <input
-                type="checkbox"
-                class="toggle-input"
-                {% if p.enabled %}checked{% endif %}
-                onchange="setEnabled({{ p.id }}, this.checked)"
-              />
-              <span class="toggle-track"></span>
-            </label>
+            <div class="field-card">
+                <div class="field-card__label-col">
+                    <span class="field-label">Pattern builder (optional)</span>
+                    <span class="field-hint">Or scroll down to write regex manually.</span>
+                </div>
 
-            {% if not p.is_builtin %}
-            <button
-              class="btn-ghost btn-ghost--sm"
-              style="color:var(--color-text-danger)"
-              onclick="deletePattern({{ p.id }})">
-              Delete
-            </button>
-            {% endif %}
-          </div>
+                <div class="field-card__input-col" style="display: flex; flex-direction: column; gap: 8px">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px">
+                        <button
+                            type="button"
+                            class="btn-ghost btn-ghost--sm"
+                            onclick="useQuickPattern('\\bchapter\\s*:?\\s*(\\d+)', 'Chapter X')"
+                        >
+                            Chapter X
+                        </button>
+                        <button
+                            type="button"
+                            class="btn-ghost btn-ghost--sm"
+                            onclick="useQuickPattern('^(\\d+)\\s*[-–—-−]', 'Number —')"
+                        >
+                            Number —
+                        </button>
+                        <button
+                            type="button"
+                            class="btn-ghost btn-ghost--sm"
+                            onclick="useQuickPattern('\\bprologue\\b', 'Prologue')"
+                        >
+                            Prologue
+                        </button>
+                        <button
+                            type="button"
+                            class="btn-ghost btn-ghost--sm"
+                            onclick="useQuickPattern('\\bepilogue\\b', 'Epilogue')"
+                        >
+                            Epilogue
+                        </button>
+                        <button
+                            type="button"
+                            class="btn-ghost btn-ghost--sm"
+                            onclick="useQuickPattern('\\binterlude\\b', 'Interlude')"
+                        >
+                            Interlude
+                        </button>
+                        <button
+                            type="button"
+                            class="btn-ghost btn-ghost--sm"
+                            onclick="useQuickPattern('\\bpart\\s*(\\d+)', 'Part X')"
+                        >
+                            Part X
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="field-card">
+                <div class="field-card__label-col">
+                    <span class="field-label">Regex pattern</span>
+                    <span class="field-hint">
+                        Case-insensitive. Matched against the chapter title from the epub spine.<br />
+                        A spine item is kept only if its title matches at least one pattern.
+                    </span>
+                </div>
+
+                <div class="field-card__input-col" style="display: flex; flex-direction: column; gap: 8px">
+                    <input
+                        id="new-pattern"
+                        type="text"
+                        class="input"
+                        placeholder="\bprologue\b"
+                        style="font-family: var(--font-mono); font-size: 13px"
+                        onchange="explainPattern()"
+                        oninput="explainPattern()"
+                    />
+
+                    <div
+                        id="pattern-explain"
+                        style="
+                        display: none;
+                        background: var(--color-bg-secondary);
+                        padding: 8px;
+                        border-radius: 4px;
+                        font-size: 12px;
+                        line-height: 1.5;
+                    "
+                    >
+                        <div style="font-weight: 500; margin-bottom: 4px">Pattern breakdown:</div>
+                        <div id="pattern-explain-text"></div>
+                    </div>
+
+                    <input
+                        id="new-description"
+                        type="text"
+                        class="input"
+                        placeholder="Description (e.g. Prologue / Epilogue)"
+                    />
+
+                    <div id="preview-wrap" style="display: none">
+                        <p class="field-hint" style="margin-bottom: 4px">Preview against common titles:</p>
+                        <div
+                            id="preview-results"
+                            style="
+                            display: flex;
+                            flex-direction: column;
+                            gap: 3px;
+                            font-size: 13px;
+                            font-family: var(--font-mono);
+                        "
+                        ></div>
+                    </div>
+
+                    <div style="display: flex; gap: 8px; margin-top: 4px">
+                        <button type="button" class="btn-ghost btn-ghost--sm" onclick="previewPattern()">
+                            Preview
+                        </button>
+                        <button
+                            type="button"
+                            class="btn-primary"
+                            style="font-size: 13px; padding: 6px 14px"
+                            onclick="addPattern()"
+                        >
+                            Add pattern
+                        </button>
+                    </div>
+
+                    <p id="add-error" class="field-hint" style="color: var(--color-text-danger); display: none"></p>
+                </div>
+            </div>
         </div>
-        {% endfor %}
-      {% else %}
-        <p id="no-patterns-msg" class="field-hint" style="padding:12px 0">
-          No patterns yet. Add one above.
-        </p>
-      {% endif %}
+
+        <!-- All patterns (builtin + custom) -->
+        <div class="section-card">
+            <div class="section-card__head">
+                <span class="section-card__title">Patterns</span>
+                <span class="field-hint" style="margin-left: auto">Built-in patterns cannot be deleted.</span>
+            </div>
+
+            <div id="patterns-list">
+                {% if chapter_patterns %}
+                    {% for p in chapter_patterns %}
+                        <div
+                            class="field-card pattern-row"
+                            id="pattern-row-{{ p.id }}"
+                            style="{% if p.is_builtin %}opacity:0.7{% endif %}"
+                        >
+                            <div style="flex: 1; min-width: 0">
+                                <div style="display: flex; align-items: center; gap: 6px">
+                                    <code style="font-size: 13px; word-break: break-all">{{ p.pattern }}</code>
+                                    {% if p.is_builtin %}
+                                        <span class="badge badge--subtle">Built-in</span>
+                                    {% endif %}
+                                </div>
+                                {% if p.description %}
+                                    <span class="field-hint" style="display: block; margin-top: 2px"
+                                        >{{ p.description }}</span
+                                    >
+                                {% endif %}
+                            </div>
+
+                            <div style="display: flex; align-items: center; gap: 12px; flex-shrink: 0">
+                                <label class="toggle-label" title="{{ 'Enabled' if p.enabled else 'Disabled' }}">
+                                    <input
+                                        type="checkbox"
+                                        class="toggle-input"
+                                        {%
+                                            if
+                                            p.enabled
+                                        %}
+                                            checked
+                                        {% endif %}
+                                        onchange="setEnabled({{ p.id }}, this.checked)"
+                                    />
+                                    <span class="toggle-track"></span>
+                                </label>
+
+                                {% if not p.is_builtin %}
+                                    <button
+                                        class="btn-ghost btn-ghost--sm"
+                                        style="color: var(--color-text-danger)"
+                                        onclick="deletePattern({{ p.id }})"
+                                    >
+                                        Delete
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p id="no-patterns-msg" class="field-hint" style="padding: 12px 0">
+                        No patterns yet. Add one above.
+                    </p>
+                {% endif %}
+            </div>
+        </div>
     </div>
-  </div>
 
-</div>
+    <script>
+        const SAMPLES = [
+            'Chapter 1',
+            'Chapter 930 Shelter',
+            'Chapter: 1 - New Beginnings',
+            'Chapter ???',
+            'Ch. 42',
+            '1.1',
+            '3.10',
+            'Part 9 (3.10)',
+            'Part 67: Running Gauntlet',
+            'Prologue',
+            'Epilogue',
+            'Interlude',
+            'Bestiary Interlude : Hydra',
+            'Glossary',
+            '1 - Vivisari',
+            '[1 - Breakfast at Night]',
+            '[1. Aine ~ Garden]',
+            'The Path of Ascension Chapter 1',
+            'Journey to Veresavir - Chapter 55',
+            'In Search of Harmony 26 - No, No Encores',
+            'Azarinth Healer Book One is out today :)',
+            'Hey all! Book 5 is out on Audible',
+            'Not a chapter - update on the story',
+            'Announcing new hardcover for book 1',
+        ];
 
-<script>
-const SAMPLES = [
-  'Chapter 1', 'Chapter 930 Shelter', 'Chapter: 1 - New Beginnings',
-  'Chapter ???', 'Ch. 42', '1.1', '3.10', 'Part 9 (3.10)', 'Part 67: Running Gauntlet',
-  'Prologue', 'Epilogue', 'Interlude', 'Bestiary Interlude : Hydra', 'Glossary',
-  '1 - Vivisari', '[1 - Breakfast at Night]', '[1. Aine ~ Garden]',
-  'The Path of Ascension Chapter 1', 'Journey to Veresavir - Chapter 55',
-  'In Search of Harmony 26 - No, No Encores',
-  'Azarinth Healer Book One is out today :)',
-  'Hey all! Book 5 is out on Audible',
-  'Not a chapter - update on the story',
-  'Announcing new hardcover for book 1',
-];
+        const REGEX_EXPLANATIONS = {
+            '\\b': 'Word boundary (start/end of word)',
+            '\\d': 'Any digit (0-9)',
+            '\\d+': 'One or more digits',
+            '[ivxlcdm]+': 'Roman numerals',
+            '[-–—-−]': 'Any type of dash',
+            '[a-z]': 'Any lowercase letter',
+            '[A-Z]': 'Any uppercase letter',
+            '(...)': 'Capture group (extract this part)',
+            '.*': 'Any character, any number of times',
+            '.+': 'Any character, one or more times',
+            '?': 'Optional (0 or 1 times)',
+            '*': 'Zero or more times',
+            '+': 'One or more times',
+            '|': 'OR',
+            '^': 'Start of line',
+            $: 'End of line',
+            '(?i)': 'Case insensitive',
+        };
 
-const REGEX_EXPLANATIONS = {
-  '\\b': 'Word boundary (start/end of word)',
-  '\\d': 'Any digit (0-9)',
-  '\\d+': 'One or more digits',
-  '[ivxlcdm]+': 'Roman numerals',
-  '[-–—-−]': 'Any type of dash',
-  '[a-z]': 'Any lowercase letter',
-  '[A-Z]': 'Any uppercase letter',
-  '(...)': 'Capture group (extract this part)',
-  '.*': 'Any character, any number of times',
-  '.+': 'Any character, one or more times',
-  '?': 'Optional (0 or 1 times)',
-  '*': 'Zero or more times',
-  '+': 'One or more times',
-  '|': 'OR',
-  '^': 'Start of line',
-  '$': 'End of line',
-  '(?i)': 'Case insensitive',
-};
+        function useQuickPattern(pattern, description) {
+            document.getElementById('new-pattern').value = pattern;
+            document.getElementById('new-description').value = description;
+            explainPattern();
+            previewPattern();
+        }
 
-function useQuickPattern(pattern, description) {
-  document.getElementById('new-pattern').value = pattern;
-  document.getElementById('new-description').value = description;
-  explainPattern();
-  previewPattern();
-}
+        function explainPattern() {
+            const pattern = document.getElementById('new-pattern').value.trim();
+            const explain = document.getElementById('pattern-explain');
+            const text = document.getElementById('pattern-explain-text');
 
-function explainPattern() {
-  const pattern = document.getElementById('new-pattern').value.trim();
-  const explain = document.getElementById('pattern-explain');
-  const text = document.getElementById('pattern-explain-text');
+            if (!pattern) {
+                explain.style.display = 'none';
+                return;
+            }
 
-  if (!pattern) {
-    explain.style.display = 'none';
-    return;
-  }
+            const parts = [];
 
-  const parts = [];
+            if (pattern.includes('\\bchapter')) parts.push('Matches word "chapter"');
+            if (pattern.includes('\\bpart')) parts.push('Matches word "part"');
+            if (pattern.includes('\\bprologue')) parts.push('Matches word "prologue"');
+            if (pattern.includes('\\bepilogue')) parts.push('Matches word "epilogue"');
+            if (pattern.includes('\\binterlude')) parts.push('Matches word "interlude"');
+            if (pattern.includes('\\d+')) parts.push('Captures one or more digits');
+            if (pattern.includes('^')) parts.push('Pattern at start of line');
+            if (pattern.includes('(')) parts.push('Has a capture group');
 
-  if (pattern.includes('\\bchapter')) parts.push('Matches word "chapter"');
-  if (pattern.includes('\\bpart')) parts.push('Matches word "part"');
-  if (pattern.includes('\\bprologue')) parts.push('Matches word "prologue"');
-  if (pattern.includes('\\bepilogue')) parts.push('Matches word "epilogue"');
-  if (pattern.includes('\\binterlude')) parts.push('Matches word "interlude"');
-  if (pattern.includes('\\d+')) parts.push('Captures one or more digits');
-  if (pattern.includes('^')) parts.push('Pattern at start of line');
-  if (pattern.includes('(')) parts.push('Has a capture group');
+            const components = [];
 
-  const components = [];
+            if (pattern.includes('\\b')) components.push('Word boundary (\\b)');
+            if (pattern.includes('\\d')) components.push('Digits (\\d)');
+            if (pattern.includes('[ivxlcdm]')) components.push('Roman numerals');
 
-  if (pattern.includes('\\b')) components.push('Word boundary (\\b)');
-  if (pattern.includes('\\d')) components.push('Digits (\\d)');
-  if (pattern.includes('[ivxlcdm]')) components.push('Roman numerals');
+            if (pattern.includes('[')) {
+                const match = pattern.match(/\[([^\]]+)\]/);
+                if (match) components.push(`Character class: ${match[1]}`);
+            }
 
-  if (pattern.includes('[')) {
-    const match = pattern.match(/\[([^\]]+)\]/);
-    if (match) components.push(`Character class: ${match[1]}`);
-  }
-
-  text.innerHTML = `
+            text.innerHTML = `
     <div style="margin-bottom:6px">${parts.join('<br>')}</div>
     ${components.length ? `<div style="opacity:0.8"><strong>Components:</strong> ${components.join(', ')}</div>` : ''}
   `;
 
-  explain.style.display = 'block';
-}
+            explain.style.display = 'block';
+        }
 
-function previewPattern() {
-  const pattern = document.getElementById('new-pattern').value.trim();
-  const wrap    = document.getElementById('preview-wrap');
-  const out     = document.getElementById('preview-results');
-  const err     = document.getElementById('add-error');
+        function previewPattern() {
+            const pattern = document.getElementById('new-pattern').value.trim();
+            const wrap = document.getElementById('preview-wrap');
+            const out = document.getElementById('preview-results');
+            const err = document.getElementById('add-error');
 
-  if (!pattern) return;
+            if (!pattern) return;
 
-  fetch('/admin/chapter-patterns/test', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({ pattern, samples: SAMPLES }),
-  })
-  .then(async r => {
-    if (!r.ok) {
-      const d = await r.json();
-      throw new Error(d.detail || 'Invalid regex');
-    }
-    return r.json();
-  })
-  .then(results => {
-    err.style.display = 'none';
+            fetch('/admin/chapter-patterns/test', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ pattern, samples: SAMPLES }),
+            })
+                .then(async (r) => {
+                    if (!r.ok) {
+                        const d = await r.json();
+                        throw new Error(d.detail || 'Invalid regex');
+                    }
+                    return r.json();
+                })
+                .then((results) => {
+                    err.style.display = 'none';
 
-    const matches = results.filter(r => r.matched);
-    const noMatches = results.filter(r => !r.matched);
+                    const matches = results.filter((r) => r.matched);
+                    const noMatches = results.filter((r) => !r.matched);
 
-    let html = '';
+                    let html = '';
 
-    if (matches.length) {
-      html += `<div style="margin-bottom:6px">
+                    if (matches.length) {
+                        html += `<div style="margin-bottom:6px">
         <strong style="color:var(--color-text-success)">Matches (${matches.length}):</strong>`;
-      html += matches.map(r => `<div>✓ ${r.sample}</div>`).join('');
-      html += '</div>';
-    }
+                        html += matches.map((r) => `<div>✓ ${r.sample}</div>`).join('');
+                        html += '</div>';
+                    }
 
-    if (noMatches.length && matches.length) {
-      html += `<div style="margin-top:4px;opacity:0.6">
+                    if (noMatches.length && matches.length) {
+                        html += `<div style="margin-top:4px;opacity:0.6">
         <strong>No match (${noMatches.length}):</strong>`;
-      html += noMatches.slice(0, 3).map(r => `<div>✗ ${r.sample}</div>`).join('');
+                        html += noMatches
+                            .slice(0, 3)
+                            .map((r) => `<div>✗ ${r.sample}</div>`)
+                            .join('');
 
-      if (noMatches.length > 3) {
-        html += `<div style="opacity:0.6">... and ${noMatches.length - 3} more</div>`;
-      }
+                        if (noMatches.length > 3) {
+                            html += `<div style="opacity:0.6">... and ${noMatches.length - 3} more</div>`;
+                        }
 
-      html += '</div>';
-    }
+                        html += '</div>';
+                    }
 
-    out.innerHTML = html;
-    wrap.style.display = 'block';
-  })
-  .catch(e => {
-    err.textContent = e.message;
-    err.style.display = 'block';
-    wrap.style.display = 'none';
-  });
-}
+                    out.innerHTML = html;
+                    wrap.style.display = 'block';
+                })
+                .catch((e) => {
+                    err.textContent = e.message;
+                    err.style.display = 'block';
+                    wrap.style.display = 'none';
+                });
+        }
 
-document.getElementById('new-pattern').addEventListener('keydown', e => {
-  if (e.key === 'Enter') previewPattern();
-});
+        document.getElementById('new-pattern').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') previewPattern();
+        });
 
-function addPattern() {
-  const pattern = document.getElementById('new-pattern').value.trim();
-  const description = document.getElementById('new-description').value.trim();
-  const err = document.getElementById('add-error');
+        function addPattern() {
+            const pattern = document.getElementById('new-pattern').value.trim();
+            const description = document.getElementById('new-description').value.trim();
+            const err = document.getElementById('add-error');
 
-  if (!pattern) {
-    err.textContent = 'Pattern is required.';
-    err.style.display = 'block';
-    return;
-  }
+            if (!pattern) {
+                err.textContent = 'Pattern is required.';
+                err.style.display = 'block';
+                return;
+            }
 
-  fetch('/admin/chapter-patterns', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({ pattern, description }),
-  })
-  .then(async r => {
-    if (!r.ok) {
-      const d = await r.json();
-      throw new Error(d.detail || 'Error');
-    }
-    return r.json();
-  })
-  .then(p => {
-    err.style.display = 'none';
-    document.getElementById('new-pattern').value = '';
-    document.getElementById('new-description').value = '';
-    document.getElementById('preview-wrap').style.display = 'none';
-    document.getElementById('pattern-explain').style.display = 'none';
-    _prependPatternRow(p);
-  })
-  .catch(e => {
-    err.textContent = e.message;
-    err.style.display = 'block';
-  });
-}
+            fetch('/admin/chapter-patterns', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ pattern, description }),
+            })
+                .then(async (r) => {
+                    if (!r.ok) {
+                        const d = await r.json();
+                        throw new Error(d.detail || 'Error');
+                    }
+                    return r.json();
+                })
+                .then((p) => {
+                    err.style.display = 'none';
+                    document.getElementById('new-pattern').value = '';
+                    document.getElementById('new-description').value = '';
+                    document.getElementById('preview-wrap').style.display = 'none';
+                    document.getElementById('pattern-explain').style.display = 'none';
+                    _prependPatternRow(p);
+                })
+                .catch((e) => {
+                    err.textContent = e.message;
+                    err.style.display = 'block';
+                });
+        }
 
-function setEnabled(id, enabled) {
-  fetch(`/admin/chapter-patterns/${id}`, {
-    method: 'PATCH',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({ enabled }),
-  });
-}
+        function setEnabled(id, enabled) {
+            fetch(`/admin/chapter-patterns/${id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ enabled }),
+            });
+        }
 
-function deletePattern(id) {
-  if (!confirm('Delete this pattern?')) return;
+        function deletePattern(id) {
+            if (!confirm('Delete this pattern?')) return;
 
-  fetch(`/admin/chapter-patterns/${id}`, { method: 'DELETE' })
-    .then(r => {
-      if (r.ok) {
-        document.getElementById(`pattern-row-${id}`)?.remove();
-      }
-    });
-}
+            fetch(`/admin/chapter-patterns/${id}`, { method: 'DELETE' }).then((r) => {
+                if (r.ok) {
+                    document.getElementById(`pattern-row-${id}`)?.remove();
+                }
+            });
+        }
 
-function _prependPatternRow(p) {
-  const noMsg = document.getElementById('no-patterns-msg');
-  if (noMsg) noMsg.remove();
+        function _prependPatternRow(p) {
+            const noMsg = document.getElementById('no-patterns-msg');
+            if (noMsg) noMsg.remove();
 
-  const list = document.getElementById('patterns-list');
-  const div = document.createElement('div');
+            const list = document.getElementById('patterns-list');
+            const div = document.createElement('div');
 
-  div.className = 'field-card pattern-row';
-  div.id = `pattern-row-${p.id}`;
+            div.className = 'field-card pattern-row';
+            div.id = `pattern-row-${p.id}`;
 
-  div.innerHTML = `
+            div.innerHTML = `
     <div style="flex:1;min-width:0">
       <code style="font-size:13px;word-break:break-all">${p.pattern}</code>
       ${p.description ? `<span class="field-hint" style="display:block;margin-top:2px">${p.description}</span>` : ''}
@@ -383,8 +463,7 @@ function _prependPatternRow(p) {
     </div>
   `;
 
-  list.prepend(div);
-}
-</script>
-
+            list.prepend(div);
+        }
+    </script>
 {% endblock %}

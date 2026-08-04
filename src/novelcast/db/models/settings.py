@@ -2,7 +2,7 @@
 #
 # Add UniqueConstraint to UserSetting so the upsert in SettingsRepository works.
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from sqlalchemy import ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -19,7 +19,7 @@ class ServerSetting(Base):
 
     key: Mapped[str] = mapped_column(String, primary_key=True)
     value: Mapped[str] = mapped_column(String, nullable=False)
-    category: Mapped[Optional[str]] = mapped_column(String)
+    category: Mapped[str | None] = mapped_column(String)
     type: Mapped[str] = mapped_column(String, default="str")
 
     def __repr__(self) -> str:
@@ -36,7 +36,7 @@ class UserSetting(Base):
     )
     name: Mapped[str] = mapped_column(String, nullable=False)
     value: Mapped[str] = mapped_column(String, nullable=False)
-    category: Mapped[Optional[str]] = mapped_column(String)
+    category: Mapped[str | None] = mapped_column(String)
     type: Mapped[str] = mapped_column(String, default="str")
 
     user: Mapped["User"] = relationship("User", back_populates="settings")
@@ -57,7 +57,7 @@ class StorySetting(Base):
     )
     name: Mapped[str] = mapped_column(String, nullable=False)
     value: Mapped[str] = mapped_column(String, nullable=False)
-    category: Mapped[Optional[str]] = mapped_column(String)
+    category: Mapped[str | None] = mapped_column(String)
     type: Mapped[str] = mapped_column(String, default="str")
 
     story: Mapped["Story"] = relationship("Story", back_populates="settings")

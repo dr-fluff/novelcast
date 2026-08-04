@@ -5,7 +5,6 @@ Patreon scraper - extract available posts/stories from a creator's page
 
 import logging
 import re
-from typing import List
 
 import httpx
 from bs4 import BeautifulSoup
@@ -30,7 +29,7 @@ async def scrape_patreon_creator(
     client: httpx.AsyncClient,
     creator_name: str,
     session_cookie: str | None = None,
-) -> List[ScrapedResult]:
+) -> list[ScrapedResult]:
     """
     Scrape a Patreon creator's page to find available stories/posts.
 

@@ -12,7 +12,7 @@ from novelcast.db.repositories.stats_repository import StatsRepository
 from novelcast.db.repositories.stories_repository import StoriesRepository
 from novelcast.db.repositories.sync_repository import SyncRepository
 from novelcast.db.repositories.users_repository import UsersRepository
- 
+
 __all__ = [
     "AuthRepository",
     "AuthorRepository",
@@ -28,4 +28,3 @@ __all__ = [
     "UsersRepository",
     "RssEntryRepository",
 ]
- 

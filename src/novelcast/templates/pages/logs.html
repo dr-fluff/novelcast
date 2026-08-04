@@ -1,38 +1,34 @@
-{% extends "layouts/base.html" %}
-
-{% block title %}Logs - NovelCast{% endblock %}
-
+{% extends "layouts/base.html" %} {% block title %}Logs - NovelCast{% endblock %}
 {% block head %}
-<link rel="stylesheet" href="/static/css/pages/logs.css" />
+    <link rel="stylesheet" href="/static/css/pages/logs.css" />
 {% endblock %}
-
 {% block content %}
-{% include "partials/library_header.html" %}
+    {% include "partials/library_header.html" %}
 
-<div class="pg-admin">
-    <div class="pg-header">
-        <h1 class="pg-title">Application Logs</h1>
-        <div class="log-actions">
-            <a href="/admin/logs/raw" target="_blank" class="btn-ghost">Open Raw Log</a>
-            <button id="resume-live" class="btn-ghost" onclick="resumeLive()" style="display:none">Resume Live</button>
-            <button class="btn-ghost" onclick="clearLogs()">Clear</button>
+    <div class="pg-admin">
+        <div class="pg-header">
+            <h1 class="pg-title">Application Logs</h1>
+            <div class="log-actions">
+                <a href="/admin/logs/raw" target="_blank" class="btn-ghost">Open Raw Log</a>
+                <button id="resume-live" class="btn-ghost" onclick="resumeLive()" style="display: none">
+                    Resume Live
+                </button>
+                <button class="btn-ghost" onclick="clearLogs()">Clear</button>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel__head">
+                <h2 class="panel__title">Live Log Stream</h2>
+            </div>
+            <div id="log-viewer" class="log-viewer"></div>
+        </div>
+
+        <div class="panel">
+            <p>asd</p>
         </div>
     </div>
-
-    <div class="panel">
-        <div class="panel__head">
-            <h2 class="panel__title">Live Log Stream</h2>
-        </div>
-        <div id="log-viewer" class="log-viewer"></div>
-    </div>
-
-    <div class="panel">
-        <p>asd</p>
-    </div>
-</div>
-
 {% endblock %}
-
 {% block scripts %}
-<script src="/static/js/logs.js" defer></script>
+    <script src="/static/js/logs.js" defer></script>
 {% endblock %}

@@ -1,5 +1,5 @@
 window.getChapterPageData = function () {
-    const readerUi = document.querySelector(".reader-ui");
+    const readerUi = document.querySelector('.reader-ui');
     if (!readerUi) return null;
 
     return {
@@ -19,13 +19,13 @@ window.confirmDeleteStory = async function () {
     const data = window.getChapterPageData();
     if (!data || !data.storyId) return;
 
-    if (!confirm("Delete this story and all downloaded files?")) {
+    if (!confirm('Delete this story and all downloaded files?')) {
         return;
     }
 
     try {
         const res = await fetch(`/api/stories/${data.storyId}`, {
-            method: "DELETE",
+            method: 'DELETE',
         });
 
         const responseBody = await res.json();
@@ -33,15 +33,15 @@ window.confirmDeleteStory = async function () {
             throw new Error(responseBody.detail || responseBody.error || res.statusText);
         }
 
-        if (typeof window.showNotification === "function") {
-            window.showNotification("Story deleted successfully.", "success", 5000);
+        if (typeof window.showNotification === 'function') {
+            window.showNotification('Story deleted successfully.', 'success', 5000);
         }
 
-        window.location.replace("/");
+        window.location.replace('/');
     } catch (error) {
         console.error(error);
-        if (typeof window.showNotification === "function") {
-            window.showNotification(`Delete failed: ${error.message}`, "error", 8000);
+        if (typeof window.showNotification === 'function') {
+            window.showNotification(`Delete failed: ${error.message}`, 'error', 8000);
         }
     }
 };

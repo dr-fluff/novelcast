@@ -2,8 +2,9 @@
 novelcast/db/models/stats.py
 """
 
-from datetime import date as date_, datetime
-from typing import TYPE_CHECKING, Optional
+from datetime import date as date_
+from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Date, DateTime, ForeignKey, Integer, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -52,7 +53,7 @@ class UserDevice(Base):
 
     # Optional human-readable label, e.g. derived from User-Agent at first
     # sight ("iPad Air"), or later user-editable.
-    label: Mapped[Optional[str]] = mapped_column(String)
+    label: Mapped[str | None] = mapped_column(String)
 
     first_seen_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     last_seen_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
