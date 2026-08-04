@@ -12,12 +12,33 @@ class FileUtils:
         name = re.sub(r'[<>:"/\\|?*]', "", name)
         return re.sub(r"\s+", "_", name).strip("_")
 
-    def story_dir(self, author: str | None, title: str | None) -> Path:
+    def story_dir(
+        self,
+        author: str | None,
+        title: str | None,
+        reserved_paths: set[str] | None = None,
+        preferred_path: str | None = None,
+    ) -> Path:
         safe_author = self._safe(author or "Unknown_Author")
         safe_title = self._safe(title or "Unknown_Title")
         path = self.base_dir / safe_author / safe_title
-        path.mkdir(parents=True, exist_ok=True)
-        return path
+
+        reserved = {str(Path(p).resolve()) for p in (reserved_paths or set())}
+
+        if preferred_path:
+            preferred = Path(preferred_path).resolve()
+            if str(preferred) not in reserved:
+                preferred.mkdir(parents=True, exist_ok=True)
+                return preferred
+
+        candidate = path.resolve()
+        suffix = 2
+        while str(candidate) in reserved or candidate.exists():
+            candidate = path.parent / f"{path.name}_{suffix}"
+            suffix += 1
+
+        candidate.mkdir(parents=True, exist_ok=True)
+        return candidate
 
     def write_chapter(self, path: Path, filename: str, content: str):
         file_path = path / filename

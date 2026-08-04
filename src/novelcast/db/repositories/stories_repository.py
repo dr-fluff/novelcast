@@ -71,6 +71,14 @@ class StoriesRepository(BaseRepository):
     def get_story_site_id(self, story_id: int) -> str:
         pass
 
+    def get_existing_local_paths(self, exclude_story_id: int | None = None) -> set[str]:
+        with self.session_no_commit() as db:
+            query = select(Story.local_path).where(Story.local_path.isnot(None))
+            if exclude_story_id is not None:
+                query = query.where(Story.id != exclude_story_id)
+            rows = db.execute(query).all()
+            return {row[0] for row in rows if row[0]}
+
     def get_chapter_file_paths(self, story_id: int) -> list[str]:
         with self.session_no_commit() as db:
             rows = db.execute(
@@ -225,7 +233,23 @@ class StoriesRepository(BaseRepository):
         with self.session() as db:
             story = db.get(Story, story_id)
             if story:
-                story.local_path = local_path
+                desired_local_path = local_path
+                if desired_local_path:
+                    conflict_id = db.scalar(
+                        select(Story.id).where(Story.local_path == desired_local_path, Story.id != story_id)
+                    )
+                    if conflict_id is not None:
+                        base_path = Path(desired_local_path)
+                        parent = base_path.parent
+                        suffix = 2
+                        candidate = base_path
+                        while db.scalar(select(Story.id).where(Story.local_path == str(candidate), Story.id != story_id)) is not None:
+                            candidate = parent / f"{base_path.name}_{suffix}"
+                            suffix += 1
+                        desired_local_path = str(candidate)
+                        candidate.mkdir(parents=True, exist_ok=True)
+
+                story.local_path = desired_local_path
                 if cover_path is not None:
                     story.cover_path = cover_path
 

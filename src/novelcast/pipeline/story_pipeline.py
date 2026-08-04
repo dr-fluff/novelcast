@@ -42,9 +42,13 @@ class StoryPipeline:
         story must already be fully parsed.
         """
 
+        reserved_paths = self.stories_repo.get_existing_local_paths(exclude_story_id=story_id)
+        preferred_path = (self.stories_repo.get_by_id(story_id) or {}).get("local_path")
         base_dir = self.file_utils.story_dir(
             story.get("author"),
             story.get("title"),
+            reserved_paths=reserved_paths,
+            preferred_path=preferred_path,
         )
 
         cover_path = self._write_cover(base_dir, story.get("cover_image"))
