@@ -22,6 +22,16 @@ HEADERS = {
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
         "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
     ),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Referer": "https://www.patreon.com/",
+    "DNT": "1",
+    "Upgrade-Insecure-Requests": "1",
+    "Sec-Fetch-Site": "none",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-User": "?1",
+    "Sec-Fetch-Dest": "document",
 }
 
 
@@ -46,16 +56,30 @@ async def scrape_patreon_creator(
     """
 
     url = _adapter.author_url(creator_name)
+    fallback_url = f"https://www.patreon.com/{creator_name}"
 
     headers = dict(HEADERS)
     cookies = {"session_id": session_cookie} if session_cookie else None
 
     try:
-        resp = await client.get(url, headers=headers, cookies=cookies, timeout=10.0, follow_redirects=True)
+        resp = await client.get(url, headers=headers, cookies=cookies, timeout=15.0, follow_redirects=True)
         resp.raise_for_status()
     except httpx.HTTPError as e:
         logger.warning("[Patreon] Failed to fetch %s: %s", url, e)
-        return []
+        try:
+            fallback_resp = await client.get(
+                fallback_url,
+                headers=headers,
+                cookies=cookies,
+                timeout=15.0,
+                follow_redirects=True,
+            )
+            fallback_resp.raise_for_status()
+            resp = fallback_resp
+            url = fallback_url
+        except httpx.HTTPError as fallback_error:
+            logger.warning("[Patreon] Fallback fetch also failed for %s: %s", fallback_url, fallback_error)
+            return []
 
     soup = BeautifulSoup(resp.text, "html.parser")
 
