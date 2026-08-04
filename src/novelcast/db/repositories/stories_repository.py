@@ -250,8 +250,14 @@ class StoriesRepository(BaseRepository):
                         candidate.mkdir(parents=True, exist_ok=True)
 
                 story.local_path = desired_local_path
-                if cover_path is not None:
+                if cover_path is not None and story.cover_path is None:
                     story.cover_path = cover_path
+
+    def update_cover(self, story_id: int, cover_path: str | None) -> None:
+        with self.session() as db:
+            story = db.get(Story, story_id)
+            if story:
+                story.cover_path = cover_path
 
     def restore_local_cover_paths(self) -> int:
         restored = 0

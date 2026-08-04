@@ -583,6 +583,7 @@ const UnifiedPanel = (() => {
                 });
 
                 if (!result.ok) {
+                    console.log(result);
                     throw new Error(result.data.detail || 'Failed to save');
                 }
 
@@ -714,8 +715,8 @@ const UnifiedPanel = (() => {
         authorId: null,
 
         open(panelId, storyId, authorId) {
-            this.storyId = storyId;
-            this.authorId = authorId;
+            this.storyId = storyId || null;
+            this.authorId = authorId || null;
             setState(panelId, { panelType: 'author' });
             setStatus(panelId, '', '');
             setOpen(panelId, true);
@@ -727,16 +728,59 @@ const UnifiedPanel = (() => {
         },
 
         async loadData(panelId) {
-            if (!this.storyId || !this.authorId) return;
+            if (!this.authorId) return;
 
             try {
-                const result = await fetchJSON(`/api/stories/${this.storyId}/authors`);
+                const result = this.storyId
+                    ? await fetchJSON(`/api/stories/${this.storyId}/authors`)
+                    : await fetchJSON(`/api/stories/authors/${this.authorId}`);
+
                 if (result.ok) {
-                    const authors = result.data.authors || [];
-                    const author = authors.find((a) => a.id === this.authorId);
+                    let author = null;
+                    if (this.storyId) {
+                        const authors = result.data.authors || [];
+                        author = authors.find((a) => a.id === this.authorId);
+                    } else {
+                        author = result.data.author || null;
+                    }
+
                     if (author) {
                         setVal('authorName', panelId, author.name || '');
                         setVal('authorBio', panelId, author.bio || '');
+                        setVal('authorPicturePath', panelId, author.picture_path || '');
+
+                        const linksWrap = $(`authorLinksWrap-${panelId}`);
+                        if (linksWrap) {
+                            linksWrap.innerHTML = '';
+                            const links = Array.isArray(author.links) ? author.links : [];
+                            if (links.length === 0) {
+                                linksWrap.innerHTML = '<p class="author-links-empty">No links yet.</p>';
+                            } else {
+                                links.forEach((link) => {
+                                    const row = document.createElement('div');
+                                    row.className = 'author-link-row';
+                                    row.innerHTML = `
+                                        <input type="text" class="author-link-label" value="${(link.label || '').replace(/"/g, '&quot;')}" placeholder="Label" />
+                                        <input type="text" class="author-link-url" value="${(link.url || '').replace(/"/g, '&quot;')}" placeholder="https://example.com" />
+                                        <button type="button" class="author-link-remove" onclick="this.parentElement.remove()"><i class="fa-solid fa-xmark"></i></button>
+                                    `;
+                                    linksWrap.appendChild(row);
+                                });
+                            }
+                        }
+
+                        const preview = $(`authorCoverPreview-${panelId}`);
+                        if (preview) {
+                            const picturePath = author.picture_path || '';
+                            const pictureUrl = author.picture_url || (picturePath.startsWith('http') ? picturePath : picturePath ? `/covers?path=${encodeURIComponent(picturePath)}` : '');
+                            if (pictureUrl) {
+                                preview.innerHTML = `<img src="${pictureUrl}" alt="Author cover" />`;
+                                preview.classList.add('has-image');
+                            } else {
+                                preview.innerHTML = '<div class="cover-placeholder"><i class="fa-solid fa-image"></i><p>No cover image</p></div>';
+                                preview.classList.remove('has-image');
+                            }
+                        }
                     }
                 }
             } catch (_) {}
@@ -753,18 +797,35 @@ const UnifiedPanel = (() => {
                     throw new Error('Author name is required');
                 }
 
+                const linksWrap = $(`authorLinksWrap-${panelId}`);
+                const links = [];
+                if (linksWrap) {
+                    linksWrap.querySelectorAll('.author-link-row').forEach((row) => {
+                        const label = row.querySelector('.author-link-label')?.value?.trim() || '';
+                        const url = row.querySelector('.author-link-url')?.value?.trim() || '';
+                        if (label && url) links.push({ label, url });
+                    });
+                }
+
                 const payload = {
                     name,
                     bio: getVal('authorBio', panelId) || null,
+                    picture_path: getVal('authorPicturePath', panelId) || null,
+                    links,
                 };
 
-                const result = await fetchJSON(`/api/stories/${this.storyId}/authors/${this.authorId}`, {
+                const url = this.storyId
+                    ? `/api/stories/${this.storyId}/authors/${this.authorId}`
+                    : `/api/stories/authors/${this.authorId}`;
+
+                const result = await fetchJSON(url, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload),
                 });
 
                 if (!result.ok) {
+                    console.log(result);
                     throw new Error(result.data.detail || 'Failed to save');
                 }
 

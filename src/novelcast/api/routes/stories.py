@@ -32,6 +32,8 @@ class StoryMetadataUpdate(BaseModel):
 class AuthorUpdate(BaseModel):
     name: str
     bio: str | None = None
+    picture_path: str | None = None
+    links: list[dict] | None = None
 
 
 class AuthorLinkItem(BaseModel):
@@ -108,6 +110,38 @@ def delete_story(
 # ── author endpoints ───────────────────────────────────────────────────────
 
 
+@router.get("/authors/{author_id}")
+def get_author_detail(
+    author_id: int,
+    stories: StoryService = Depends(get_stories),
+):
+    author = stories.get_author(author_id)
+    if not author:
+        raise HTTPException(status_code=404, detail="Author not found")
+    return {"author": author}
+
+
+@router.patch("/authors/{author_id}")
+def update_author_detail(
+    author_id: int,
+    body: AuthorUpdate,
+    stories: StoryService = Depends(get_stories),
+):
+    try:
+        updated = stories.update_author(
+            author_id,
+            name=body.name,
+            bio=body.bio,
+            picture_path=body.picture_path,
+            links=body.links,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+    if not updated:
+        raise HTTPException(status_code=404, detail="Author not found")
+    return {"status": "ok", "author": updated}
+
+
 @router.get("/{story_id}/authors")
 def get_story_authors(
     story_id: int,
@@ -128,7 +162,13 @@ def update_story_author(
     if not stories.get_story(story_id):
         raise HTTPException(status_code=404, detail="Story not found")
     try:
-        updated = stories.update_author(author_id, name=body.name, bio=body.bio)
+        updated = stories.update_author(
+            author_id,
+            name=body.name,
+            bio=body.bio,
+            picture_path=body.picture_path,
+            links=body.links,
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
     if not updated:

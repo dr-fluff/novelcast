@@ -55,8 +55,23 @@ async def scrape_patreon_creator(
         List of ScrapedResult objects representing available posts
     """
 
-    url = _adapter.author_url(creator_name)
-    fallback_url = f"https://www.patreon.com/{creator_name}"
+    normalized_creator = (creator_name or "").strip()
+    if not normalized_creator or any(ch in normalized_creator for ch in '{}[]"\''):
+        logger.warning("[Patreon] Ignoring malformed creator identifier: %r", creator_name)
+        return [
+            ScrapedResult(
+                site="patreon",
+                kind="author_profile",
+                url="",
+                title="Patreon creator",
+                author=normalized_creator or "Patreon creator",
+                description="Unable to resolve a valid Patreon creator from the provided value",
+                patreon_url=None,
+            )
+        ]
+
+    url = _adapter.author_url(normalized_creator)
+    fallback_url = f"https://www.patreon.com/{normalized_creator}"
 
     headers = dict(HEADERS)
     cookies = {"session_id": session_cookie} if session_cookie else None
@@ -81,7 +96,7 @@ async def scrape_patreon_creator(
             url = fallback_url
         except httpx.HTTPError as fallback_error:
             logger.warning("[Patreon] Fallback fetch also failed for %s: %s", fallback_url, fallback_error)
-            creator_display = creator_name
+            creator_display = normalized_creator
             fallback_title = f"Patreon: {creator_display}" if creator_display else "Patreon creator"
             return [
                 ScrapedResult(
@@ -96,7 +111,7 @@ async def scrape_patreon_creator(
             ]
 
     if resp is None:
-        creator_display = creator_name
+        creator_display = normalized_creator
         fallback_title = f"Patreon: {creator_display}" if creator_display else "Patreon creator"
         return [
             ScrapedResult(

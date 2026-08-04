@@ -179,6 +179,10 @@ class StoryService:
 
         return True
 
+    def update_story_cover(self, story_id: int, cover_path: str | None) -> None:
+        self.repo.update_cover(story_id, cover_path)
+        self._story_files_cache.clear()
+
     def update_story_metadata(
         self,
         story_id: int,
@@ -303,10 +307,22 @@ class StoryService:
 
     # ── author writes ──────────────────────────────────────────────────────
 
-    def update_author(self, author_id: int, name: str, bio: str | None = None) -> dict | None:
+    def update_author(
+        self,
+        author_id: int,
+        name: str,
+        bio: str | None = None,
+        picture_path: str | None = None,
+        links: list[dict] | None = None,
+    ) -> dict | None:
         if not self.author_repo:
             return None
-        return self.author_repo.update(author_id, name, bio)
+        updated = self.author_repo.update(author_id, name, bio, picture_path=picture_path)
+        if updated is None:
+            return None
+        if links is not None:
+            self.author_repo.set_links(author_id, links)
+        return updated
 
     def set_author_links(self, author_id: int, links: list[dict]) -> list[dict]:
         if not self.author_repo:

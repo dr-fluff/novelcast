@@ -253,6 +253,12 @@
         >
             Basic Info
         </button>
+        <button class="unified-panel-tab" onclick="UnifiedPanel.switchTab('authorPanel', 'tabAuthorCover', this)">
+            Cover
+        </button>
+        <button class="unified-panel-tab" onclick="UnifiedPanel.switchTab('authorPanel', 'tabAuthorLinks', this)">
+            Links
+        </button>
         <button class="unified-panel-tab" onclick="UnifiedPanel.switchTab('authorPanel', 'tabAuthorBio', this)">
             Biography
         </button>
@@ -264,6 +270,33 @@
             <div class="form-group">
                 <label for="authorName-authorPanel">Author Name</label>
                 <input type="text" id="authorName-authorPanel" placeholder="Full name" class="form-input" />
+            </div>
+            <div class="form-group">
+                <label for="authorPicturePath-authorPanel">Cover path or URL</label>
+                <input type="text" id="authorPicturePath-authorPanel" placeholder="/path/to/file.jpg or https://…" class="form-input" />
+            </div>
+        </div>
+
+        {# ── Cover tab ────────────────────────────────────────────────── #}
+        <div class="unified-panel-content" id="tabAuthorCover-authorPanel" style="display: none">
+            <div class="cover-upload">
+                <div class="cover-preview" id="authorCoverPreview-authorPanel">
+                    <div class="cover-placeholder">
+                        <i class="fa-solid fa-image"></i>
+                        <p>No cover image</p>
+                    </div>
+                </div>
+                <p class="form-help">Use the field above to set a cover path or URL.</p>
+            </div>
+        </div>
+
+        {# ── Links tab ───────────────────────────────────────────────── #}
+        <div class="unified-panel-content" id="tabAuthorLinks-authorPanel" style="display: none">
+            <div class="form-group">
+                <div class="author-links-list" id="authorLinksWrap-authorPanel"></div>
+                <button type="button" class="btn btn-outline" onclick="(function(){ const wrap=document.getElementById('authorLinksWrap-authorPanel'); const row=document.createElement('div'); row.className='author-link-row'; row.innerHTML='\n                            <input type=\"text\" class=\"author-link-label\" placeholder=\"Label\" />\n                            <input type=\"text\" class=\"author-link-url\" placeholder=\"https://example.com\" />\n                            <button type=\"button\" class=\"author-link-remove\" onclick=\"this.parentElement.remove()\"><i class=\"fa-solid fa-xmark\"></i></button>\n                        '; wrap.appendChild(row); })()">
+                    <i class="fa-solid fa-plus"></i> Add link
+                </button>
             </div>
         </div>
 

@@ -51,7 +51,11 @@ class StoryPipeline:
             preferred_path=preferred_path,
         )
 
-        cover_path = self._write_cover(base_dir, story.get("cover_image"))
+        existing_story = self.stories_repo.get_by_id(story_id) or {}
+        existing_cover_path = existing_story.get("cover_path")
+        cover_path = None
+        if not existing_cover_path:
+            cover_path = self._write_cover(base_dir, story.get("cover_image"))
 
         epub_source_path = story.get("source_file_path")
         if epub_source_path:

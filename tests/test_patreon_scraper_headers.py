@@ -46,3 +46,13 @@ def test_scraper_returns_author_profile_when_requests_are_blocked():
     assert results[0].kind == "author_profile"
     assert results[0].url == "https://www.patreon.com/c/brianjnordon/posts"
     assert results[0].patreon_url == "https://www.patreon.com/c/brianjnordon/posts"
+
+
+def test_scraper_rejects_malformed_creator_values():
+    client = DummyClient([])
+
+    results = asyncio.run(scrape_patreon_creator(client, '{"timestamp": "2026-08-04"}'))
+
+    assert results
+    assert results[0].kind == "author_profile"
+    assert client.calls == []
