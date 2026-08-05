@@ -1,0 +1,245 @@
+<!-- novelcast/templates/pages/offline_data.html -->
+
+{% extends "layouts/base.html" %}
+
+{% block title %}Offline Data{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="/static/css/pages/offline.css" />
+{% endblock %}
+
+{% block content %}
+
+{% include "partials/library_header.html" %}
+
+<section class="offline-data">
+
+    <h1>Offline Data</h1>
+
+    <p>
+        Stories and chapters stored on this device for offline reading.
+    </p>
+
+    <div id="offline-storage-info">
+        Loading storage information...
+    </div>
+
+    <hr>
+
+    <h2>Offline Stories</h2>
+
+    <div id="offline-story-list">
+        Loading offline stories...
+    </div>
+
+    <hr>
+
+    <div class="offline-data-actions">
+        <button id="clear-offline-data-btn" class="btn-primary">
+            Clear Offline Data
+        </button>
+    </div>
+
+    <div id="offline-data-status"></div>
+
+</section>
+
+{% endblock %}
+
+
+{% block scripts %}
+
+<script src="/static/js/offline-db.js"></script>
+
+<script>
+(async function () {
+
+    const storyList = document.getElementById("offline-story-list");
+    const storageInfo = document.getElementById("offline-storage-info");
+    const status = document.getElementById("offline-data-status");
+    const clearButton = document.getElementById("clear-offline-data-btn");
+
+
+    async function loadStorageInfo() {
+        if (!navigator.storage?.estimate) {
+            storageInfo.innerHTML =
+                "<p>Storage information unavailable.</p>";
+            return;
+        }
+
+        const estimate = await navigator.storage.estimate();
+
+        const usedMB =
+            (estimate.usage / 1024 / 1024).toFixed(1);
+
+        const quotaMB =
+            (estimate.quota / 1024 / 1024).toFixed(1);
+
+        storageInfo.innerHTML = `
+            <h2>Storage</h2>
+            <p>
+                Used:
+                <strong>${usedMB} MB</strong>
+                /
+                ${quotaMB} MB
+            </p>
+        `;
+    }
+
+
+    async function loadOfflineStories() {
+
+        const stories =
+            await NovelcastOfflineDB.getAllOfflineStories();
+
+
+        if (!stories.length) {
+            storyList.innerHTML =
+                "<p>No stories are available offline.</p>";
+            return;
+        }
+
+
+        storyList.innerHTML = stories.map(story => {
+
+            const date =
+                new Date(story.downloadedAt)
+                    .toLocaleString();
+
+
+            return `
+                <article class="offline-story">
+
+                    ${
+                        story.coverUrl
+                        ?
+                        `<img
+                            src="${story.coverUrl}"
+                            alt="${story.title}"
+                            width="100"
+                        >`
+                        :
+                        ""
+                    }
+
+
+                    <div>
+
+                        <h3>
+                            ${story.title}
+                        </h3>
+
+                        <p>
+                            Chapters:
+                            <strong>
+                                ${story.chapterIds.length}
+                            </strong>
+                        </p>
+
+                        <p>
+                            Downloaded:
+                            ${date}
+                        </p>
+
+                    </div>
+
+                </article>
+            `;
+
+        }).join("");
+    }
+
+
+    async function loadCacheInfo() {
+
+        const chapterCache =
+            await caches.open(
+                "novelcast-chapters-v1"
+            );
+
+        const chapterEntries =
+            await chapterCache.keys();
+
+
+        const shellCache =
+            await caches.open(
+                "novelcast-shell-v1"
+            );
+
+        const shellEntries =
+            await shellCache.keys();
+
+
+        storageInfo.innerHTML += `
+            <p>
+                Cached app files:
+                <strong>
+                    ${shellEntries.length}
+                </strong>
+            </p>
+
+            <p>
+                Cached chapters:
+                <strong>
+                    ${chapterEntries.length}
+                </strong>
+            </p>
+        `;
+    }
+
+
+    async function clearOfflineData() {
+
+        if (!confirm(
+            "Remove all offline stories and cached chapters?"
+        )) {
+            return;
+        }
+
+
+        const stories =
+            await NovelcastOfflineDB.getAllOfflineStories();
+
+
+        for (const story of stories) {
+
+            await NovelcastOfflineDB
+                .deleteOfflineStory(
+                    story.storyId
+                );
+        }
+
+
+        await caches.delete(
+            "novelcast-chapters-v1"
+        );
+
+        await caches.delete(
+            "novelcast-shell-v1"
+        );
+
+
+        status.innerHTML =
+            "<p>Offline data cleared.</p>";
+
+
+        await loadOfflineStories();
+        await loadStorageInfo();
+
+    }
+
+
+    clearButton.addEventListener(
+        "click",
+        clearOfflineData
+    );
+
+
+    await loadStorageInfo();
+    await loadCacheInfo();
+    await loadOfflineStories();
+
+})();
+</script>
+
+{% endblock %}

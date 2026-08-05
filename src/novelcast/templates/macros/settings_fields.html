@@ -2,8 +2,7 @@
 {% macro render_field(section, key, meta, value, hide_label=false) %}
     {% set field_name = section ~ "." ~ key %}
     {% set field_id = (section ~ "_" ~ key) | replace(".", "_") %}
-    {# ── TEXT
-/ URL / EMAIL / PASSWORD ── #}
+    {# ── TEXT / URL / EMAIL / PASSWORD ── #}
     {% if meta.type in ["text", "url", "email", "password"] %}
         {% if not hide_label %}
             <label for="{{ field_id }}"> {{ meta.label | default(key | replace("_", " ") | capitalize) }} </label>
@@ -83,11 +82,11 @@
         {% endif %}
         <select id="{{ field_id }}" name="{{ field_name }}">
             {% for option in meta.options %}{% if option is mapping %}
-                <option value="{{ option.value }}" {% if option.value="" ="value" %}selected{% endif %}>
+                <option value="{{ option.value }}" {% if option.value == value %}selected{% endif %}>
                     {{ option.label }}
                 </option>
             {% else %}
-                <option value="{{ option }}" {% if option="" ="value" %}selected{% endif %}>
+                <option value="{{ option }}" {% if option == value %}selected{% endif %}>
                     {{ option | capitalize }}
                 </option>
             {% endif %}{% endfor %}

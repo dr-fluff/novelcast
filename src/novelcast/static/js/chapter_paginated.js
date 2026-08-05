@@ -71,7 +71,7 @@ class PaginatedEReader {
 
     registerServiceWorker() {
         if (!('serviceWorker' in navigator)) return;
-        navigator.serviceWorker.register('/static/js/sw.js').catch(() => {
+        navigator.serviceWorker.register('/static/sw.js').catch(() => {
             // If registration fails (unsupported context, etc.) the reader
             // still works — it just falls back to normal network requests
             // with no background precaching.
@@ -161,21 +161,32 @@ class PaginatedEReader {
                 this.userLoaded = true;
             }
         } catch (e) {
-            /* use defaults */
+            /* offline or unreachable — keep schema/safety-net defaults */
         }
     }
 
     async saveUserSettings() {
         if (!this.userLoaded) return;
+
+        const url = '/api/chapter-settings';
+        const options = {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(this.deviceId ? { 'X-Device-Id': this.deviceId } : {}),
+            },
+            body: JSON.stringify({ settings: this.settings }),
+        };
+
         try {
-            await fetch('/api/chapter-settings', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(this.deviceId ? { 'X-Device-Id': this.deviceId } : {}),
-                },
-                body: JSON.stringify({ settings: this.settings }),
-            });
+            // queuedFetch (from offline-sync.js) queues this in IndexedDB
+            // and retries once back online if it fails — falls back to a
+            // plain fetch if offline support hasn't loaded for some reason.
+            if (window.NovelcastOffline?.queuedFetch) {
+                await window.NovelcastOffline.queuedFetch(url, options);
+            } else {
+                await fetch(url, options);
+            }
         } catch (e) {
             /* ignore */
         }
@@ -440,15 +451,27 @@ class PaginatedEReader {
             // sendBeacon is specifically designed to survive the page being
             // torn down mid-request — a normal fetch is not guaranteed to
             // complete once the browser starts suspending/discarding the tab.
+            // Note: sendBeacon has no failure callback, so this path can't
+            // be routed through the offline queue — if the device is
+            // actually offline at teardown time, this delivery attempt is
+            // simply lost. The debounced path below (normal foreground
+            // page turns) is what the offline queue actually protects.
             const blob = new Blob([payload], { type: 'application/json' });
             navigator.sendBeacon('/api/chapter-progress', blob);
         } else {
-            fetch('/api/chapter-progress', {
+            const url = '/api/chapter-progress';
+            const options = {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: payload,
                 keepalive: true, // best-effort: helps the request survive unload in more browsers
-            }).catch(() => {});
+            };
+
+            if (window.NovelcastOffline?.queuedFetch) {
+                window.NovelcastOffline.queuedFetch(url, options).catch(() => {});
+            } else {
+                fetch(url, options).catch(() => {});
+            }
         }
     }
 

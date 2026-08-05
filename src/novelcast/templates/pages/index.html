@@ -16,6 +16,9 @@ persist_key="library.index" ) }}
             {% if not s.has_unread %}
             <div class="card-badge"><i class="fa-solid fa-check"></i></div>
             {% endif %}
+            <div class="card-offline-badge" style="display: none" title="Available offline">
+                <i class="fa-solid fa-cloud-arrow-down"></i>
+            </div>
         </div>
 
         <div class="card-info">

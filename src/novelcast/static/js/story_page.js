@@ -422,3 +422,67 @@ window.probeAudioFile = async function (filePath) {
         window.showNotification?.(`Probe failed: ${err.message}`, 'error', 6000);
     }
 };
+
+/* ── Offline availability ─────────────────────────────────────────────── */
+
+async function refreshOfflineUI() {
+    const section = document.querySelector('.story-page');
+    const storyId = section?.dataset.storyId;
+    const btn = document.getElementById('offlineToggleBtn');
+    const icon = document.getElementById('offlineToggleIcon');
+    const badge = document.getElementById('offlineBadge');
+    if (!storyId || !btn || !window.NovelcastOffline) return;
+
+    const offline = await window.NovelcastOffline.isStoryOffline(storyId);
+    btn.classList.toggle('active', offline);
+    btn.title = offline ? 'Remove from offline' : 'Available offline';
+    if (icon) icon.className = offline ? 'fa-solid fa-trash-can' : 'fa-solid fa-download';
+    if (badge) badge.style.display = offline ? '' : 'none';
+}
+
+window.toggleStoryOffline = async function () {
+    const section = document.querySelector('.story-page');
+    const storyId = section?.dataset.storyId;
+    const btn = document.getElementById('offlineToggleBtn');
+    if (!storyId || !window.NovelcastOffline) return;
+
+    let chapterIds = [];
+    try {
+        chapterIds = JSON.parse(section.dataset.chapterIds || '[]');
+    } catch (e) {
+        /* leave empty */
+    }
+    if (!chapterIds.length) {
+    window.showNotification?.('No downloaded chapters to make available offline yet.', 'info', 5000);
+    return;
+}
+
+    const coverUrl = document.querySelector('.story-cover')?.getAttribute('src') || '';
+    const title = document.querySelector('.story-title')?.textContent?.trim() || '';
+
+    if (btn) btn.disabled = true;
+
+    try {
+        const alreadyOffline = await window.NovelcastOffline.isStoryOffline(storyId);
+
+        if (alreadyOffline) {
+            await window.NovelcastOffline.removeStoryOffline(storyId);
+            window.showNotification?.('Removed from offline storage.', 'success', 4000);
+        } else {
+            if (!chapterIds.length) {
+                window.showNotification?.('No downloaded chapters to make available offline yet.', 'info', 5000);
+                return;
+            }
+            window.showNotification?.('Downloading for offline reading…', 'info', 4000);
+            await window.NovelcastOffline.markStoryOffline(storyId, { title, coverUrl, chapterIds });
+            window.showNotification?.('Available offline.', 'success', 4000);
+        }
+    } catch (err) {
+        window.showNotification?.(`Offline update failed: ${err.message}`, 'error', 6000) ?? alert(err.message);
+    } finally {
+        if (btn) btn.disabled = false;
+        refreshOfflineUI();
+    }
+};
+
+document.addEventListener('DOMContentLoaded', refreshOfflineUI);

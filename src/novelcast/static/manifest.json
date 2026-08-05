@@ -1,0 +1,32 @@
+{
+    "name": "NovelCast",
+    "short_name": "NovelCast",
+    "description": "Download, manage, and read serialized web fiction — with offline reading for stories you've marked available offline.",
+    "id": "/",
+    "start_url": "/",
+    "scope": "/",
+    "display": "standalone",
+    "background_color": "#faf8f3",
+    "theme_color": "#111114",
+    "orientation": "any",
+    "icons": [
+        {
+            "src": "/static/icons/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/static/icons/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/static/icons/icon-512-maskable.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ]
+}

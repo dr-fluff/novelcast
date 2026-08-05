@@ -17,6 +17,7 @@
         data-last-chapter-id="{{ last_chapter_id | default('') }}"
         data-chapter-sort="{{ story_preferences.chapter_sort | default('asc') }}"
         data-file-sort="{{ story_preferences.file_sort | default('asc') }}"
+        data-chapter-ids='{{ chapters | map(attribute="id") | list | tojson }}'
     >
         {# ── Hero ─────────────────────────────────────────────────────────── #}
         <div class="story-hero">
@@ -118,6 +119,16 @@
                     {% if last_chapter_id or first_unread_chapter_id %}
                         <button class="btn-play" onclick="goToReading()"><i class="fa-solid fa-play"></i> Read</button>
                     {% endif %}
+
+                    <button
+                        class="btn-action-icon"
+                        id="offlineToggleBtn"
+                        onclick="toggleStoryOffline()"
+                        title="Available offline"
+                    >
+                        <i class="fa-solid fa-download" id="offlineToggleIcon"></i>
+                    </button>
+
                     {% if current_user and current_user.is_root %}
                         <button
                             class="btn-action-icon"
@@ -148,6 +159,10 @@
                         </button>
                     </div>
                 </div>
+
+                <span class="offline-badge" id="offlineBadge" style="display: none">
+                    <i class="fa-solid fa-circle-check"></i> Available offline
+                </span>
 
                 {% if story["description"] %}
                     <div class="story-description-block">

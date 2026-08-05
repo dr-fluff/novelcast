@@ -7,6 +7,16 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <link rel="icon" href="/static/images/favicon.svg" onerror="this.href = '/favicon.svg'" />
 
+        <!-- PWA -->
+        <link rel="manifest" href="/static/manifest.json" />
+        <meta name="theme-color" content="#111114" />
+        <!-- iOS ignores the manifest for home-screen icon/standalone mode --
+        these tags are what actually make "Add to Home Screen" work there. -->
+        <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="NovelCast" />
+
         <!-- HTMX — must load before body content -->
         <script src="https://unpkg.com/htmx.org@1.9.12"></script>
 
@@ -52,7 +62,10 @@
             include
             "components/notifications.html"
         %}
-
+        <!-- Offline support: must load before any page script that reads/
+        writes progress, settings, or the offline-story list. -->
+        <script src="/static/js/offline-db.js" defer></script>
+        <script src="/static/js/offline-sync.js" defer></script>
         <script src="/static/js/main.js" defer></script>
         <script src="/static/js/library_header.js" defer></script>
         <script src="/static/js/notifications.js" defer></script>

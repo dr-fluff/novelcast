@@ -127,3 +127,28 @@
         }, 900);
     });
 })();
+
+/* ── Offline badges ──────────────────────────────────────────────────── */
+
+async function paintOfflineBadges() {
+    if (!window.NovelcastOfflineDB) return;
+
+    let offlineIds;
+    try {
+        const stories = await NovelcastOfflineDB.getAllOfflineStories();
+        offlineIds = new Set(stories.map((s) => String(s.storyId)));
+    } catch (e) {
+        return;
+    }
+
+    document.querySelectorAll('a.card[href]').forEach((card) => {
+        const match = card.getAttribute('href').match(/story_id=(\d+)/);
+        const storyId = match?.[1];
+        const badge = card.querySelector('.card-offline-badge');
+        if (!badge) return;
+        badge.style.display = storyId && offlineIds.has(storyId) ? '' : 'none';
+    });
+}
+
+document.addEventListener('DOMContentLoaded', paintOfflineBadges);
+window.addEventListener('online', paintOfflineBadges);

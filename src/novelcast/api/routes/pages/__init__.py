@@ -11,6 +11,7 @@ from .search import router as search_router
 from .settings import router as settings_router
 from .stats import router as stats_router
 from .story import router as story_router
+from .offline_data import router as offline_router
 
 router = APIRouter()
 
@@ -24,3 +25,4 @@ router.include_router(admin_pages_router)
 router.include_router(preferences_router)
 router.include_router(stats_router)
 router.include_router(account_router)
+router.include_router(offline_router)
