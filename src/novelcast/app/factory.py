@@ -3,6 +3,7 @@
 from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from novelcast.api import (
@@ -42,6 +43,18 @@ def create_app(config: AppConfig) -> FastAPI:
     app.add_middleware(PermissionMiddleware)
 
     app.include_router(api_router)
+
+    # Served at the origin root (not under /static) so its default max
+    # scope is "/" -- a service worker's scope can never extend above the
+    # path it's served from, and the /static mount would otherwise cap it
+    # at /static/*, which excludes every real app page (/, /story, /chapter).
+    @app.get("/sw.js", include_in_schema=False)
+    async def service_worker():
+        return FileResponse(
+            STATIC_DIR / "sw.js",
+            media_type="application/javascript",
+            headers={"Cache-Control": "no-cache"},
+        )
 
     app.mount(
         "/static",

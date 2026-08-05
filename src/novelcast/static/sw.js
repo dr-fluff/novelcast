@@ -1,4 +1,4 @@
-// novelcast/static/js/sw.js
+// novelcast/static/sw.js
 //
 // Service worker for the reader + PWA offline support. Jobs:
 //

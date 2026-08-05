@@ -71,7 +71,7 @@ class PaginatedEReader {
 
     registerServiceWorker() {
         if (!('serviceWorker' in navigator)) return;
-        navigator.serviceWorker.register('/static/sw.js').catch(() => {
+        navigator.serviceWorker.register('/sw.js').catch(() => {
             // If registration fails (unsupported context, etc.) the reader
             // still works — it just falls back to normal network requests
             // with no background precaching.

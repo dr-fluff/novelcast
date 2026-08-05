@@ -25,7 +25,7 @@
     async function ensureServiceWorker() {
         if (!('serviceWorker' in navigator)) return null;
         try {
-            const reg = await navigator.serviceWorker.register('/static/sw.js');
+            const reg = await navigator.serviceWorker.register('/sw.js');
             await navigator.serviceWorker.ready;
             return reg;
         } catch (e) {
