@@ -91,7 +91,16 @@ self.addEventListener('fetch', (event) => {
     if (event.request.method !== 'GET' || url.origin !== self.location.origin) return;
 
     if (url.pathname === '/chapter') {
-        event.respondWith(cacheFirst(event.request, CACHE_NAME));
+        // Cache keys only ever include story_id/chapter_id (see
+        // handleMarkStoryOffline) -- strip navigation-only params
+        // (page/anchor/lastPage) before matching so chapter transitions
+        // that add ?page=0 or ?lastPage=1 still hit the cache.
+        const cacheUrl = new URL(url);
+        cacheUrl.searchParams.delete('page');
+        cacheUrl.searchParams.delete('anchor');
+        cacheUrl.searchParams.delete('lastPage');
+        const cacheKey = new Request(cacheUrl.toString(), { method: 'GET' });
+        event.respondWith(cacheFirst(cacheKey, CACHE_NAME));
         return;
     }
 
@@ -109,6 +118,7 @@ self.addEventListener('fetch', (event) => {
 async function cacheFirst(request, cacheName, { revalidate = false } = {}) {
     const cache = await caches.open(cacheName);
     const cached = await cache.match(request);
+
     if (cached) {
         if (revalidate) {
             // Refresh the cache in the background so updates show up next

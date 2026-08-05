@@ -435,8 +435,8 @@ async function refreshOfflineUI() {
 
     const offline = await window.NovelcastOffline.isStoryOffline(storyId);
     btn.classList.toggle('active', offline);
-    btn.title = offline ? 'Remove from offline' : 'Available offline';
-    if (icon) icon.className = offline ? 'fa-solid fa-trash-can' : 'fa-solid fa-download';
+    btn.title = offline ? 'Remove offline copy' : 'Available offline';
+    if (icon) icon.className = offline ? 'fa-solid fa-cloud-arrow-up' : 'fa-solid fa-download';
     if (badge) badge.style.display = offline ? '' : 'none';
 }
 

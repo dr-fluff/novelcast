@@ -1,0 +1,258 @@
+/* novelcast/static/css/pages/offline.css */
+
+.pg-offline {
+    max-width: 1060px;
+    margin: 0 auto;
+    padding: 2.5rem 2rem 5rem;
+}
+
+.pg-header {
+    margin-bottom: 1.75rem;
+}
+
+.pg-title {
+    font-size: 1.9rem;
+    font-weight: 700;
+    margin: 0 0 0.4rem;
+    color: var(--text-primary);
+}
+
+.pg-subtitle {
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+/* ── Stat cards (shared shape with stats.css) ────────────────── */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.75rem;
+}
+
+.stats-card {
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    background: var(--surface-raised);
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.stats-card__label {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.stats-card__value {
+    font-size: 1.9rem;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--text-primary);
+}
+
+.stats-card__unit {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-left: 0.2rem;
+}
+
+.stats-card__value--empty {
+    color: var(--text-secondary);
+}
+
+.skeleton-value {
+    opacity: 0.4;
+}
+
+/* ── Section card ─────────────────────────────────────────────── */
+.section-card {
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    background: var(--surface-raised);
+    margin-bottom: 1.75rem;
+}
+
+.section-card__head {
+    padding: 0.9rem 1.4rem;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.section-card__title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.section-card__badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    background: var(--surface-hover);
+    border-radius: 999px;
+    padding: 0.1rem 0.55rem;
+}
+
+/* ── Offline story list ───────────────────────────────────────── */
+.offline-story-list {
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.offline-story-card {
+    display: flex;
+    gap: 1rem;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    background: var(--bg-primary);
+}
+
+.offline-story-card__cover {
+    width: 64px;
+    height: 92px;
+    flex-shrink: 0;
+    object-fit: cover;
+    border-radius: var(--radius-sm);
+    background: var(--surface-hover);
+}
+
+.offline-story-card__cover--placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    font-size: 1.4rem;
+}
+
+.offline-story-card__body {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.3rem;
+    min-width: 0;
+}
+
+.offline-story-card__title {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0;
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.offline-story-card__meta {
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.offline-story-card__meta i {
+    width: 1em;
+    text-align: center;
+    opacity: 0.8;
+}
+
+/* ── Empty state ──────────────────────────────────────────────── */
+.offline-empty {
+    padding: 2.5rem 1rem;
+    text-align: center;
+    color: var(--text-secondary);
+}
+
+.offline-empty i {
+    font-size: 1.8rem;
+    margin-bottom: 0.75rem;
+    opacity: 0.5;
+    display: block;
+}
+
+.offline-empty p {
+    margin: 0.2rem 0;
+    font-size: 0.9rem;
+}
+
+.offline-empty__hint {
+    font-size: 0.8rem;
+    opacity: 0.85;
+}
+
+/* ── Actions ──────────────────────────────────────────────────── */
+.pg-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.btn-danger-outline {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    padding: 0.6rem 1.1rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--danger-color);
+    background: transparent;
+    color: var(--danger-color);
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.btn-danger-outline:hover:not(:disabled) {
+    background: var(--danger-subtle);
+}
+
+.btn-danger-outline:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+.pg-status {
+    font-size: 0.85rem;
+}
+
+.pg-status--success {
+    color: var(--success-color);
+}
+
+.pg-status--error {
+    color: var(--danger-color);
+}
+
+/* ── Responsive ───────────────────────────────────────────────── */
+@media (max-width: 860px) {
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 520px) {
+    .pg-offline {
+        padding: 1.25rem 1rem 4rem;
+    }
+
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .offline-story-card {
+        flex-direction: row;
+    }
+}
