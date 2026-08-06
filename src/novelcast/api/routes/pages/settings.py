@@ -59,17 +59,22 @@ async def save_settings(
     settings.save_user_settings(current_user["id"], **user_updates)
 
     if current_user.get("is_root"):
+        # Save site overrides via the dedicated method
+        fanficfare_updates = server_updates.get("fanficfare", {})
+        site_overrides = fanficfare_updates.pop("site_overrides", {})
+        for domain, domain_fields in site_overrides.items():
+            for field, value in domain_fields.items():
+                settings.set_site_override(domain, field, value)
+
         # Validate Patreon settings before saving if they're being updated
         patreon_updated = False
         for section, fields in server_updates.items():
             if section == "patreon":
                 patreon_updated = True
-                # Temporarily apply updates for validation
                 for key, value in fields.items():
                     settings.set_server_setting(f"{section}.{key}", value)
 
         if patreon_updated:
-            # Validate Patreon settings
             ctx = request.app.state.ctx
             patreon_config_service = ctx.engines_config.get("patreon", {}).get("writer")
             if patreon_config_service and hasattr(patreon_config_service, "validate_settings"):
@@ -81,8 +86,10 @@ async def save_settings(
                         redirect_url = f"{redirect_url}#{quote(active_tab, safe='')}"
                     return RedirectResponse(redirect_url, status_code=303)
 
-        # Save all settings
+        # Save remaining flat settings (skip patreon, already saved above)
         for section, fields in server_updates.items():
+            if section == "patreon":
+                continue
             for key, value in fields.items():
                 settings.set_server_setting(f"{section}.{key}", value)
 

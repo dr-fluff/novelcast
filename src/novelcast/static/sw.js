@@ -12,7 +12,10 @@
 // 5. MARK_STORY_OFFLINE / REMOVE_STORY_OFFLINE: explicitly download (or
 //    evict) a story's page, cover, and all its chapters, and record
 //    that in IndexedDB (via offline-db.js) so the UI can show which
-//    stories are available offline.
+//    stories are available offline. Calling MARK_STORY_OFFLINE again
+//    for a story that's already offline is treated as a *refresh*:
+//    the story page/cover are always re-fetched, and the chapter list
+//    is diffed against what's cached rather than blindly skipped.
 // 6. Background Sync (where supported -- not on iOS) to flush queued
 //    progress/settings writes even if the tab isn't open.
 
@@ -209,21 +212,42 @@ async function handleMarkStoryOffline(data, event) {
             caches.open(SHELL_CACHE_NAME),
         ]);
 
-        // Story page + cover go in the shell cache (same place navigation
-        // caching looks); chapters go in the chapter cache so they're
-        // covered by the same cache-first handler chapters already use.
+        const existingRecord = await NovelcastOfflineDB.getOfflineStory(storyId);
+        const isRefresh = !!existingRecord;
+
+        // Story page + cover: on a fresh download these are fetch-if-missing
+        // (matches chapter behavior below). On a refresh of an already
+        // -offline story, always re-fetch and overwrite -- metadata
+        // (title, cover, description) can change server-side and the whole
+        // point of a refresh is to pick that up rather than keep serving
+        // whatever was cached the first time.
         const shellUrls = meta.coverUrl ? [storyPageUrl, meta.coverUrl] : [storyPageUrl];
 
         for (const url of shellUrls) {
-            const existing = await shellCache.match(url);
-            if (existing) continue;
+            if (!isRefresh) {
+                const existing = await shellCache.match(url);
+                if (existing) continue;
+            }
             const response = await fetchWithRetry(url);
             if (response) await shellCache.put(url, response.clone());
         }
 
+        // Chapters: diff against the previous chapter list rather than the
+        // cache directly, so a chapter that still exists is left untouched
+        // (no wasted re-fetch), a newly-added chapter gets pulled in, and a
+        // chapter that's no longer part of the story gets evicted instead
+        // of lingering in the cache forever.
+        const previousChapterIds = new Set(existingRecord?.chapterIds || []);
+        const currentChapterIds = new Set(chapterIds);
+
+        const removedIds = [...previousChapterIds].filter((id) => !currentChapterIds.has(id));
+        for (const cid of removedIds) {
+            await chapterCache.delete(`/chapter?story_id=${storyId}&chapter_id=${cid}`);
+        }
+
         for (const url of chapterUrls) {
             const existing = await chapterCache.match(url);
-            if (existing) continue;
+            if (existing) continue; // unchanged chapter -- already cached, nothing to do
             const response = await fetchWithRetry(url);
             if (response) await chapterCache.put(url, response.clone());
         }
@@ -236,7 +260,7 @@ async function handleMarkStoryOffline(data, event) {
             downloadedAt: Date.now(),
         });
 
-        port?.postMessage({ ok: true });
+        port?.postMessage({ ok: true, refreshed: isRefresh, addedChapters: chapterIds.length - previousChapterIds.size + removedIds.length, removedChapters: removedIds.length });
     } catch (err) {
         port?.postMessage({ error: err.message || 'Failed to mark story offline' });
     }

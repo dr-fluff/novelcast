@@ -20,7 +20,8 @@
         <!-- TAB BAR -->
         <div class="tab-bar">
             {% for section_name in schema.keys() %}
-                <button class="tab-btn{% if loop.first %}active{% endif %}" data-tab="{{ section_name }}" type="button">
+                <button class="tab-btn {% if loop.first %}active{% endif %}" data-tab="{{ section_name }}" type="button">
+
                     {{ section_name | capitalize }}
                 </button>
             {% endfor %}
@@ -35,7 +36,7 @@
             <input type="hidden" name="_active_tab" id="active-tab" value="" />
 
             {% for section_name, section in schema.items() %}
-                <div class="tab-panel{% if loop.first %}active{% endif %}" data-panel="{{ section_name }}">
+                <div class="tab-panel {% if loop.first %}active{% endif %}" data-panel="{{ section_name }}">
                     {% set section_values = server_settings.get(section_name, {}) %}
 
                     {% for scope_name, scope_fields in section_values.items() %}
@@ -87,7 +88,7 @@
                                                     <div class="field-card__input-col">
                                                         {{
                                                             render_field(
-                                                                section_name ~ "." ~ domain,
+                                                                section_name ~ ".site." ~ domain,
                                                                 field_key, field_meta, field_value,
                                                                 hide_label=true
                                                             )

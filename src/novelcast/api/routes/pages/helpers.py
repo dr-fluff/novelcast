@@ -226,25 +226,22 @@ def parse_settings_form(form: dict) -> tuple[dict, dict]:
         if key.startswith("_") or "." not in key:
             continue
 
-        parts = key.split(".")
-
-        if parts[0] == "app":
-            user_updates[".".join(parts[1:])] = value
+        if key.startswith("app."):
+            user_updates[key[len("app."):]] = value
             continue
 
-        section = parts[0]
-        if section not in server_updates:
-            server_updates[section] = {}
+        if key.startswith("fanficfare.site."):
+            remainder = key[len("fanficfare.site."):]
+            domain, sep, field = remainder.rpartition(".")
+            if not sep or not domain or not field:
+                logger.warning("Malformed site override field name: %s", key)
+                continue
+            site_overrides = server_updates.setdefault("fanficfare", {}).setdefault("site_overrides", {})
+            site_overrides.setdefault(domain, {})[field] = value
+            continue
 
-        current = server_updates[section]
-        if len(parts) >= 3:
-            domain = parts[1]
-            field = parts[2]
-            current.setdefault(domain, {})
-            current[domain][field] = value
-        else:
-            field = parts[1]
-            current[field] = value
+        section, _, field = key.partition(".")
+        server_updates.setdefault(section, {})[field] = value
 
     return user_updates, server_updates
 

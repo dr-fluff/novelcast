@@ -227,9 +227,17 @@ window.openStoryMenu = function (btn) {
     const wrapper = btn.closest('.file-menu-wrapper');
     const dropdown = document.createElement('div');
     dropdown.className = 'file-dropdown';
-    dropdown.innerHTML = `
-        <button class="file-dropdown-item" onclick="updateStory()">Update story</button>
-    `;
+
+    let items = `<button class="file-dropdown-item" onclick="updateStory()">Update story</button>`;
+
+    // Only offer "Remove from offline" once we actually know the story is
+    // offline -- _isStoryOffline is kept in sync by refreshOfflineUI(),
+    // which always runs before this menu can be opened.
+    if (_isStoryOffline) {
+        items += `<button class="file-dropdown-item danger" onclick="removeOfflineCopy()">Remove from offline</button>`;
+    }
+
+    dropdown.innerHTML = items;
     wrapper.appendChild(dropdown);
     _activeDropdown = dropdown;
 };
@@ -330,6 +338,20 @@ window.addEventListener('novelcast:notification', (event) => {
     }
 
     if (['sync_story_updated', 'sync_finished', 'story_updated'].includes(payload.type)) {
+        // If this story is currently kept offline, its cached snapshot is
+        // now stale (new/changed chapters won't be reflected until it's
+        // refreshed) -- surface that explicitly rather than silently
+        // reloading into a page whose offline copy no longer matches what's
+        // shown. Reload still happens either way so the visible chapter
+        // list/metadata is current; the offline cache itself is refreshed
+        // separately, by the person tapping the offline button again.
+        if (_isStoryOffline) {
+            window.showNotification?.(
+                'This story updated — your offline copy is now out of date. Tap the offline button to refresh it.',
+                'info',
+                8000
+            );
+        }
         window.location.reload();
     }
 });
@@ -425,6 +447,12 @@ window.probeAudioFile = async function (filePath) {
 
 /* ── Offline availability ─────────────────────────────────────────────── */
 
+// Kept in sync by refreshOfflineUI() -- other functions (openStoryMenu,
+// the novelcast:notification handler) read this instead of re-querying
+// IndexedDB themselves, since it's already refreshed on load and after
+// every offline action.
+let _isStoryOffline = false;
+
 async function refreshOfflineUI() {
     const section = document.querySelector('.story-page');
     const storyId = section?.dataset.storyId;
@@ -434,9 +462,15 @@ async function refreshOfflineUI() {
     if (!storyId || !btn || !window.NovelcastOffline) return;
 
     const offline = await window.NovelcastOffline.isStoryOffline(storyId);
+    _isStoryOffline = offline;
+
     btn.classList.toggle('active', offline);
-    btn.title = offline ? 'Remove offline copy' : 'Available offline';
-    if (icon) icon.className = offline ? 'fa-solid fa-cloud-arrow-up' : 'fa-solid fa-download';
+    // Tapping the button when a story is already offline now refreshes
+    // the offline copy (picks up new/changed chapters) rather than
+    // removing it -- removal lives in the story menu instead, so the two
+    // destructive-looking actions aren't sharing one control.
+    btn.title = offline ? 'Refresh offline copy' : 'Available offline';
+    if (icon) icon.className = offline ? 'fa-solid fa-rotate' : 'fa-solid fa-download';
     if (badge) badge.style.display = offline ? '' : 'none';
 }
 
@@ -453,9 +487,9 @@ window.toggleStoryOffline = async function () {
         /* leave empty */
     }
     if (!chapterIds.length) {
-    window.showNotification?.('No downloaded chapters to make available offline yet.', 'info', 5000);
-    return;
-}
+        window.showNotification?.('No downloaded chapters to make available offline yet.', 'info', 5000);
+        return;
+    }
 
     const coverUrl = document.querySelector('.story-cover')?.getAttribute('src') || '';
     const title = document.querySelector('.story-title')?.textContent?.trim() || '';
@@ -463,16 +497,16 @@ window.toggleStoryOffline = async function () {
     if (btn) btn.disabled = true;
 
     try {
-        const alreadyOffline = await window.NovelcastOffline.isStoryOffline(storyId);
+        const alreadyOffline = _isStoryOffline;
 
         if (alreadyOffline) {
-            await window.NovelcastOffline.removeStoryOffline(storyId);
-            window.showNotification?.('Removed from offline storage.', 'success', 4000);
+            window.showNotification?.('Refreshing offline copy…', 'info', 3000);
+            const result = await window.NovelcastOffline.markStoryOffline(storyId, { title, coverUrl, chapterIds });
+            const added = result?.addedChapters || 0;
+            const removed = result?.removedChapters || 0;
+            const detail = added || removed ? ` (${added} added, ${removed} removed)` : ' — already up to date';
+            window.showNotification?.(`Offline copy refreshed${detail}.`, 'success', 5000);
         } else {
-            if (!chapterIds.length) {
-                window.showNotification?.('No downloaded chapters to make available offline yet.', 'info', 5000);
-                return;
-            }
             window.showNotification?.('Downloading for offline reading…', 'info', 4000);
             await window.NovelcastOffline.markStoryOffline(storyId, { title, coverUrl, chapterIds });
             window.showNotification?.('Available offline.', 'success', 4000);
@@ -481,6 +515,24 @@ window.toggleStoryOffline = async function () {
         window.showNotification?.(`Offline update failed: ${err.message}`, 'error', 6000) ?? alert(err.message);
     } finally {
         if (btn) btn.disabled = false;
+        refreshOfflineUI();
+    }
+};
+
+window.removeOfflineCopy = async function () {
+    closeActiveDropdown();
+    const section = document.querySelector('.story-page');
+    const storyId = section?.dataset.storyId;
+    if (!storyId || !window.NovelcastOffline) return;
+
+    if (!confirm('Remove this story from offline storage? Cached chapters will be deleted from this device.')) return;
+
+    try {
+        await window.NovelcastOffline.removeStoryOffline(storyId);
+        window.showNotification?.('Removed from offline storage.', 'success', 4000);
+    } catch (err) {
+        window.showNotification?.(`Remove failed: ${err.message}`, 'error', 6000);
+    } finally {
         refreshOfflineUI();
     }
 };
