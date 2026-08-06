@@ -1,4 +1,8 @@
 /* novelcast/static/css/pages/story.css */
+.story-page {
+    /* max-width: 100%; */
+    overflow-x: hidden;
+}
 
 /* ── Hero ─────────────────────────────────────────────────────────────── */
 
@@ -41,6 +45,8 @@
 .story-info {
     flex: 1;
     min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
@@ -144,6 +150,8 @@
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    overflow-wrap: break-word;
+    word-break: break-word;
 }
 
 .story-description.expanded {
@@ -596,6 +604,14 @@
     .story-hero {
         flex-direction: column;
         align-items: center;
+    }
+
+    .story-cover-wrap {
+        align-self: center;
+    }
+
+    .story-info {
+        width: 100%;
         text-align: center;
     }
 
@@ -644,4 +660,20 @@
     font-weight: 700;
     color: #6366f1;
     margin-top: 0.15rem;
+}
+
+@media (min-width: 601px) and (max-width: 1024px) {
+    .story-hero {
+        gap: 1.25rem;
+    }
+
+    .story-cover,
+    .story-cover-placeholder {
+        width: 100px;
+        height: 100px;
+    }
+
+    .story-title {
+        font-size: 1.5rem;
+    }
 }

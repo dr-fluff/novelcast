@@ -175,6 +175,11 @@ def story_card(story: dict) -> dict:
     else:
         cover_url = cover_path
 
+    downloaded = story.get("downloaded_chapters", 0) or 0
+    last_read = (story.get("progress") or {}).get("last_read_chapter", 0) or 0
+    progress_percent = int(round((last_read / downloaded) * 100)) if downloaded else 0
+    progress_percent = max(0, min(100, progress_percent))
+
     return {
         "id": story.get("id"),
         "display_title": title,
@@ -183,6 +188,8 @@ def story_card(story: dict) -> dict:
         "last_chapter": story.get("downloaded_chapters", 0),
         "last_chapter_name": story.get("chapter"),
         "has_unread": story.get("has_unread", False),
+        "is_caught_up": story.get("is_caught_up", False),
+        "progress_percent": progress_percent,
         "genres": story.get("genres_list") or [],
         "tags": story.get("tags_list") or [],
         "series": story.get("series_list") or [],

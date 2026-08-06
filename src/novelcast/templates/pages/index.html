@@ -14,11 +14,20 @@ persist_key="library.index" ) }}
             <img src="{{ s.cover_url or '/static/images/cover-placeholder.svg' }}" alt="{{ s.display_title }} cover" />
             <div class="card-letter">{{ s.thumbnail_letter }}</div>
             {% if not s.has_unread %}
-            <div class="card-badge"><i class="fa-solid fa-check"></i></div>
+                <div class="card-badge"><i class="fa-solid fa-check"></i></div>
             {% endif %}
             <div class="card-offline-badge" style="display: none" title="Available offline">
                 <i class="fa-solid fa-cloud-arrow-down"></i>
             </div>
+
+            {% if s.progress_percent > 0 %}
+                <div class="card-progress-track">
+                    <div
+                        class="card-progress-fill{% if s.is_caught_up %} card-progress-complete{% endif %}"
+                        style="width: {{ s.progress_percent }}%;"
+                    ></div>
+                </div>
+            {% endif %}
         </div>
 
         <div class="card-info">
