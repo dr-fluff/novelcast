@@ -294,7 +294,7 @@
         <div class="unified-panel-content" id="tabAuthorLinks-authorPanel" style="display: none">
             <div class="form-group">
                 <div class="author-links-list" id="authorLinksWrap-authorPanel"></div>
-                <button type="button" class="btn btn-outline" onclick="(function(){ const wrap=document.getElementById('authorLinksWrap-authorPanel'); const row=document.createElement('div'); row.className='author-link-row'; row.innerHTML='\n                            <input type=\"text\" class=\"author-link-label\" placeholder=\"Label\" />\n                            <input type=\"text\" class=\"author-link-url\" placeholder=\"https://example.com\" />\n                            <button type=\"button\" class=\"author-link-remove\" onclick=\"this.parentElement.remove()\"><i class=\"fa-solid fa-xmark\"></i></button>\n                        '; wrap.appendChild(row); })()">
+                <button type="button" class="btn btn-outline" onclick="UnifiedPanel.addAuthorLinkRow('authorPanel')">
                     <i class="fa-solid fa-plus"></i> Add link
                 </button>
             </div>

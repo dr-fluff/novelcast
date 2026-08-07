@@ -8,10 +8,7 @@
 {% endblock %}
 {% block content %}
     {% from "macros/grid_toolbar.html" import render_grid_toolbar %}
-    {%
-        include
-        "partials/library_header.html"
-    %}
+    {% include "partials/library_header.html"%}
     {{ render_grid_toolbar("/authors", query, sort, sort_options) }}
 
     <section class="grid grid-compact">
@@ -33,10 +30,7 @@
                         <h3>{{ author.name }}</h3>
                         <p class="card-meta">
                             {{ author.story_count }} {{ "story" if author.story_count == 1 else "stories" }}
-                            {%
-                                if
-                                author.last_updated
-                            %}
+                            {% if author.last_updated %}
                                 · {{ author.last_updated.strftime("%b %Y") }}
                             {% endif %}
                         </p>

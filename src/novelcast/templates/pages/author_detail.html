@@ -50,9 +50,8 @@
                 {% if author.links %}
                     <div class="author-profile-links">
                         {% for link in author.links %}
-                            <a class="author-link-pill" href="{{ link.url }}" target="_blank" rel="noreferrer noopener">
-                                <i class="fa-solid fa-arrow-up-right-from-square"></i>
-                                {{ link.label }}
+                            <a href="{{ link.url }}" target="_blank" rel="noreferrer" class="author-link">
+                                <i class="{{ icon_for_url(link.url) }}"></i> {{ link.label }}
                             </a>
                         {% endfor %}
                     </div>

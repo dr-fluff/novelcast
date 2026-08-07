@@ -154,3 +154,11 @@
 .auth-page .field-card:last-child {
     padding-bottom: 0;
 }
+
+.author-link-icon {
+    width: 1em;
+    height: 1em;
+    display: inline-block;
+    vertical-align: -0.125em;
+    object-fit: contain;
+}

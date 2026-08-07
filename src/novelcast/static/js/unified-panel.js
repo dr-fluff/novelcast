@@ -181,6 +181,48 @@ const UnifiedPanel = (() => {
     }
 
     // ─────────────────────────────────────────────────────────────────
+    // AUTHOR LINK ROW HELPERS
+    // (built via DOM APIs, not innerHTML-with-escaped-quotes, since HTML
+    // attributes don't support backslash escaping the way JS strings do)
+    // ─────────────────────────────────────────────────────────────────
+
+    function createAuthorLinkRow(label, url) {
+        const row = document.createElement('div');
+        row.className = 'author-link-row';
+
+        const labelInput = document.createElement('input');
+        labelInput.type = 'text';
+        labelInput.className = 'author-link-label';
+        labelInput.placeholder = 'Label';
+        labelInput.value = label || '';
+
+        const urlInput = document.createElement('input');
+        urlInput.type = 'text';
+        urlInput.className = 'author-link-url';
+        urlInput.placeholder = 'https://example.com';
+        urlInput.value = url || '';
+
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'author-link-remove';
+        removeBtn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+        removeBtn.addEventListener('click', () => row.remove());
+
+        row.append(labelInput, urlInput, removeBtn);
+        return row;
+    }
+
+    function addAuthorLinkRow(panelId) {
+        const wrap = $(`authorLinksWrap-${panelId}`);
+        if (!wrap) return;
+
+        const empty = wrap.querySelector('.author-links-empty');
+        if (empty) empty.remove();
+
+        wrap.appendChild(createAuthorLinkRow('', ''));
+    }
+
+    // ─────────────────────────────────────────────────────────────────
     // FORM HELPERS
     // ─────────────────────────────────────────────────────────────────
 
@@ -588,7 +630,12 @@ const UnifiedPanel = (() => {
                 }
 
                 setStatus(panelId, 'Saved!', 'success');
-                setTimeout(() => this.close(panelId), 1200);
+                // Reload so server-rendered fields (title, description, meta
+                // grid, etc.) reflect what was just saved.
+                setTimeout(() => {
+                    this.close(panelId);
+                    window.location.reload();
+                }, 800);
             } catch (e) {
                 err('metadata', e);
                 setStatus(panelId, e.message, 'error');
@@ -754,17 +801,13 @@ const UnifiedPanel = (() => {
                             linksWrap.innerHTML = '';
                             const links = Array.isArray(author.links) ? author.links : [];
                             if (links.length === 0) {
-                                linksWrap.innerHTML = '<p class="author-links-empty">No links yet.</p>';
+                                const empty = document.createElement('p');
+                                empty.className = 'author-links-empty';
+                                empty.textContent = 'No links yet.';
+                                linksWrap.appendChild(empty);
                             } else {
                                 links.forEach((link) => {
-                                    const row = document.createElement('div');
-                                    row.className = 'author-link-row';
-                                    row.innerHTML = `
-                                        <input type="text" class="author-link-label" value="${(link.label || '').replace(/"/g, '&quot;')}" placeholder="Label" />
-                                        <input type="text" class="author-link-url" value="${(link.url || '').replace(/"/g, '&quot;')}" placeholder="https://example.com" />
-                                        <button type="button" class="author-link-remove" onclick="this.parentElement.remove()"><i class="fa-solid fa-xmark"></i></button>
-                                    `;
-                                    linksWrap.appendChild(row);
+                                    linksWrap.appendChild(createAuthorLinkRow(link.label || '', link.url || ''));
                                 });
                             }
                         }
@@ -830,7 +873,12 @@ const UnifiedPanel = (() => {
                 }
 
                 setStatus(panelId, 'Saved!', 'success');
-                setTimeout(() => this.close(panelId), 1200);
+                // Reload so server-rendered author info (name, bio, links)
+                // reflects what was just saved.
+                setTimeout(() => {
+                    this.close(panelId);
+                    window.location.reload();
+                }, 800);
             } catch (e) {
                 err('author', e);
                 setStatus(panelId, e.message, 'error');
@@ -906,6 +954,11 @@ const UnifiedPanel = (() => {
         // Update button text/action based on active tab
         updateActionButton(panelId) {
             updateActionButton(panelId);
+        },
+
+        // Author links
+        addAuthorLinkRow(panelId) {
+            addAuthorLinkRow(panelId);
         },
     };
 })();

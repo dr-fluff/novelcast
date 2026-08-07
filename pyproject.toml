@@ -30,6 +30,7 @@ dependencies = [
     "pypdf2>=3.0.1",
     "alembic>=1.18.4",
     "ebooklib>=0.20",
+    "pip-audit>=2.10.1",
 ]
 
 [tool.setuptools]
