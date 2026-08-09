@@ -1,5 +1,4 @@
 # novelcast/services/telegram_service.py
-# Full replacement — changes marked with # ← CHANGED
 
 import asyncio
 import logging
@@ -42,8 +41,6 @@ class TelegramService:
         self._disabled = False  # permanent auth failure
         self._consecutive_failures = 0
 
-        # ← CHANGED: dispatch table, command key -> bound handler.
-        # Built in __init__ so handlers can be plain instance methods.
         self._command_handlers = {
             STATUS_KEY: self._cmd_status,
             STORIES_KEY: self._cmd_stories,
@@ -130,7 +127,7 @@ class TelegramService:
                 pool=5.0,
             )
         ) as client:
-            await self._register_commands(client)  # ← CHANGED: one-shot menu registration
+            await self._register_commands(client)
 
             while True:
                 try:
@@ -217,7 +214,6 @@ class TelegramService:
             self._offset = update["update_id"] + 1
             await self._handle_update(update)
 
-    # ── rest of the class unchanged ───────────────────────────────────────
 
     def _handle_task_result(self, task: asyncio.Task):
         try:

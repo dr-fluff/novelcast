@@ -252,10 +252,6 @@ class PaginatedEReader {
         return el;
     }
 
-    // ======================
-    // IFRAME + COLUMNS
-    // ======================
-
     getPageSize() {
         return {
             w: this.el.scrollContainer.clientWidth,
@@ -263,11 +259,6 @@ class PaginatedEReader {
         };
     }
 
-    // Runs once the iframe document has actually loaded. Pulled out into
-    // its own method (rather than an inline arrow function passed straight
-    // to addEventListener) so it can be attached to the 'load' event
-    // BEFORE we write to the document — see buildIframe() below for why
-    // that ordering matters.
     onIframeLoad() {
         const touchTarget = this.iframeDoc.body;
 
@@ -298,10 +289,6 @@ class PaginatedEReader {
                 const startPage = await this.resolveStartPage();
                 if (startPage > 0) this.render(startPage); // jump once progress loads
 
-                // Give the current chapter's own render a brief head start
-                // before kicking off background precaching of upcoming ones,
-                // so precache network activity doesn't compete with anything
-                // the person is actively waiting on right now.
                 setTimeout(() => this.precacheUpcomingChapters(), 300);
             })
         );
@@ -339,17 +326,7 @@ class PaginatedEReader {
 
         const titleEscaped = this.state.chapterTitle.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-        // IMPORTANT: attach the 'load' listener BEFORE calling doc.open() /
-        // write() / close(). Some WebKit builds (confirmed: iPadOS 15.8,
-        // real hardware — not reproducible in desktop Firefox's simulated
-        // iPad viewport) can fire 'load' synchronously as part of close(),
-        // or on an earlier tick than expected. If the listener is attached
-        // AFTER close(), it can miss the event entirely — totalPages then
-        // stays stuck at its initial value of 0 forever, the page counter
-        // pill never gets its text set, and nextPage()/prevPage() always
-        // fall through to the change-chapter branch since
-        // `currentPage < totalPages - 1` (0 < -1) is false. That matches
-        // every symptom seen on that device exactly.
+
         iframe.addEventListener('load', () => this.onIframeLoad(), { once: true });
 
         this.iframeDoc.open();
@@ -382,7 +359,6 @@ class PaginatedEReader {
         if (anchorParam !== null) return this.findPageForAnchor(parseInt(anchorParam, 10));
         if (pageParam !== null) return Math.min(parseInt(pageParam, 10), this.state.totalPages - 1);
 
-        // ← was always falling through to 0; now fetches saved progress
         try {
             const r = await fetch(`/api/chapter-progress?chapter_id=${this.state.chapterId}`);
             if (r.ok) {
@@ -391,7 +367,6 @@ class PaginatedEReader {
                 if (data.page) return Math.min(data.page, this.state.totalPages - 1);
             }
         } catch (e) {
-            /* fall through to 0 */
         }
 
         return 0;
@@ -412,25 +387,12 @@ class PaginatedEReader {
     }
 
     saveProgress(page, totalPages) {
-        // Track the latest pending save so it can be flushed immediately
-        // (bypassing the debounce) if the browser signals the page is
-        // about to be hidden/backgrounded — see flushProgress() below.
         this._pendingProgress = { page, totalPages };
 
         clearTimeout(this.progressTimer);
         this.progressTimer = setTimeout(() => this.flushProgress(false), 500);
     }
 
-    // Sends whatever progress is currently pending, right now, bypassing
-    // the normal 500ms debounce entirely. Mobile browsers commonly
-    // suspend JS timers the instant a tab is backgrounded (app switch,
-    // screen lock) — if several page turns happened in quick succession
-    // right before that, each one's debounce timer kept getting
-    // cancelled by the next, and the final pending save could be
-    // discarded entirely before it ever got a chance to fire. That's
-    // why reopening the app could show the reader having silently
-    // regressed by however many pages were turned in that last ~500ms
-    // window. Calling this on visibilitychange/pagehide closes that gap.
     flushProgress(useBeacon) {
         if (!this._pendingProgress) return;
         const { page, totalPages } = this._pendingProgress;
@@ -448,14 +410,6 @@ class PaginatedEReader {
         });
 
         if (useBeacon && navigator.sendBeacon) {
-            // sendBeacon is specifically designed to survive the page being
-            // torn down mid-request — a normal fetch is not guaranteed to
-            // complete once the browser starts suspending/discarding the tab.
-            // Note: sendBeacon has no failure callback, so this path can't
-            // be routed through the offline queue — if the device is
-            // actually offline at teardown time, this delivery attempt is
-            // simply lost. The debounced path below (normal foreground
-            // page turns) is what the offline queue actually protects.
             const blob = new Blob([payload], { type: 'application/json' });
             navigator.sendBeacon('/api/chapter-progress', blob);
         } else {
@@ -464,7 +418,7 @@ class PaginatedEReader {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: payload,
-                keepalive: true, // best-effort: helps the request survive unload in more browsers
+                keepalive: true,
             };
 
             if (window.NovelcastOffline?.queuedFetch) {
@@ -484,8 +438,7 @@ class PaginatedEReader {
         const paragraphs = doc.querySelectorAll('p');
         for (let i = 0; i < paragraphs.length; i++) {
             const rect = paragraphs[i].getBoundingClientRect();
-            // getBoundingClientRect is relative to iframe viewport, not columns
-            // use offsetLeft instead
+            
             const left = paragraphs[i].offsetLeft;
             if (left >= scrollLeft - w && left < scrollLeft + w) {
                 return i;
@@ -637,9 +590,6 @@ class PaginatedEReader {
     `;
     }
 
-    // ======================
-    // PAGINATION
-    // ======================
 
     calculatePages() {
         const doc = this.iframeDoc;
@@ -649,14 +599,10 @@ class PaginatedEReader {
         const columnsEl = doc.getElementById('columns');
         if (!columnsEl) return;
 
-        // scrollWidth of the column container = total width of all columns
         const totalWidth = columnsEl.scrollWidth;
         this.state.totalPages = Math.max(1, Math.round(totalWidth / w));
     }
 
-    // ======================
-    // RENDERING
-    // ======================
 
     render(index) {
         const i = Math.max(0, Math.min(index, this.state.totalPages - 1));
@@ -675,8 +621,6 @@ class PaginatedEReader {
     repaginate(targetPage) {
         clearTimeout(this.repaginateTimer);
         this.repaginateTimer = setTimeout(() => {
-            // Same ordering fix as buildIframe(): attach 'load' before
-            // rebuilding the iframe's document, not after.
             const onLoad = () => {
                 requestAnimationFrame(() =>
                     requestAnimationFrame(() => {
@@ -684,10 +628,6 @@ class PaginatedEReader {
                     })
                 );
             };
-            // buildIframe() itself now attaches onIframeLoad() first, so by
-            // the time it returns the 'load' handling for this rebuild is
-            // already wired up. We still want our own targetPage callback to
-            // run after that too.
             this.buildIframe();
             this.iframe.addEventListener('load', onLoad, { once: true });
         }, 50);
@@ -700,13 +640,6 @@ class PaginatedEReader {
         if (this.el.nextBtn) this.el.nextBtn.style.opacity = currentPage === totalPages - 1 ? '0.3' : '0.8';
     }
 
-    // Hands the service worker a list of upcoming chapter URLs to fetch
-    // and cache in the background, with retry/backoff on its side. Runs
-    // once per chapter load, as early as reasonably possible — on a slow
-    // or spotty connection, the whole point is to get ahead of the
-    // problem before it happens, not wait until you're already near the
-    // end of the current chapter (by then a dropped connection has less
-    // time to recover before you tap "next").
     precacheUpcomingChapters() {
         if (!('serviceWorker' in navigator)) return;
         const { storyId, upcomingChapterIds } = this.state;
@@ -721,7 +654,6 @@ class PaginatedEReader {
                 }
             })
             .catch(() => {
-                /* best-effort — normal navigation still works without it */
             });
     }
 
@@ -733,11 +665,6 @@ class PaginatedEReader {
         const { currentPage, totalPages, nextChapterId, storyId } = this.state;
         const cleanNext = !nextChapterId || nextChapterId === 'None' ? null : nextChapterId;
         if (currentPage < totalPages - 1) this.render(currentPage + 1);
-        // Explicitly request page 0 — otherwise resolveStartPage() falls
-        // back to whatever page was last saved for this specific chapter,
-        // which could be stale (e.g. from skimming ahead once before) and
-        // would silently resume there instead of starting the chapter
-        // fresh, which is what advancing forward should always do.
         else if (cleanNext) window.location.href = `/chapter?story_id=${storyId}&chapter_id=${cleanNext}&page=0`;
         else window.location.href = `/story?story_id=${storyId}`;
     };
@@ -760,10 +687,6 @@ class PaginatedEReader {
             this.prevPage();
         }
     }
-
-    // ======================
-    // SETTINGS — rendered dynamically from this.schema
-    // ======================
 
     buildSettingsPanel() {
         const container = this.el.settingsFields;
@@ -856,11 +779,6 @@ class PaginatedEReader {
             this.saveUserSettings();
         });
 
-        // Live-update the preview on every tick of the drag, but keep this
-        // cheap — no repagination, no saving. Fast drags on mobile were
-        // getting interrupted because buildIframe() (full doc.write + layout)
-        // was firing on every 'input' event, blocking the main thread long
-        // enough to drop the touch gesture mid-drag.
         container.addEventListener('input', (e) => {
             const slider = e.target.closest('.slider[data-setting-key]');
             if (!slider) return;
@@ -870,8 +788,6 @@ class PaginatedEReader {
             this.updateSettingsUI();
         });
 
-        // Only repaginate and save once the drag actually finishes — 'change'
-        // fires once when the user releases the slider/lifts their finger.
         container.addEventListener('change', (e) => {
             const slider = e.target.closest('.slider[data-setting-key]');
             if (!slider) return;
@@ -881,15 +797,9 @@ class PaginatedEReader {
         });
     }
 
-    // ======================
-    // EVENTS
-    // ======================
-
     attachEvents() {
-        // Keyboard on the outer page
         document.addEventListener('keydown', (e) => this.handleKey(e));
 
-        // Touch swipe
         const sc = this.el.scrollContainer;
         if (sc) {
             sc.addEventListener(
@@ -906,7 +816,6 @@ class PaginatedEReader {
             });
         }
 
-        // Resize / zoom
         window.addEventListener('resize', () => {
             clearTimeout(this.resizeTimer);
             this.resizeTimer = setTimeout(() => {
@@ -914,7 +823,6 @@ class PaginatedEReader {
             }, 250);
         });
 
-        // Settings panel open/close
         this.el.settingsBtn?.addEventListener('click', () => {
             this.el.settingsPanel.classList.add('active');
             this.el.settingsOverlay.classList.add('active');
@@ -933,14 +841,6 @@ class PaginatedEReader {
             window.location.href = '/';
         });
 
-        // Flush any pending (debounced) progress save immediately once the
-        // browser signals the page is being hidden — app switch, screen
-        // lock, closing the tab, etc. Covers both: visibilitychange fires
-        // reliably when the app is backgrounded but the page/process may
-        // still be alive; pagehide fires when the page is actually being
-        // torn down (navigation away, tab close). Using sendBeacon (via
-        // flushProgress(true)) so the request has the best chance of
-        // actually completing even as the browser suspends the page.
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'hidden') {
                 this.flushProgress(true);

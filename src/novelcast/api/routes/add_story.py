@@ -230,7 +230,7 @@ async def _download_story(
 
     if _is_patreon_url(body.url):
         creator = _extract_patreon_creator(body.url)
-        download_url = patreon_story_key_url(body.url, body.chapter_regex)  # CHANGED
+        download_url = patreon_story_key_url(body.url, body.chapter_regex)  
 
         existing = download.stories_repo.get_by_url(download_url)
         if existing:
@@ -247,7 +247,7 @@ async def _download_story(
         story_id = await asyncio.get_event_loop().run_in_executor(
             None,
             lambda: download.add_story(
-                download_url,  # CHANGED — was body.url
+                download_url, 
                 selected_chapters=body.selected_chapters,
                 story_match=body.chapter_regex if _is_patreon_url(body.url) else None,
                 content_source=body.content_source if _is_patreon_url(body.url) else None,

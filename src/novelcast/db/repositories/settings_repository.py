@@ -76,8 +76,7 @@ class SettingsRepository(BaseRepository):
             self.on_change(key)
 
     def delete_server_setting(self, key: str) -> None:
-        # ← CHANGED: same idea — deleting a key that was never set is a
-        # no-op and shouldn't notify.
+        
         with self.session() as db:
             row = db.get(ServerSetting, key)
             existed = row is not None
@@ -86,8 +85,6 @@ class SettingsRepository(BaseRepository):
 
         if existed and self.on_change:
             self.on_change(key)
-
-    # ── user settings (unchanged) ─────────────────────────────────────────
 
     def get_user_settings(self, user_id: int, device_id: str | None = None) -> dict | None:
         with self.session_no_commit() as db:

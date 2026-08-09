@@ -20,23 +20,6 @@
     --warning-color: #b8860b;
     --warning-subtle: #fef9c3;
 
-    /* Legacy aliases. Keep older components theme-aware while they migrate. */
-    --bg: var(--bg-primary);
-    --card: var(--surface-raised);
-    --panel: var(--surface-raised);
-    --panel-hover: var(--surface-hover);
-    --input-bg: var(--bg-primary);
-    --hover: var(--surface-hover);
-    --text: var(--text-primary);
-    --muted: var(--text-secondary);
-    --text-muted: var(--text-secondary);
-    --border: var(--border-color);
-    --primary: var(--accent-color);
-    --accent: var(--accent-color);
-    --accent-blue: var(--accent-color);
-    --accent-green: var(--success-color);
-    --accent-purple: var(--accent-color);
-
     /* Log level colours */
     --log-error: var(--danger-color);
     --log-warning: var(--warning-color);

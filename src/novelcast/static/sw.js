@@ -1,23 +1,5 @@
 // novelcast/static/sw.js
-//
-// Service worker for the reader + PWA offline support. Jobs:
-//
-// 1. Serve /chapter navigations cache-first (unchanged from before).
-// 2. Precache upcoming chapters on request from the page (unchanged).
-// 3. App-shell caching: global CSS/JS/manifest/icons precached on
-//    install, so the app can boot with no connection at all.
-// 4. Page navigations (library, story pages): network-first, falling
-//    back to cache when offline -- covers both "recently visited" pages
-//    and pages explicitly cached via MARK_STORY_OFFLINE below.
-// 5. MARK_STORY_OFFLINE / REMOVE_STORY_OFFLINE: explicitly download (or
-//    evict) a story's page, cover, and all its chapters, and record
-//    that in IndexedDB (via offline-db.js) so the UI can show which
-//    stories are available offline. Calling MARK_STORY_OFFLINE again
-//    for a story that's already offline is treated as a *refresh*:
-//    the story page/cover are always re-fetched, and the chapter list
-//    is diffed against what's cached rather than blindly skipped.
-// 6. Background Sync (where supported -- not on iOS) to flush queued
-//    progress/settings writes even if the tab isn't open.
+
 
 importScripts('/static/js/offline-db.js');
 
@@ -26,10 +8,6 @@ const SHELL_CACHE_NAME = 'novelcast-shell-v1';
 const MAX_RETRIES = 3;
 const RETRY_BASE_DELAY_MS = 1000;
 
-// Global assets loaded on every page via layouts/base.html. Page-specific
-// CSS/JS (story.css, index.js, etc.) isn't precached here -- it gets
-// cached opportunistically the first time each page is actually visited,
-// same as the navigation caching below.
 const SHELL_ASSETS = [
     '/',
     '/static/css/tokens.css',
@@ -57,13 +35,9 @@ const SHELL_ASSETS = [
 ];
 
 self.addEventListener('install', (event) => {
-    // Take over immediately -- this is a caching helper, not something
-    // that needs strict version gating between installs.
     self.skipWaiting();
     event.waitUntil(
         caches.open(SHELL_CACHE_NAME).then((cache) =>
-            // Best-effort per-asset -- one missing/renamed file shouldn't
-            // block install and leave the whole worker uninstalled.
             Promise.all(SHELL_ASSETS.map((url) => cache.add(url).catch(() => {})))
         )
     );
@@ -82,8 +56,6 @@ self.addEventListener('activate', (event) => {
     );
 });
 
-// ── Fetch handling ───────────────────────────────────────────────────
-
 self.addEventListener('fetch', (event) => {
     let url;
     try {
@@ -94,10 +66,6 @@ self.addEventListener('fetch', (event) => {
     if (event.request.method !== 'GET' || url.origin !== self.location.origin) return;
 
     if (url.pathname === '/chapter') {
-        // Cache keys only ever include story_id/chapter_id (see
-        // handleMarkStoryOffline) -- strip navigation-only params
-        // (page/anchor/lastPage) before matching so chapter transitions
-        // that add ?page=0 or ?lastPage=1 still hit the cache.
         const cacheUrl = new URL(url);
         cacheUrl.searchParams.delete('page');
         cacheUrl.searchParams.delete('anchor');
@@ -124,8 +92,6 @@ async function cacheFirst(request, cacheName, { revalidate = false } = {}) {
 
     if (cached) {
         if (revalidate) {
-            // Refresh the cache in the background so updates show up next
-            // load, without making this load wait on the network.
             fetch(request)
                 .then((res) => res && res.ok && cache.put(request, res.clone()))
                 .catch(() => {});
@@ -146,11 +112,9 @@ async function networkFirstNavigation(request) {
     } catch (e) {
         const cached = await cache.match(request);
         if (cached) return cached;
-        throw e; // nothing cached for this URL and no connection -- normal offline error
+        throw e;
     }
 }
-
-// ── Precaching on request from the page (existing chapter behavior) ────
 
 async function fetchWithRetry(url) {
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
@@ -158,7 +122,6 @@ async function fetchWithRetry(url) {
             const response = await fetch(url, { credentials: 'same-origin' });
             if (response && response.ok) return response;
         } catch (err) {
-            // network error -- fall through to retry/backoff below
         }
         if (attempt < MAX_RETRIES - 1) {
             await new Promise((resolve) => setTimeout(resolve, RETRY_BASE_DELAY_MS * (attempt + 1)));
@@ -215,12 +178,6 @@ async function handleMarkStoryOffline(data, event) {
         const existingRecord = await NovelcastOfflineDB.getOfflineStory(storyId);
         const isRefresh = !!existingRecord;
 
-        // Story page + cover: on a fresh download these are fetch-if-missing
-        // (matches chapter behavior below). On a refresh of an already
-        // -offline story, always re-fetch and overwrite -- metadata
-        // (title, cover, description) can change server-side and the whole
-        // point of a refresh is to pick that up rather than keep serving
-        // whatever was cached the first time.
         const shellUrls = meta.coverUrl ? [storyPageUrl, meta.coverUrl] : [storyPageUrl];
 
         for (const url of shellUrls) {
@@ -232,11 +189,6 @@ async function handleMarkStoryOffline(data, event) {
             if (response) await shellCache.put(url, response.clone());
         }
 
-        // Chapters: diff against the previous chapter list rather than the
-        // cache directly, so a chapter that still exists is left untouched
-        // (no wasted re-fetch), a newly-added chapter gets pulled in, and a
-        // chapter that's no longer part of the story gets evicted instead
-        // of lingering in the cache forever.
         const previousChapterIds = new Set(existingRecord?.chapterIds || []);
         const currentChapterIds = new Set(chapterIds);
 
@@ -247,7 +199,7 @@ async function handleMarkStoryOffline(data, event) {
 
         for (const url of chapterUrls) {
             const existing = await chapterCache.match(url);
-            if (existing) continue; // unchanged chapter -- already cached, nothing to do
+            if (existing) continue; 
             const response = await fetchWithRetry(url);
             if (response) await chapterCache.put(url, response.clone());
         }
@@ -291,8 +243,6 @@ async function handleRemoveStoryOffline(data, event) {
         port?.postMessage({ error: err.message || 'Failed to remove offline story' });
     }
 }
-
-// ── Background sync (progressive enhancement -- not supported on iOS) ──
 
 self.addEventListener('sync', (event) => {
     if (event.tag === 'flush-novelcast-queue') {

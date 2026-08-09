@@ -27,8 +27,6 @@ function saveDevicePreference(name, value) {
     }).catch(() => {});
 }
 
-/* ── Collapsible sections ─────────────────────────────────────────────── */
-
 window.toggleSection = function (key) {
     const body = document.getElementById(key + 'Body');
     const chevron = document.getElementById(key + 'Chevron');
@@ -36,8 +34,6 @@ window.toggleSection = function (key) {
     const collapsed = body.classList.toggle('collapsed');
     if (chevron) chevron.classList.toggle('collapsed', collapsed);
 };
-
-/* ── Chapter sort ─────────────────────────────────────────────────────── */
 
 const SORT_MODES = ['asc', 'desc'];
 let chapterSortMode = document.querySelector('.story-page')?.dataset.chapterSort || 'asc';
@@ -71,8 +67,6 @@ window.cycleSort = function () {
     saveDevicePreference('story.chapters.sort', chapterSortMode);
 };
 
-/* ── Full path toggle ─────────────────────────────────────────────────── */
-
 let showingFullPath = false;
 
 function toggleFullPath() {
@@ -84,8 +78,6 @@ function toggleFullPath() {
         el.classList.toggle('full-path', showingFullPath);
     });
 }
-
-/* ── File sort ────────────────────────────────────────────────────────── */
 
 let fileSortMode = document.querySelector('.story-page')?.dataset.fileSort || 'asc';
 if (!SORT_MODES.includes(fileSortMode)) fileSortMode = 'asc';
@@ -125,15 +117,9 @@ document.addEventListener('DOMContentLoaded', () => {
     applyFileSort(fileSortMode);
 });
 
-/* ── Go to first unread ───────────────────────────────────────────────── */
-
 window.goToReading = async function () {
     const section = document.querySelector('.story-page');
     const storyId = section?.dataset.storyId;
-    // Prioritize resuming exactly where the person most recently read —
-    // this can legitimately be an earlier chapter than their furthest
-    // point if they went back to re-read something. Only fall back to
-    // "first unread" for a story they've never actually started.
     const lastId = section?.dataset.lastChapterId;
     const unreadId = section?.dataset.firstUnreadId;
     const chapterId = lastId || unreadId;
@@ -149,20 +135,15 @@ window.goToReading = async function () {
             return;
         }
     } catch (e) {
-        /* fall through */
     }
 
     window.location.href = `/chapter?story_id=${storyId}&chapter_id=${chapterId}`;
 };
 
-/* ── Metadata panel ───────────────────────────────────────────────────── */
-
 window.openMetaPanel = function () {
     const panel = document.getElementById('metadataPanel');
     if (panel) panel.classList.add('open');
 };
-
-/* ── Delete story ─────────────────────────────────────────────────────── */
 
 window.confirmDeleteStory = async function () {
     const section = document.querySelector('.story-page');
@@ -179,8 +160,6 @@ window.confirmDeleteStory = async function () {
     }
 };
 
-/* ── Description expand/collapse ─────────────────────────────────────── */
-
 window.toggleDescription = function () {
     const desc = document.getElementById('storyDescription');
     const btn = document.getElementById('readMoreBtn');
@@ -190,8 +169,6 @@ window.toggleDescription = function () {
         ? 'Show less <i class="fa-solid fa-chevron-up"></i>'
         : 'Read more <i class="fa-solid fa-chevron-down"></i>';
 };
-
-/* ── File row menu & More Info modal ─────────────────────────────────── */
 
 let _activeDropdown = null;
 
@@ -229,10 +206,6 @@ window.openStoryMenu = function (btn) {
     dropdown.className = 'file-dropdown';
 
     let items = `<button class="file-dropdown-item" onclick="updateStory()">Update story</button>`;
-
-    // Only offer "Remove from offline" once we actually know the story is
-    // offline -- _isStoryOffline is kept in sync by refreshOfflineUI(),
-    // which always runs before this menu can be opened.
     if (_isStoryOffline) {
         items += `<button class="file-dropdown-item danger" onclick="removeOfflineCopy()">Remove from offline</button>`;
     }
@@ -338,13 +311,6 @@ window.addEventListener('novelcast:notification', (event) => {
     }
 
     if (['sync_story_updated', 'sync_finished', 'story_updated'].includes(payload.type)) {
-        // If this story is currently kept offline, its cached snapshot is
-        // now stale (new/changed chapters won't be reflected until it's
-        // refreshed) -- surface that explicitly rather than silently
-        // reloading into a page whose offline copy no longer matches what's
-        // shown. Reload still happens either way so the visible chapter
-        // list/metadata is current; the offline cache itself is refreshed
-        // separately, by the person tapping the offline button again.
         if (_isStoryOffline) {
             window.showNotification?.(
                 'This story updated — your offline copy is now out of date. Tap the offline button to refresh it.',
@@ -445,12 +411,6 @@ window.probeAudioFile = async function (filePath) {
     }
 };
 
-/* ── Offline availability ─────────────────────────────────────────────── */
-
-// Kept in sync by refreshOfflineUI() -- other functions (openStoryMenu,
-// the novelcast:notification handler) read this instead of re-querying
-// IndexedDB themselves, since it's already refreshed on load and after
-// every offline action.
 let _isStoryOffline = false;
 
 async function refreshOfflineUI() {
@@ -465,10 +425,6 @@ async function refreshOfflineUI() {
     _isStoryOffline = offline;
 
     btn.classList.toggle('active', offline);
-    // Tapping the button when a story is already offline now refreshes
-    // the offline copy (picks up new/changed chapters) rather than
-    // removing it -- removal lives in the story menu instead, so the two
-    // destructive-looking actions aren't sharing one control.
     btn.title = offline ? 'Refresh offline copy' : 'Available offline';
     if (icon) icon.className = offline ? 'fa-solid fa-rotate' : 'fa-solid fa-download';
     if (badge) badge.style.display = offline ? '' : 'none';
@@ -484,7 +440,6 @@ window.toggleStoryOffline = async function () {
     try {
         chapterIds = JSON.parse(section.dataset.chapterIds || '[]');
     } catch (e) {
-        /* leave empty */
     }
     if (!chapterIds.length) {
         window.showNotification?.('No downloaded chapters to make available offline yet.', 'info', 5000);

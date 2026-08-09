@@ -47,10 +47,6 @@ class SettingsService:
         self.schema = settings_schema or {}
         self.secret_key = secret_key
 
-    # ─────────────────────────────
-    # SERVER SETTINGS (unchanged)
-    # ─────────────────────────────
-
     def get_scoped_server_settings(self) -> dict:
         resolved = self.get_resolved_server_settings()
 

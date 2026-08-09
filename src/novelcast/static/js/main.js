@@ -45,7 +45,6 @@ document.addEventListener('DOMContentLoaded', function () {
         let uiVisible = true;
 
         document.addEventListener('click', (e) => {
-            // ignore clicks on controls or links
             if (e.target.closest('a') || e.target.closest('button')) return;
 
             uiVisible = !uiVisible;

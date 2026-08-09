@@ -20,7 +20,7 @@ class StoryDownloadOrchestrator:
 
         return engine.fetch(url, **kwargs)
 
-    def check_updates(self, url: str, story_match: str | None = None) -> dict:  # CHANGED — added story_match
+    def check_updates(self, url: str, story_match: str | None = None) -> dict:
         engine = self.selector.get_engine(url)
         logger.debug("Checking updates with engine: %s", engine.__class__.__name__)
 

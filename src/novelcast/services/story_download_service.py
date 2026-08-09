@@ -234,10 +234,10 @@ class StoryDownloadService:
             },
         )
 
-        settings = self._load_patreon_settings(story_id)  # NEW
+        settings = self._load_patreon_settings(story_id)
 
-        raw = self._download_raw(source_url, story_match=settings.get("chapter_regex"))  # CHANGED
-        parsed = self._parse_raw(raw, settings=settings)  # CHANGED
+        raw = self._download_raw(source_url, story_match=settings.get("chapter_regex"))
+        parsed = self._parse_raw(raw, settings=settings)
         self._update_story_metadata(story_id, raw, parsed)
 
         existing_numbers = self.pipeline.chapters_repo.get_chapter_numbers(story_id)
@@ -373,7 +373,7 @@ class StoryDownloadService:
             }
 
         settings = self._load_patreon_settings(story_id)  # NEW
-        raw = self.orchestrator.check_updates(source_url, story_match=settings.get("chapter_regex"))  # CHANGED
+        raw = self.orchestrator.check_updates(source_url, story_match=settings.get("chapter_regex"))
         online_numbers = self._online_chapter_numbers(raw)
         local_numbers = self.pipeline.chapters_repo.get_chapter_numbers(story_id)
         pending = sorted(number for number in online_numbers if number not in local_numbers)

@@ -158,21 +158,7 @@ class StoriesRepository(BaseRepository):
         story_site_id: str | None = None,
         is_user_edit: bool = False,
     ) -> dict | None:
-        """
-        Two callers, two behaviors:
 
-        - GUI edit/add panel (is_user_edit=True): applies every field the
-          user submitted, and records which fields actually *changed* vs
-          the current DB value in `locked_fields`.
-        - Scrape/sync pipeline (is_user_edit=False, the default — used by
-          StoryDownloadService._update_story_metadata): applies freshly
-          scraped values EXCEPT for any field name already present in
-          `locked_fields`, so a manual edit is never silently overwritten
-          by the next auto-update.
-
-        Cover is intentionally not tracked here — it's written separately
-        by StoryPipeline.persist()/update_paths() and always refreshes.
-        """
         with self.session() as db:
             story = db.get(Story, story_id)
             if not story:

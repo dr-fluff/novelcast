@@ -125,7 +125,6 @@ class RssService:
     def check_feeds(self):
 
         for reader in self.readers:
-            # ← CHANGED: bail out between readers if stop() was called
             if self._stop_event.is_set():
                 return
 
