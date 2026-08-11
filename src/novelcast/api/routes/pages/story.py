@@ -10,6 +10,7 @@ from novelcast.api.deps import (
     get_current_user,
     get_progress,
     get_settings,
+    get_stats,
     get_stories,
     get_templates,
 )
@@ -17,10 +18,11 @@ from novelcast.services import (
     ChaptersService,
     ProgressService,
     SettingsService,
+    StatsService,
     StoryService,
 )
 
-from .helpers import resolve_progress
+from .helpers import build_reading_progress_card, resolve_progress
 from .preferences import device_preference_key
 
 router = APIRouter()
@@ -36,6 +38,7 @@ def story(
     chapters: ChaptersService = Depends(get_chapters),
     progress: ProgressService = Depends(get_progress),
     settings: SettingsService = Depends(get_settings),
+    stats: StatsService = Depends(get_stats),
     current_user: dict | None = Depends(get_current_user),
     templates: Jinja2Templates = Depends(get_templates),
 ):
@@ -56,6 +59,19 @@ def story(
         )
 
         first_unread = next((c["id"] for c in chapter_list if c["id"] not in read_chapters), None)
+
+        progress_card = None
+        if current_user and current_user.get("id"):
+            progress_row = progress.get_progress(current_user["id"], story_id)
+            reading_speed_wpm = stats.get_reading_speed_wpm(current_user["id"])
+            progress_card = build_reading_progress_card(
+                chapter_list,
+                read_chapters,
+                last_chapter_id,
+                last_read_title,
+                progress_row,
+                reading_speed_wpm,
+            )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -88,5 +104,6 @@ def story(
             "last_read_title": last_read_title,
             "first_unread_chapter_id": first_unread,
             "story_preferences": story_preferences,
+            "progress_card": progress_card,
         },
     )

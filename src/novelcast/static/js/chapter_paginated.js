@@ -27,6 +27,14 @@ class PaginatedEReader {
         this.repaginateTimer = null;
         this.touch = { startX: 0, endX: 0, threshold: 50 };
 
+        // Reading-time heartbeat: fires every heartbeatIntervalMs while the
+        // tab is visible, reporting elapsed seconds since the last beat.
+        // Paused (not just skipped) while hidden so background tabs don't
+        // silently accrue read time.
+        this.heartbeatIntervalMs = 30000;
+        this.heartbeatTimer = null;
+        this.lastHeartbeatAt = null;
+
         // Safety-net defaults, used only until the schema (server-provided)
         // and/or the saved settings load. Once loadSchema() runs, defaults
         // come from the schema instead.
@@ -456,6 +464,48 @@ class PaginatedEReader {
         }
     }
 
+    // ======================
+    // READING-TIME HEARTBEAT
+    // ======================
+
+    startHeartbeat() {
+        if (this.heartbeatTimer) return; // already running
+        this.lastHeartbeatAt = Date.now();
+        this.heartbeatTimer = setInterval(() => this.sendHeartbeat(), this.heartbeatIntervalMs);
+    }
+
+    stopHeartbeat() {
+        if (this.heartbeatTimer) {
+            clearInterval(this.heartbeatTimer);
+            this.heartbeatTimer = null;
+        }
+    }
+
+    sendHeartbeat(useBeacon = false) {
+        if (this.lastHeartbeatAt == null) return;
+
+        const now = Date.now();
+        const elapsedSeconds = Math.round((now - this.lastHeartbeatAt) / 1000);
+        this.lastHeartbeatAt = now;
+
+        if (elapsedSeconds <= 0) return;
+
+        const payload = JSON.stringify({ seconds: elapsedSeconds });
+
+        if (useBeacon && navigator.sendBeacon) {
+            const blob = new Blob([payload], { type: 'application/json' });
+            navigator.sendBeacon('/api/reading-heartbeat', blob);
+            return;
+        }
+
+        fetch('/api/reading-heartbeat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: payload,
+            keepalive: true,
+        }).catch(() => {});
+    }
+
     buildCSS(w, h) {
         const fontSize = ((1.05 * this.settings.fontSize) / 100).toFixed(3);
         const lineHeight = ((1.85 * this.settings.lineSpacing) / 100).toFixed(3);
@@ -841,13 +891,28 @@ class PaginatedEReader {
             window.location.href = '/';
         });
 
+        // Start the reading-time heartbeat only if the tab is visible on
+        // load — if it loaded hidden (e.g. background tab restore) it'll
+        // pick up on the first visibilitychange to 'visible' instead.
+        if (document.visibilityState === 'visible') {
+            this.startHeartbeat();
+        }
+
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'hidden') {
                 this.flushProgress(true);
+                this.sendHeartbeat(true);
+                this.stopHeartbeat();
+            } else {
+                // Don't count the time spent hidden — restart the clock
+                // rather than letting the next heartbeat report a huge gap.
+                this.startHeartbeat();
             }
         });
         window.addEventListener('pagehide', () => {
             this.flushProgress(true);
+            this.sendHeartbeat(true);
+            this.stopHeartbeat();
         });
     }
 }

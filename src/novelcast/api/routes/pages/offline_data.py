@@ -1,9 +1,7 @@
 # novcast/api/routes/pages/offline_data.py
 
-from datetime import date, timedelta
 
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from novelcast.api.deps import get_current_user, get_templates
@@ -16,7 +14,7 @@ def offline_data_page(
     current_user: dict | None = Depends(get_current_user),
     templates: Jinja2Templates = Depends(get_templates),
 ):
-    
+
     return templates.TemplateResponse(
             "pages/offline_data.html",
             {

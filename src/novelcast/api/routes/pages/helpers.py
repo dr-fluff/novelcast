@@ -225,6 +225,64 @@ def resolve_progress(
     return read_chapters, last_chapter_id, last_read_title
 
 
+def _format_duration(minutes: float) -> str:
+    """Formats a minute count as 'X hr Y min', dropping whichever unit is zero."""
+    total_minutes = int(round(minutes))
+    hours, mins = divmod(total_minutes, 60)
+    if hours and mins:
+        return f"{hours} hr {mins} min"
+    if hours:
+        return f"{hours} hr"
+    return f"{mins} min"
+
+
+def build_reading_progress_card(
+    chapter_list: list[dict],
+    read_chapters: set[int],
+    last_chapter_id: int | None,
+    last_read_title: str | None,
+    progress_row: dict | None,
+    reading_speed_wpm: float | None,
+) -> dict | None:
+    """Builds the 'Your Progress' card view model for the story page.
+
+    Returns None when the user hasn't started the story yet (no progress
+    row, or no continue-reading pointer set), so the template can skip
+    rendering the card entirely rather than showing a 0% box.
+    """
+    total_chapters = len(chapter_list)
+    if not progress_row or not last_chapter_id or total_chapters <= 0:
+        return None
+
+    chapters_read = len(read_chapters)
+    percent_complete = max(0, min(100, int(round((chapters_read / total_chapters) * 100))))
+
+    last_chapter_number = next(
+        (c.get("chapter_number") for c in chapter_list if c["id"] == last_chapter_id),
+        None,
+    )
+
+    unread_chapters = [c for c in chapter_list if c["id"] not in read_chapters]
+    remaining_words = sum(c.get("word_count") or 0 for c in unread_chapters)
+    # Only trust the estimate if every remaining chapter actually has a
+    # word count — a partial sum would understate time remaining.
+    has_full_word_data = bool(unread_chapters) and all(c.get("word_count") for c in unread_chapters)
+
+    time_remaining_display = None
+    if has_full_word_data and reading_speed_wpm and reading_speed_wpm > 0:
+        time_remaining_display = _format_duration(remaining_words / reading_speed_wpm)
+
+    return {
+        "current_chapter_number": last_chapter_number,
+        "current_chapter_title": last_read_title,
+        "total_chapters": total_chapters,
+        "chapters_read": chapters_read,
+        "percent_complete": percent_complete,
+        "last_read_at": progress_row.get("updated_at"),
+        "time_remaining_display": time_remaining_display,
+    }
+
+
 def parse_settings_form(form: dict) -> tuple[dict, dict]:
     user_updates: dict = {}
     server_updates: dict = {}

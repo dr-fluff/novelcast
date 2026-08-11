@@ -76,7 +76,7 @@ class SettingsRepository(BaseRepository):
             self.on_change(key)
 
     def delete_server_setting(self, key: str) -> None:
-        
+
         with self.session() as db:
             row = db.get(ServerSetting, key)
             existed = row is not None

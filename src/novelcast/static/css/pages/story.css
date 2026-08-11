@@ -418,7 +418,9 @@
 }
 
 .file-dropdown-item {
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
     width: 100%;
     padding: 0.65rem 1rem;
     text-align: left;
@@ -429,6 +431,13 @@
     color: #e2e8f0;
     cursor: pointer;
     transition: background 0.1s ease;
+}
+
+.file-dropdown-item i {
+    width: 16px;
+    flex-shrink: 0;
+    text-align: center;
+    font-size: 0.85rem;
 }
 
 .file-dropdown-item:hover {

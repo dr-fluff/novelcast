@@ -1,0 +1,85 @@
+/* novelcast/static/css/components/progress_card.css */
+
+.progress-card {
+    position: relative;
+    margin-top: 0.25rem;
+    padding: 0.9rem 1rem;
+    border-radius: 12px;
+    background: rgba(99, 102, 241, 0.05);
+    border: 1px solid rgba(99, 102, 241, 0.15);
+    max-width: 320px;
+}
+
+.progress-card-close {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--muted, #94a3b8);
+    cursor: pointer;
+    font-size: 0.72rem;
+    transition:
+        background 0.12s ease,
+        color 0.12s ease;
+}
+
+.progress-card-close:hover {
+    background: rgba(0, 0, 0, 0.06);
+    color: var(--text, #0f172a);
+}
+
+.progress-card-heading {
+    margin: 0 0 0.3rem;
+    font-weight: 700;
+    font-size: 0.92rem;
+    color: var(--text, #0f172a);
+    padding-right: 1.5rem;
+}
+
+.progress-card-chapter {
+    margin: 0 0 0.15rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text, #0f172a);
+}
+
+.progress-card-subline {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--muted, #64748b);
+}
+
+.progress-card-bar {
+    margin-top: 0.6rem;
+    height: 5px;
+    border-radius: 999px;
+    background: rgba(99, 102, 241, 0.15);
+    overflow: hidden;
+}
+
+.progress-card-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: #6366f1;
+    transition: width 0.2s ease;
+}
+
+.progress-card-date {
+    margin: 0.5rem 0 0;
+    font-size: 0.72rem;
+    color: var(--muted, #94a3b8);
+}
+
+@media (max-width: 600px) {
+    .progress-card {
+        max-width: none;
+        text-align: left;
+    }
+}

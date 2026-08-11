@@ -1,4 +1,3 @@
-from pathlib import Path
 
 from novelcast.pipeline.story_pipeline import StoryPipeline
 from novelcast.services.story_service import StoryService

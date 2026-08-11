@@ -146,6 +146,7 @@ window.openMetaPanel = function () {
 };
 
 window.confirmDeleteStory = async function () {
+    closeActiveDropdown();
     const section = document.querySelector('.story-page');
     const storyId = section?.dataset.storyId;
     if (!storyId) return;
@@ -191,9 +192,9 @@ window.openFileMenu = function (btn, filePath, fileType) {
     const dropdown = document.createElement('div');
     dropdown.className = 'file-dropdown';
     dropdown.innerHTML = `
-        <button class="file-dropdown-item" onclick="downloadFile(${JSON.stringify(filePath)})">Download</button>
-        <button class="file-dropdown-item danger" onclick="deleteFile(${JSON.stringify(filePath)})">Delete</button>
-        <button class="file-dropdown-item" onclick="openFileInfo(${JSON.stringify(filePath)}, ${JSON.stringify(fileType)})">More Info</button>
+        <button class="file-dropdown-item" onclick="downloadFile(${JSON.stringify(filePath)})"><i class="fa-solid fa-download"></i> Download</button>
+        <button class="file-dropdown-item danger" onclick="deleteFile(${JSON.stringify(filePath)})"><i class="fa-solid fa-trash"></i> Delete</button>
+        <button class="file-dropdown-item" onclick="openFileInfo(${JSON.stringify(filePath)}, ${JSON.stringify(fileType)})"><i class="fa-solid fa-circle-info"></i> More Info</button>
     `;
     wrapper.appendChild(dropdown);
     _activeDropdown = dropdown;
@@ -202,12 +203,22 @@ window.openFileMenu = function (btn, filePath, fileType) {
 window.openStoryMenu = function (btn) {
     closeActiveDropdown();
     const wrapper = btn.closest('.file-menu-wrapper');
+    const section = document.querySelector('.story-page');
+    const storyId = section?.dataset.storyId;
+    const isRoot = section?.dataset.isRoot === 'true';
+
     const dropdown = document.createElement('div');
     dropdown.className = 'file-dropdown';
 
-    let items = `<button class="file-dropdown-item" onclick="updateStory()">Update story</button>`;
+    let items = `<button class="file-dropdown-item" onclick="updateStory()"><i class="fa-solid fa-arrows-rotate"></i> Update story</button>`;
+
     if (_isStoryOffline) {
-        items += `<button class="file-dropdown-item danger" onclick="removeOfflineCopy()">Remove from offline</button>`;
+        items += `<button class="file-dropdown-item danger" onclick="removeOfflineCopy()"><i class="fa-solid fa-cloud-arrow-down"></i> Remove from offline</button>`;
+    }
+
+    if (isRoot) {
+        items += `<button class="file-dropdown-item" onclick="UnifiedPanel.open('metadata', 'metaPanel', ${JSON.stringify(storyId)})"><i class="fa-solid fa-pen-to-square"></i> Edit metadata</button>`;
+        items += `<button class="file-dropdown-item danger" onclick="confirmDeleteStory()"><i class="fa-solid fa-trash"></i> Delete story</button>`;
     }
 
     dropdown.innerHTML = items;

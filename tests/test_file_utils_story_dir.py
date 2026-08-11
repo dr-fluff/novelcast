@@ -1,4 +1,3 @@
-from pathlib import Path
 
 from novelcast.utils.files import FileUtils
 

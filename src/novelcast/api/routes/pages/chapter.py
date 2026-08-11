@@ -11,10 +11,11 @@ from novelcast.api.deps import (
     get_current_user,
     get_progress,
     get_settings,
+    get_stats,
     get_stories,
     get_templates,
 )
-from novelcast.services import ChaptersService, ProgressService, SettingsService, StoryService
+from novelcast.services import ChaptersService, ProgressService, SettingsService, StatsService, StoryService
 
 router = APIRouter()
 
@@ -24,6 +25,13 @@ logger = logging.getLogger(__name__)
 # for background precaching (service worker). This only sends a few
 # extra integers in the page — no extra file reads happen here.
 PRECACHE_LOOKAHEAD = 3
+
+# Reading heartbeats fire every 30s client-side (see chapter_paginated.js).
+# This is an upper bound on the "seconds" value accepted per heartbeat,
+# with slack for timer jitter/backgrounding — not a client-configurable
+# interval — so a tampered or runaway client can't inflate read time with
+# an oversized value in a single call.
+MAX_HEARTBEAT_SECONDS = 60
 
 
 @router.get("/chapter")
@@ -216,3 +224,34 @@ async def get_chapter_progress(
     if isinstance(result, dict):
         return {"page": result.get("page", 0), "anchor": result.get("anchor")}
     return {"page": result or 0, "anchor": None}
+
+
+@router.post("/api/reading-heartbeat")
+async def record_reading_heartbeat(
+    request: Request,
+    current_user: dict | None = Depends(get_current_user),
+    stats: StatsService = Depends(get_stats),
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+
+    try:
+        body = await request.json()
+    except ClientDisconnect:
+        return {"ok": True}
+
+    seconds = body.get("seconds", 0)
+    try:
+        seconds = int(seconds)
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="seconds must be an integer") from None
+
+    # Clamp rather than reject out-of-range values — a stray large value
+    # (e.g. a laptop waking from sleep mid-interval) shouldn't error out
+    # the beacon, it should just not count more than the cap.
+    seconds = max(0, min(seconds, MAX_HEARTBEAT_SECONDS))
+    if seconds == 0:
+        return {"ok": True}
+
+    stats.record_heartbeat(current_user["id"], seconds)
+    return {"ok": True}

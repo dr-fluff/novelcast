@@ -6,6 +6,7 @@
 {% block head %}
     <link rel="stylesheet" href="/static/css/pages/story.css" />
     <link rel="stylesheet" href="/static/css/components/metadata_panel.css" />
+    <link rel="stylesheet" href="/static/css/components/progress_card.css" />
 {% endblock %}
 {% block content %}
     {% include "partials/library_header.html" %}
@@ -18,6 +19,7 @@
         data-chapter-sort="{{ story_preferences.chapter_sort | default('asc') }}"
         data-file-sort="{{ story_preferences.file_sort | default('asc') }}"
         data-chapter-ids='{{ chapters | map(attribute="id") | list | tojson }}'
+        data-is-root="{{ 'true' if current_user and current_user.is_root else 'false' }}"
     >
         {# ── Hero ─────────────────────────────────────────────────────────── #}
         <div class="story-hero">
@@ -115,6 +117,52 @@
                     {% endif %}
                 </dl>
 
+                {# ── Reading progress card ───────────────────────────────────── #}
+                {% if progress_card %}
+                    <div class="progress-card" id="progressCard">
+                        <button
+                            class="progress-card-close"
+                            onclick="dismissProgressCard()"
+                            aria-label="Dismiss progress"
+                        >
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+
+                        <p class="progress-card-heading">Your Progress: {{ progress_card.percent_complete }}%</p>
+
+                        <p class="progress-card-chapter">
+                            {% if progress_card.current_chapter_number %}
+                                Chapter {{ progress_card.current_chapter_number }}
+                                {%- if progress_card.current_chapter_title %}: {{ progress_card.current_chapter_title
+                                    }}
+                                {%- endif %}
+                            {% else %}
+                                {{ progress_card.current_chapter_title or "In progress" }}
+                            {% endif %}
+                        </p>
+
+                        <p class="progress-card-subline">
+                            {{ progress_card.chapters_read }} of {{ progress_card.total_chapters }} chapters read
+                        </p>
+
+                        {% if progress_card.time_remaining_display %}
+                            <p class="progress-card-subline">
+                                {{ progress_card.time_remaining_display }} remaining
+                            </p>
+                        {% endif %}
+
+                        <div class="progress-card-bar">
+                            <div class="progress-card-bar-fill" style="width: {{ progress_card.percent_complete }}%"></div>
+                        </div>
+
+                        {% if progress_card.last_read_at %}
+                            <p class="progress-card-date">
+                                Started {{ progress_card.last_read_at.strftime("%m/%d/%Y") }}
+                            </p>
+                        {% endif %}
+                    </div>
+                {% endif %}
+
                 <div class="story-action-row">
                     {% if last_chapter_id or first_unread_chapter_id %}
                         <button class="btn-play" onclick="goToReading()"><i class="fa-solid fa-play"></i> Read</button>
@@ -129,23 +177,6 @@
                         <i class="fa-solid fa-download" id="offlineToggleIcon"></i>
                     </button>
 
-                    {% if current_user and current_user.is_root %}
-                        <button
-                            class="btn-action-icon"
-                            onclick="UnifiedPanel.open('metadata', 'metaPanel', {{ story['id'] }})"
-                            title="Edit metadata"
-                        >
-                            <i class="fa-solid fa-pen-to-square"></i>
-                        </button>
-
-                        <button
-                            class="btn-action-icon btn-action-danger"
-                            onclick="confirmDeleteStory()"
-                            title="Delete story"
-                        >
-                            <i class="fa-solid fa-trash"></i>
-                        </button>
-                    {% endif %}
                     <div class="file-menu-wrapper">
                         <button
                             class="btn-action-icon"
@@ -359,4 +390,10 @@
 {% block scripts %}
     <script src="/static/js/story_page.js" defer></script>
     <script src="/static/js/pagination.js" defer></script>
+    <script>
+        function dismissProgressCard() {
+            const card = document.getElementById("progressCard");
+            if (card) card.remove();
+        }
+    </script>
 {% endblock %}
