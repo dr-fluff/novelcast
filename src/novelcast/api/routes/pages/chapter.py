@@ -15,22 +15,14 @@ from novelcast.api.deps import (
     get_stories,
     get_templates,
 )
+from novelcast.api.routes.pages.helpers import strip_duplicate_title_heading
 from novelcast.services import ChaptersService, ProgressService, SettingsService, StatsService, StoryService
 
 router = APIRouter()
 
 logger = logging.getLogger(__name__)
 
-# How many chapters beyond the immediate next one to expose to the client
-# for background precaching (service worker). This only sends a few
-# extra integers in the page — no extra file reads happen here.
 PRECACHE_LOOKAHEAD = 3
-
-# Reading heartbeats fire every 30s client-side (see chapter_paginated.js).
-# This is an upper bound on the "seconds" value accepted per heartbeat,
-# with slack for timer jitter/backgrounding — not a client-configurable
-# interval — so a tampered or runaway client can't inflate read time with
-# an oversized value in a single call.
 MAX_HEARTBEAT_SECONDS = 60
 
 
@@ -61,16 +53,12 @@ def chapter(
     if content is None:
         raise HTTPException(status_code=404, detail="Chapter file missing")
 
-    # Lightweight — IDs only, no N+1 (see ChaptersService.get_downloaded_ids).
     ids = chapters.get_downloaded_ids(story_id)
     idx = next((i for i, cid in enumerate(ids) if cid == chapter_id), None)
 
     prev_id = ids[idx - 1] if idx is not None and idx > 0 else None
     next_id = ids[idx + 1] if idx is not None and idx < len(ids) - 1 else None
 
-    # A short window of chapter IDs beyond the immediate next one, so the
-    # client can hand the service worker several chapters to precache in
-    # the background instead of only ever knowing about a single "next".
     upcoming_chapter_ids = ids[idx + 1 : idx + 1 + PRECACHE_LOOKAHEAD] if idx is not None else []
 
     read_chapters: set[int] = set()
@@ -85,6 +73,9 @@ def chapter(
 
     reading_settings_schema = settings_service.get_reading_settings_schema()
 
+    chapter_title = chapter.get("title") or f"Chapter {chapter.get('chapter_number')}"
+    content = strip_duplicate_title_heading(content, chapter_title)
+
     return templates.TemplateResponse(
         "pages/chapter.html",
         {
@@ -92,7 +83,7 @@ def chapter(
             "title": story.get("title"),
             "story_link": story.get("source_url"),
             "author": story.get("author"),
-            "chapter": chapter.get("title") or f"Chapter {chapter.get('chapter_number')}",
+            "chapter": chapter_title,
             "content": content,
             "story_id": story_id,
             "chapter_id": chapter_id,

@@ -2,7 +2,7 @@
 
 from datetime import UTC, datetime
 
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy.orm import aliased
 
@@ -139,6 +139,22 @@ class ProgressRepository(BaseRepository):
                 )
             )
             db.execute(stmt)
+            
+    def delete_progress(self, user_id: int, story_id: int) -> None:
+        with self.session() as db:
+            db.execute(
+                delete(ReadingProgress).where(
+                    ReadingProgress.user_id == user_id,
+                    ReadingProgress.story_id == story_id,
+                )
+            )
+            chapter_ids_subq = select(Chapter.id).where(Chapter.story_id == story_id)
+            db.execute(
+                delete(ChapterProgress).where(
+                    ChapterProgress.user_id == user_id,
+                    ChapterProgress.chapter_id.in_(chapter_ids_subq),
+                    )
+                )
 
 
 def _progress_to_dict(

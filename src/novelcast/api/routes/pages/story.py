@@ -107,3 +107,15 @@ def story(
             "progress_card": progress_card,
         },
     )
+
+@router.delete("/api/story-progress/{story_id}")
+async def delete_story_progress(
+    story_id: int,
+    current_user: dict | None = Depends(get_current_user),
+    progress: ProgressService = Depends(get_progress),
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+
+    progress.delete_progress(current_user["id"], story_id)
+    return {"ok": True}

@@ -14,8 +14,8 @@
     <section
         class="story-page"
         data-story-id="{{ story['id'] }}"
-        data-first-unread-id="{{ first_unread_chapter_id | default('') }}"
-        data-last-chapter-id="{{ last_chapter_id | default('') }}"
+        data-first-unread-id="{{ first_unread_chapter_id | default('', true) }}"
+        data-last-chapter-id="{{ last_chapter_id | default('', true) }}"
         data-chapter-sort="{{ story_preferences.chapter_sort | default('asc') }}"
         data-file-sort="{{ story_preferences.file_sort | default('asc') }}"
         data-chapter-ids='{{ chapters | map(attribute="id") | list | tojson }}'
@@ -391,9 +391,20 @@
     <script src="/static/js/story_page.js" defer></script>
     <script src="/static/js/pagination.js" defer></script>
     <script>
-        function dismissProgressCard() {
+        async function dismissProgressCard() {
             const card = document.getElementById("progressCard");
+            const section = document.querySelector(".story-page");
+            const storyId = section?.dataset.storyId;
             if (card) card.remove();
+            if (!storyId) return;
+
+            try {
+                const res = await fetch(`/api/story-progress/${storyId}`, { method: "DELETE" });
+                if (!res.ok) throw new Error(await res.text());
+                window.location.reload();
+            } catch (err) {
+                window.showNotification?.(`Failed to reset progress: ${err.message}`, "error", 6000);
+            }
         }
     </script>
 {% endblock %}

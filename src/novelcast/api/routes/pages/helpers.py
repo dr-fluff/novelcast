@@ -2,6 +2,9 @@
 import logging
 from urllib.parse import quote
 
+import re
+from bs4 import BeautifulSoup
+
 logger = logging.getLogger(__name__)
 
 
@@ -321,3 +324,35 @@ def _strip_prefix(title: str, prefixes: list[str]) -> str:
         if lower.startswith(p + " "):
             return title[len(p) :].strip()
     return title
+
+
+def strip_duplicate_title_heading(html: str, chapter_title: str) -> str:
+    if not html or not chapter_title:
+        return html
+
+    soup = BeautifulSoup(html, "html.parser")
+
+    first_elem = None
+    for child in soup.contents:
+        if getattr(child, "name", None) is not None:
+            first_elem = child
+            break
+        if str(child).strip():
+            return html
+
+    if first_elem is None or first_elem.name not in ("h1", "h2", "h3", "h4", "h5", "h6"):
+        return html
+
+    def normalize(s: str) -> str:
+        s = s.lower().strip()
+        s = re.sub(r"^(chapter\s+)?(\d+|[ivxlcdm]+)?\s*[:\-.]?\s*", "", s)
+        s = re.sub(r"\s+", " ", s)
+        return s.strip()
+
+    heading_text = normalize(first_elem.get_text())
+    title_text = normalize(chapter_title)
+
+    if heading_text == title_text or heading_text in title_text or title_text in heading_text:
+        first_elem.decompose()
+
+    return str(soup)

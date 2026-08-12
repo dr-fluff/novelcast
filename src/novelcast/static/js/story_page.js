@@ -192,9 +192,9 @@ window.openFileMenu = function (btn, filePath, fileType) {
     const dropdown = document.createElement('div');
     dropdown.className = 'file-dropdown';
     dropdown.innerHTML = `
-        <button class="file-dropdown-item" onclick="downloadFile(${JSON.stringify(filePath)})"><i class="fa-solid fa-download"></i> Download</button>
-        <button class="file-dropdown-item danger" onclick="deleteFile(${JSON.stringify(filePath)})"><i class="fa-solid fa-trash"></i> Delete</button>
-        <button class="file-dropdown-item" onclick="openFileInfo(${JSON.stringify(filePath)}, ${JSON.stringify(fileType)})"><i class="fa-solid fa-circle-info"></i> More Info</button>
+        <button class="file-dropdown-item" onclick='downloadFile(${JSON.stringify(filePath)})'><i class="fa-solid fa-download"></i> Download</button>
+        <button class="file-dropdown-item danger" onclick='deleteFile(${JSON.stringify(filePath)})'><i class="fa-solid fa-trash"></i> Delete</button>
+        <button class="file-dropdown-item" onclick='openFileInfo(${JSON.stringify(filePath)}, ${JSON.stringify(fileType)})'><i class="fa-solid fa-circle-info"></i> More Info</button>
     `;
     wrapper.appendChild(dropdown);
     _activeDropdown = dropdown;
@@ -217,7 +217,7 @@ window.openStoryMenu = function (btn) {
     }
 
     if (isRoot) {
-        items += `<button class="file-dropdown-item" onclick="UnifiedPanel.open('metadata', 'metaPanel', ${JSON.stringify(storyId)})"><i class="fa-solid fa-pen-to-square"></i> Edit metadata</button>`;
+        items += `<button class="file-dropdown-item" onclick="UnifiedPanel.open('metadata', 'metaPanel', ${storyId})"><i class="fa-solid fa-pen-to-square"></i> Edit metadata</button>`;
         items += `<button class="file-dropdown-item danger" onclick="confirmDeleteStory()"><i class="fa-solid fa-trash"></i> Delete story</button>`;
     }
 

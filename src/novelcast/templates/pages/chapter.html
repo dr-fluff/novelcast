@@ -11,7 +11,7 @@
         data-next-chapter-id="{{ next_chapter_id }}"
         data-prev-chapter-id="{{ prev_chapter_id }}"
         data-upcoming-chapter-ids="{{ upcoming_chapter_ids | tojson | e }}"
-        data-first-unread-id="{{ first_unread_chapter_id | default('') }}"
+        data-first-unread-id="{{ first_unread_chapter_id | default('', true) }}"
         data-chapter-title="{{ chapter | e }}"
         data-hide-author-notes="{{ hide_author_notes | lower }}"
     >
