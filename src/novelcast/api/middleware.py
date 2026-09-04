@@ -41,8 +41,11 @@ class RequestIDMiddleware:
 
         try:
             return await self.app(scope, receive, send_wrapper)
+        except Exception as e:
+            logger.exception("Error in RequestIDMiddleware: %s", e)
+            raise e
         finally:
-            request_id_ctx.reset(token)
+                    request_id_ctx.reset(token)
 
 
 # ─────────────────────────────

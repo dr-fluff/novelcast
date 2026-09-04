@@ -34,6 +34,7 @@ class AuthorUpdate(BaseModel):
     bio: str | None = None
     picture_path: str | None = None
     links: list[dict] | None = None
+    force: bool = False
 
 
 class AuthorLinkItem(BaseModel):
@@ -43,6 +44,10 @@ class AuthorLinkItem(BaseModel):
 
 class AuthorLinksUpdate(BaseModel):
     links: list[AuthorLinkItem]
+
+
+class AuthorMerge(BaseModel):
+    duplicate_ids: list[int]
 
 
 @router.patch("/{story_id}/metadata")
@@ -74,8 +79,6 @@ def update_story_metadata(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
     return {"status": "ok", "story": updated}
-
-
 
 
 # ── story endpoints ────────────────────────────────────────────────────────
@@ -136,12 +139,30 @@ def update_author_detail(
             bio=body.bio,
             picture_path=body.picture_path,
             links=body.links,
+            force=body.force,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
     if not updated:
         raise HTTPException(status_code=404, detail="Author not found")
+    if "conflict" in updated:
+        raise HTTPException(status_code=409, detail={"conflict": updated["conflict"]})
     return {"status": "ok", "author": updated}
+
+
+@router.post("/authors/{author_id}/merge")
+def merge_authors(
+    author_id: int,
+    body: AuthorMerge,
+    stories: StoryService = Depends(get_stories),
+):
+    if not stories.get_author(author_id):
+        raise HTTPException(status_code=404, detail="Author not found")
+    try:
+        merged = stories.merge_authors(author_id, body.duplicate_ids)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+    return {"status": "ok", "author": merged}
 
 
 @router.get("/{story_id}/authors")
@@ -170,11 +191,14 @@ def update_story_author(
             bio=body.bio,
             picture_path=body.picture_path,
             links=body.links,
+            force=body.force,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
     if not updated:
         raise HTTPException(status_code=404, detail="Author not found")
+    if "conflict" in updated:
+        raise HTTPException(status_code=409, detail={"conflict": updated["conflict"]})
     return {"status": "ok", "author": updated}
 
 

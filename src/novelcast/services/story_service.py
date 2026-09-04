@@ -305,6 +305,16 @@ class StoryService:
             return []
         return self.author_repo.get_for_story(story_id)
 
+    def find_author_collision(self, name: str, exclude_id: int | None = None) -> dict | None:
+        if not self.author_repo:
+            return None
+        return self.author_repo.find_collision(name, exclude_id=exclude_id)
+
+    def find_duplicate_author_groups(self) -> list[list[dict]]:
+        if not self.author_repo:
+            return []
+        return self.author_repo.find_duplicate_groups()
+
     # ── author writes ──────────────────────────────────────────────────────
 
     def update_author(
@@ -314,15 +324,30 @@ class StoryService:
         bio: str | None = None,
         picture_path: str | None = None,
         links: list[dict] | None = None,
+        force: bool = False,
     ) -> dict | None:
+        """
+        Returns the updated author dict, or None if author_id doesn't exist,
+        or {"conflict": <other author dict>} if `name` collides with another
+        author and force=False. On conflict, nothing is written (including
+        links) so the caller can prompt the user and retry with force=True
+        or call merge_authors() instead.
+        """
         if not self.author_repo:
             return None
-        updated = self.author_repo.update(author_id, name, bio, picture_path=picture_path)
+        updated = self.author_repo.update(author_id, name, bio, picture_path=picture_path, force=force)
         if updated is None:
             return None
+        if "conflict" in updated:
+            return updated
         if links is not None:
             self.author_repo.set_links(author_id, links)
         return updated
+
+    def merge_authors(self, primary_id: int, duplicate_ids: list[int]) -> dict | None:
+        if not self.author_repo:
+            return None
+        return self.author_repo.merge(primary_id, duplicate_ids)
 
     def set_author_links(self, author_id: int, links: list[dict]) -> list[dict]:
         if not self.author_repo:

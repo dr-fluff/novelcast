@@ -3,13 +3,16 @@
 {% extends "layouts/base.html" %}
 {% block head %}
     <link rel="stylesheet" href="/static/css/pages/settings.css" />
-    {% if mode == 'signup' %}<link rel="stylesheet" href="/static/css/pages/auth.css" />{% endif %}
+    {% if mode == 'signup' %}
+        <link rel="stylesheet" href="/static/css/pages/auth.css" />
+    {% endif %}
 {% endblock %}
-{%
-    block
-    title
-%}
-    {% if mode == 'signup' %}Sign Up{% else %}Edit User{% endif %}
+{% block title %}
+    {% if mode == 'signup' %}
+        Sign Up
+    {% else %}
+        Edit User
+    {% endif %}
     - NovelCast
 {% endblock %}
 {% block content %}
@@ -17,7 +20,7 @@
         {% include "partials/library_header.html" %}
     {% endif %}
 
-    <div class="pg-settings{% if mode == 'signup' %}auth-page{% endif %}">
+    <div class="pg-settings{% if mode == 'signup' %} auth-page{% endif %}">
         <div class="pg-header">
             <div>
                 <h1 class="pg-title">{% if mode == 'signup' %}Create an account{% else %}Edit User{% endif %}</h1>
@@ -69,11 +72,7 @@
                             id="password"
                             name="password"
                             autocomplete="new-password"
-                            {%
-                                if
-                                mode=""
-                                ="signup"
-                            %}
+                            {% if mode == "signup" %}
                                 required
                             {% endif %}
                         />
@@ -83,8 +82,8 @@
                 <div class="field-card">
                     <div class="field-card__label-col">
                         <span class="field-label">Confirm Password</span>
-                        <span class="field-hint"
-                            >{% if mode == 'signup' %}
+                        <span class="field-hint">
+                            {% if mode == 'signup' %}
                                 Repeat your password.
                             {% else %}
                                 Repeat the password only if you are changing it.
@@ -97,11 +96,7 @@
                             id="password_confirm"
                             name="password_confirm"
                             autocomplete="new-password"
-                            {%
-                                if
-                                mode=""
-                                ="signup"
-                            %}
+                            {% if mode == 'signup' %}
                                 required
                             {% endif %}
                         />

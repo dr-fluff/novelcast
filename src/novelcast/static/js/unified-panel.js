@@ -760,18 +760,23 @@ const UnifiedPanel = (() => {
         name: 'author',
         storyId: null,
         authorId: null,
+        _pendingPayload: null, // payload from the save attempt that hit a 409
 
         open(panelId, storyId, authorId) {
             this.storyId = storyId || null;
             this.authorId = authorId || null;
+            this._pendingPayload = null;
             setState(panelId, { panelType: 'author' });
             setStatus(panelId, '', '');
+            this.clearConflictPrompt(panelId);
             setOpen(panelId, true);
             this.loadData(panelId);
         },
 
         close(panelId) {
             setOpen(panelId, false);
+            this.clearConflictPrompt(panelId);
+            this._pendingPayload = null;
         },
 
         async loadData(panelId) {
@@ -829,45 +834,61 @@ const UnifiedPanel = (() => {
             } catch (_) {}
         },
 
+        _buildPayload(panelId) {
+            const name = getVal('authorName', panelId);
+            if (!name) {
+                throw new Error('Author name is required');
+            }
+
+            const linksWrap = $(`authorLinksWrap-${panelId}`);
+            const links = [];
+            if (linksWrap) {
+                linksWrap.querySelectorAll('.author-link-row').forEach((row) => {
+                    const label = row.querySelector('.author-link-label')?.value?.trim() || '';
+                    const url = row.querySelector('.author-link-url')?.value?.trim() || '';
+                    if (label && url) links.push({ label, url });
+                });
+            }
+
+            return {
+                name,
+                bio: getVal('authorBio', panelId) || null,
+                picture_path: getVal('authorPicturePath', panelId) || null,
+                links,
+            };
+        },
+
+        _saveUrl() {
+            return this.storyId
+                ? `/api/stories/${this.storyId}/authors/${this.authorId}`
+                : `/api/stories/authors/${this.authorId}`;
+        },
+
         async save(panelId) {
             const saveBtn = $(`authorSaveBtn-${panelId}`);
             if (saveBtn) saveBtn.disabled = true;
+            this.clearConflictPrompt(panelId);
             setStatus(panelId, 'Saving…', '');
 
             try {
-                const name = getVal('authorName', panelId);
-                if (!name) {
-                    throw new Error('Author name is required');
-                }
+                const payload = this._buildPayload(panelId);
 
-                const linksWrap = $(`authorLinksWrap-${panelId}`);
-                const links = [];
-                if (linksWrap) {
-                    linksWrap.querySelectorAll('.author-link-row').forEach((row) => {
-                        const label = row.querySelector('.author-link-label')?.value?.trim() || '';
-                        const url = row.querySelector('.author-link-url')?.value?.trim() || '';
-                        if (label && url) links.push({ label, url });
-                    });
-                }
-
-                const payload = {
-                    name,
-                    bio: getVal('authorBio', panelId) || null,
-                    picture_path: getVal('authorPicturePath', panelId) || null,
-                    links,
-                };
-
-                const url = this.storyId
-                    ? `/api/stories/${this.storyId}/authors/${this.authorId}`
-                    : `/api/stories/authors/${this.authorId}`;
-
-                const result = await fetchJSON(url, {
+                const result = await fetchJSON(this._saveUrl(), {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload),
                 });
 
                 if (!result.ok) {
+                    if (result.status === 409) {
+                        const conflict = result.data?.detail?.conflict;
+                        if (conflict) {
+                            this._pendingPayload = payload;
+                            setStatus(panelId, '', '');
+                            this.showConflictPrompt(panelId, conflict);
+                            return;
+                        }
+                    }
                     console.log(result);
                     throw new Error(result.data.detail || 'Failed to save');
                 }
@@ -884,6 +905,118 @@ const UnifiedPanel = (() => {
                 setStatus(panelId, e.message, 'error');
             } finally {
                 if (saveBtn) saveBtn.disabled = false;
+            }
+        },
+
+        // ── merge conflict prompt ────────────────────────────────────────
+
+        showConflictPrompt(panelId, conflict) {
+            const statusEl = $(`status-${panelId}`);
+            if (!statusEl) return;
+
+            this.clearConflictPrompt(panelId);
+
+            const box = document.createElement('div');
+            box.id = `authorConflictPrompt-${panelId}`;
+            box.className = 'unified-panel-conflict';
+
+            const msg = document.createElement('p');
+            msg.textContent = `An author named "${conflict.name}" already exists. Merge into them, or save this as a separate author anyway?`;
+            box.appendChild(msg);
+
+            const btnRow = document.createElement('div');
+            btnRow.className = 'unified-panel-conflict-actions';
+
+            const mergeBtn = document.createElement('button');
+            mergeBtn.type = 'button';
+            mergeBtn.className = 'btn btn-primary';
+            mergeBtn.textContent = `Merge into "${conflict.name}"`;
+            mergeBtn.onclick = () => this.confirmMerge(panelId, conflict.id);
+
+            const forceBtn = document.createElement('button');
+            forceBtn.type = 'button';
+            forceBtn.className = 'btn btn-secondary';
+            forceBtn.textContent = 'Save as separate author';
+            forceBtn.onclick = () => this.forceSave(panelId);
+
+            const cancelBtn = document.createElement('button');
+            cancelBtn.type = 'button';
+            cancelBtn.className = 'btn btn-link';
+            cancelBtn.textContent = 'Cancel';
+            cancelBtn.onclick = () => this.clearConflictPrompt(panelId);
+
+            btnRow.append(mergeBtn, forceBtn, cancelBtn);
+            box.appendChild(btnRow);
+
+            statusEl.insertAdjacentElement('afterend', box);
+        },
+
+        clearConflictPrompt(panelId) {
+            const existing = $(`authorConflictPrompt-${panelId}`);
+            if (existing) existing.remove();
+        },
+
+        async confirmMerge(panelId, primaryAuthorId) {
+            const saveBtn = $(`authorSaveBtn-${panelId}`);
+            if (saveBtn) saveBtn.disabled = true;
+            this.clearConflictPrompt(panelId);
+            setStatus(panelId, 'Merging…', '');
+
+            try {
+                const result = await fetchJSON(`/api/stories/authors/${primaryAuthorId}/merge`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ duplicate_ids: [this.authorId] }),
+                });
+
+                if (!result.ok) {
+                    throw new Error(result.data.detail || 'Failed to merge');
+                }
+
+                setStatus(panelId, 'Merged!', 'success');
+                setTimeout(() => {
+                    this.close(panelId);
+                    window.location.reload();
+                }, 800);
+            } catch (e) {
+                err('author', e);
+                setStatus(panelId, e.message, 'error');
+            } finally {
+                if (saveBtn) saveBtn.disabled = false;
+                this._pendingPayload = null;
+            }
+        },
+
+        async forceSave(panelId) {
+            const saveBtn = $(`authorSaveBtn-${panelId}`);
+            if (saveBtn) saveBtn.disabled = true;
+            this.clearConflictPrompt(panelId);
+            setStatus(panelId, 'Saving…', '');
+
+            try {
+                const payload = this._pendingPayload || this._buildPayload(panelId);
+
+                const result = await fetchJSON(this._saveUrl(), {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ...payload, force: true }),
+                });
+
+                if (!result.ok) {
+                    throw new Error(result.data.detail || 'Failed to save');
+                }
+
+                setStatus(panelId, 'Saved!', 'success');
+                setTimeout(() => {
+                    this.close(panelId);
+                    window.location.reload();
+                }, 800);
+            } catch (e) {
+                err('author', e);
+                setStatus(panelId, e.message, 'error');
+            } finally {
+                if (saveBtn) saveBtn.disabled = false;
+                this._pendingPayload = null;
             }
         },
     };

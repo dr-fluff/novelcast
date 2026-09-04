@@ -17,4 +17,5 @@ class AppTemplates(Jinja2Templates):
         request: Request = context.get("request")
         if request and "current_user" not in context:
             context["current_user"] = getattr(request.state, "user", None)
+            
         return super().TemplateResponse(name, context, **kwargs)
