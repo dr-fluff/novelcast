@@ -274,6 +274,21 @@
             <div class="form-group">
                 <label for="authorPicturePath-authorPanel">Cover path or URL</label>
                 <input type="text" id="authorPicturePath-authorPanel" placeholder="/path/to/file.jpg or https://…" class="form-input" />
+                <label for="authorSourceUrl-authorPanel" style="margin-top: 0.75rem">Royal Road or Patreon profile URL</label>
+                <input
+                    type="url"
+                    id="authorSourceUrl-authorPanel"
+                    placeholder="https://www.royalroad.com/profile/..."
+                    class="form-input"
+                />
+                <button
+                    type="button"
+                    class="btn btn-outline"
+                    onclick="UnifiedPanel.fetchAuthorPicture('authorPanel')"
+                    style="margin-top: 0.5rem"
+                >
+                    <i class="fa-solid fa-cloud-arrow-down"></i> Fetch from source
+                </button>
             </div>
         </div>
 

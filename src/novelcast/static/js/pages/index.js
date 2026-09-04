@@ -16,6 +16,31 @@
     }
 
     const deviceId = getNovelcastDeviceId();
+    const libraryStateStorageKey = 'novelcast.library.index';
+    const libraryStateKeys = ['q', 'sort', 'genre', 'tag', 'series', 'language', 'status'];
+
+    function readLocalLibraryState() {
+        try {
+            const saved = JSON.parse(localStorage.getItem(libraryStateStorageKey) || 'null');
+            return saved && typeof saved === 'object' ? saved : null;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    const currentUrl = new URL(window.location.href);
+    const hasLibraryState = libraryStateKeys.some((key) => currentUrl.searchParams.has(key));
+    if (currentUrl.pathname === '/' && !hasLibraryState) {
+        const saved = readLocalLibraryState();
+        const params = new URLSearchParams();
+        libraryStateKeys.forEach((key) => {
+            if (saved?.[key]) params.set(key, saved[key]);
+        });
+        if (params.toString()) {
+            window.location.replace(`/?${params.toString()}`);
+            return;
+        }
+    }
 
     const current = window.novelcastPageData || {
         sort: '',
@@ -70,6 +95,11 @@
                 status: params.get('status') || '',
             };
 
+            try {
+                localStorage.setItem(libraryStateStorageKey, JSON.stringify(value));
+            } catch (e) {
+            }
+
             fetch('/api/user-preferences', {
                 method: 'POST',
                 headers: {
@@ -91,6 +121,10 @@
         });
 
         document.querySelector('.grid-toolbar-clear')?.addEventListener('click', () => {
+            try {
+                localStorage.removeItem(libraryStateStorageKey);
+            } catch (e) {
+            }
             fetch('/api/user-preferences', {
                 method: 'DELETE',
                 headers: {
@@ -104,6 +138,37 @@
             }).catch(() => {});
         });
     }
+
+    const prefetchedStories = new Set();
+    let prefetchTimer = null;
+
+    function prefetchStory(card) {
+        const href = card?.getAttribute('href');
+        const connection = navigator.connection;
+        if (
+            !href ||
+            prefetchedStories.has(href) ||
+            connection?.saveData ||
+            ['slow-2g', '2g'].includes(connection?.effectiveType)
+        ) {
+            return;
+        }
+
+        prefetchedStories.add(href);
+        const link = document.createElement('link');
+        link.rel = 'prefetch';
+        link.href = href;
+        document.head.appendChild(link);
+    }
+
+    document.querySelectorAll('a.card[href]').forEach((card) => {
+        card.addEventListener('mouseenter', () => {
+            clearTimeout(prefetchTimer);
+            prefetchTimer = setTimeout(() => prefetchStory(card), 150);
+        });
+        card.addEventListener('mouseleave', () => clearTimeout(prefetchTimer));
+        card.addEventListener('focusin', () => prefetchStory(card));
+    });
 
     let refreshTimer = null;
 

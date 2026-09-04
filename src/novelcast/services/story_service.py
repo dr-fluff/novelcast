@@ -354,6 +354,11 @@ class StoryService:
             return []
         return self.author_repo.set_links(author_id, links)
 
+    def set_author_picture(self, author_id: int, picture_path: str) -> dict | None:
+        if not self.author_repo:
+            return None
+        return self.author_repo.set_picture_path(author_id, picture_path)
+
     # In novelcast/repositories/story_repository.py
 
     def count_pending_syncs(self) -> int:

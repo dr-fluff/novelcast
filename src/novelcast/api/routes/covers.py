@@ -12,7 +12,7 @@ from novelcast.services import StoryService
 
 router = APIRouter(prefix="/stories", tags=["covers"])
 
-COVERS_DIR = (Path(__file__).resolve().parent.parent / "data" / "covers").resolve()
+COVERS_DIR = (Path.cwd().resolve() / "data" / "covers").resolve()
 COVERS_DIR.mkdir(parents=True, exist_ok=True)
 
 ALLOWED_CONTENT_TYPES = {

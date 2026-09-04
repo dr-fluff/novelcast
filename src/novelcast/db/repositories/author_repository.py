@@ -240,6 +240,15 @@ class AuthorRepository(BaseRepository):
                 saved.append(_link_to_dict(link))
             return saved
 
+    def set_picture_path(self, author_id: int, picture_path: str) -> dict | None:
+        with self.session() as db:
+            author = db.get(Author, author_id)
+            if not author:
+                return None
+            author.picture_path = picture_path
+            db.flush()
+            return _author_to_dict(author)
+
 
 # ── helpers ────────────────────────────────────────────────────────────────
 
@@ -272,6 +281,7 @@ def _story_to_dict(story: Story) -> dict:
     return {
         "id": story.id,
         "title": story.title,
+        "source_url": story.source_url,
         "cover_path": story.cover_path,
         "downloaded_chapters": story.downloaded_chapters,
         "total_chapters": story.total_chapters,

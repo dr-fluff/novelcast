@@ -6,8 +6,19 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 
 router = APIRouter()
-COVERS_DIR = (Path(__file__).resolve().parent.parent / "data" / "covers").resolve()
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
+PROJECT_ROOT = Path.cwd().resolve()
+DATA_DIR = PROJECT_ROOT / "data"
+COVERS_DIR = (DATA_DIR / "covers").resolve()
+LEGACY_COVERS_DIR = (Path(__file__).resolve().parent.parent / "data" / "covers").resolve()
+
+
+def _data_relative_path(path: Path) -> Path | None:
+    try:
+        data_index = path.parts.index("data")
+    except ValueError:
+        return None
+    relative = Path(*path.parts[data_index + 1 :])
+    return relative if relative.parts else None
 
 
 def _resolve_cover_path(path: str) -> Path | None:
@@ -16,18 +27,26 @@ def _resolve_cover_path(path: str) -> Path | None:
 
     if requested.is_absolute():
         candidate = requested.resolve()
-        return candidate if candidate.is_file() else None
+        if candidate.is_file():
+            return candidate
+
+        relative = _data_relative_path(requested)
+        if relative:
+            candidate = (DATA_DIR / relative).resolve()
+            return candidate if candidate.is_file() else None
+        return None
 
     # Uploaded and URL-fetched covers are stored as a filename in COVERS_DIR.
     # Check this first so they do not depend on the process working directory.
     if requested.parent == Path("."):
-        managed_cover = (COVERS_DIR / requested.name).resolve()
-        if managed_cover.is_file():
-            return managed_cover
+        for covers_dir in (COVERS_DIR, LEGACY_COVERS_DIR):
+            managed_cover = (covers_dir / requested.name).resolve()
+            if managed_cover.is_file():
+                return managed_cover
 
     # Keep existing relative paths working for stories imported before managed
     # covers were introduced.
-    for base_dir in (Path.cwd(), PROJECT_ROOT):
+    for base_dir in (PROJECT_ROOT, DATA_DIR):
         candidate = (base_dir / requested).resolve()
         if candidate.is_file():
             return candidate

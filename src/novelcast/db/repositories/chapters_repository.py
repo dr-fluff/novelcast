@@ -2,6 +2,7 @@
 
 from sqlalchemy import select
 from sqlalchemy.dialects.sqlite import insert
+from sqlalchemy.orm import selectinload
 
 from novelcast.db.models.chapter import Chapter, ChapterFile
 from novelcast.db.repositories.base import BaseRepository
@@ -39,6 +40,7 @@ class ChaptersRepository(BaseRepository):
                     Chapter.story_id == story_id,
                     Chapter.is_downloaded,
                 )
+                .options(selectinload(Chapter.files))
                 .order_by(Chapter.chapter_number)
             ).all()
             return [_to_dict(c) for c in rows]
