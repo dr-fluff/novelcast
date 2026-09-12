@@ -83,8 +83,9 @@ def measure(url: str, cookie: str | None, timeout: float) -> Sample:
         status = error.code
         final_url = error.geturl()
         error.read()
-    except urllib.error.URLError as error:
-        raise RuntimeError(f"{url}: {error.reason}") from error
+    except (urllib.error.URLError, ConnectionResetError, TimeoutError) as error:
+        reason = getattr(error, "reason", str(error))
+        raise RuntimeError(f"{url}: {reason}") from error
 
     finished = time.perf_counter()
     first_byte = first_byte or finished
