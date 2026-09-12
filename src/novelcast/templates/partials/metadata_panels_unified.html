@@ -151,67 +151,89 @@
                     <p>No cover image</p>
                 </div>
 
-                <div class="cover-actions">
-                    <input
-                        type="file"
-                        id="coverFileInput-metaPanel"
-                        accept="image/png,image/jpeg,image/webp"
-                        style="display: none"
-                        onchange="UnifiedPanel.handleCoverFileSelect('metaPanel', this)"
-                    />
-                    <button
-                        type="button"
-                        class="btn btn-outline"
-                        onclick="document.getElementById('coverFileInput-metaPanel').click()"
-                    >
-                        <i class="fa-solid fa-upload"></i> Upload image
-                    </button>
-                    <button
-                        type="button"
-                        class="btn btn-outline"
-                        onclick="UnifiedPanel.toggleCoverUrlInput('metaPanel')"
-                    >
-                        <i class="fa-solid fa-link"></i> From URL
-                    </button>
-                    <button
-                        type="button"
-                        class="btn btn-outline btn-danger"
-                        id="coverRemoveBtn-metaPanel"
-                        style="display: none"
-                        onclick="UnifiedPanel.removeCover('metaPanel')"
-                    >
-                        <i class="fa-solid fa-trash"></i> Remove
-                    </button>
-                </div>
+                <div class="cover-controls">
+                    <div class="cover-actions">
+                        <input
+                            type="file"
+                            id="coverFileInput-metaPanel"
+                            accept="image/png,image/jpeg,image/webp"
+                            style="display: none"
+                            onchange="UnifiedPanel.handleCoverFileSelect('metaPanel', this)"
+                        />
+                        <button
+                            type="button"
+                            class="btn btn-outline"
+                            onclick="document.getElementById('coverFileInput-metaPanel').click()"
+                        >
+                            <i class="fa-solid fa-upload"></i> Upload Cover
+                        </button>
+                        <div class="cover-url-row" id="coverUrlRow-metaPanel">
+                            <input
+                                type="url"
+                                id="coverUrlInput-metaPanel"
+                                class="form-input"
+                                placeholder="Image URL from the web"
+                            />
+                            <button
+                                type="button"
+                                class="btn btn-primary"
+                                onclick="UnifiedPanel.fetchCoverFromUrl('metaPanel')"
+                            >
+                                Submit
+                            </button>
+                        </div>
+                    </div>
 
-                <div class="cover-url-row" id="coverUrlRow-metaPanel" style="display: none">
-                    <input
-                        type="url"
-                        id="coverUrlInput-metaPanel"
-                        class="form-input"
-                        placeholder="https://example.com/cover.jpg"
-                    />
-                    <button type="button" class="btn btn-primary" onclick="UnifiedPanel.fetchCoverFromUrl('metaPanel')">
-                        Fetch
-                    </button>
-                </div>
+                    <div class="cover-divider"></div>
 
-                <span class="unified-panel-status" id="coverStatus-metaPanel"></span>
+                    <div class="cover-local-row">
+                        <span><i class="fa-solid fa-image"></i> Current cover</span>
+                        <button
+                            type="button"
+                            class="btn btn-outline btn-danger"
+                            id="coverRemoveBtn-metaPanel"
+                            style="display: none"
+                            onclick="UnifiedPanel.removeCover('metaPanel')"
+                        >
+                            <i class="fa-solid fa-trash"></i> Remove
+                        </button>
+                    </div>
+
+                    <span class="unified-panel-status" id="coverStatus-metaPanel"></span>
+                </div>
             </div>
         </div>
 
         {# ── Tools tab ────────────────────────────────────────────────── #}
         <div class="unified-panel-content" id="tabTools-metaPanel" style="display: none">
+            <div class="metadata-tool-actions">
+                <button type="button" class="btn btn-outline" onclick="UnifiedPanel.handleAction('metaPanel', 'updateNow')">
+                    <i class="fa-solid fa-cloud-arrow-down"></i> Update story now
+                </button>
+                <button type="button" class="btn btn-outline" onclick="UnifiedPanel.handleAction('metaPanel', 'refreshMetadata')">
+                    <i class="fa-solid fa-arrows-rotate"></i> Refresh metadata
+                </button>
+                <button type="button" class="btn btn-outline btn-danger" onclick="UnifiedPanel.handleAction('metaPanel', 'resetProgress')">
+                    <i class="fa-solid fa-rotate-left"></i> Reset reading progress
+                </button>
+            </div>
+
             <div class="form-group">
                 <div class="form-switch">
-                    <input type="checkbox" id="metaAutoUpdate-metaPanel" />
+                    <label class="toggle" title="Auto-update story">
+                        <input type="checkbox" id="metaAutoUpdate-metaPanel" />
+                        <span class="slider"></span>
+                    </label>
                     <label for="metaAutoUpdate-metaPanel" style="margin: 0">Auto-update story</label>
                 </div>
             </div>
 
             <div class="form-group">
                 <div class="form-switch">
-                    <input type="checkbox" id="metaHideAuthorNotes-metaPanel" />
+                    <label class="toggle" title="Hide author notes in reader">
+                        <input type="checkbox" id="metaHideAuthorNotes-metaPanel" />
+                        <span class="slider"></span>
+                    </label>
                     <label for="metaHideAuthorNotes-metaPanel" style="margin: 0">Hide author notes in reader</label>
                 </div>
             </div>
