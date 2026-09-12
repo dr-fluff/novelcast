@@ -5,6 +5,8 @@ from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from novelcast.api.deps import get_current_user, get_settings, get_templates, get_users
+from novelcast.core.template_names import TemplateNames
+from novelcast.core.template_context import TemplateContext as ContextKey
 from novelcast.services import SettingsService, UserService
 
 from .helpers import parse_settings_form
@@ -27,19 +29,26 @@ def settings(
     server_settings = {}
     all_users = []
 
+    app_settings = {
+        key: user_settings.get(key, meta.get("default"))
+        for key, meta in settings.schema.get("app", {}).items()
+    }
+
     if current_user.get("is_root"):
         server_settings = settings.get_scoped_server_settings()
         all_users = users.get_all_users()
 
+    server_settings["app"] = {ContextKey.USER: app_settings}
+
     return templates.TemplateResponse(
-        "pages/settings.html",
+        TemplateNames.SETTINGS,
         {
-            "request": request,
-            "user": current_user,
-            "schema": settings.schema,
-            "user_settings": user_settings,
-            "server_settings": server_settings,
-            "users": all_users,
+            ContextKey.REQUEST: request,
+            ContextKey.USER: current_user,
+            ContextKey.SCHEMA: settings.schema,
+            ContextKey.USER_SETTINGS: user_settings,
+            ContextKey.SERVER_SETTINGS: server_settings,
+            ContextKey.USERS: all_users,
         },
     )
 

@@ -45,6 +45,37 @@ class ChaptersRepository(BaseRepository):
             ).all()
             return [_to_dict(c) for c in rows]
 
+    def get_downloaded_listing(self, story_id: int) -> list[dict]:
+        """Return fields needed by the story chapter list without file joins."""
+        with self.session_no_commit() as db:
+            rows = db.execute(
+                select(
+                    Chapter.id,
+                    Chapter.story_id,
+                    Chapter.chapter_number,
+                    Chapter.title,
+                    Chapter.created_at,
+                )
+                .where(
+                    Chapter.story_id == story_id,
+                    Chapter.is_downloaded,
+                )
+                .order_by(Chapter.chapter_number)
+            ).all()
+            return [
+                {
+                    "id": row.id,
+                    "story_id": row.story_id,
+                    "chapter_number": row.chapter_number,
+                    "title": row.title,
+                    "url": None,
+                    "file_path": None,
+                    "is_downloaded": 1,
+                    "created_at": row.created_at,
+                }
+                for row in rows
+            ]
+
     def get_downloaded_ids(self, story_id: int) -> list[int]:
         with self.session_no_commit() as db:
             return list(

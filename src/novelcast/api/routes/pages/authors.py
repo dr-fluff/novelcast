@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.templating import Jinja2Templates
 
 from novelcast.api.deps import get_stories, get_templates
+from novelcast.core.template_names import TemplateNames
+from novelcast.core.template_context import TemplateContext as ContextKey
 from novelcast.services import StoryService
 
 router = APIRouter()
@@ -19,13 +21,13 @@ def authors(
     all_authors = stories.get_all_authors(query=query, sort=sort)
 
     return templates.TemplateResponse(
-        "pages/authors.html",
+        TemplateNames.AUTHORS,
         {
-            "request": request,
-            "authors": all_authors,
-            "query": query,
-            "sort": sort,
-            "sort_options": [
+            ContextKey.REQUEST: request,
+            ContextKey.AUTHORS: all_authors,
+            ContextKey.QUERY: query,
+            ContextKey.SORT: sort,
+            ContextKey.SORT_OPTIONS: [
                 {"key": "name", "label": "Name (A–Z)"},
                 {"key": "stories", "label": "Most stories"},
                 {"key": "updated", "label": "Last updated"},
@@ -47,9 +49,9 @@ def author_detail(
         raise HTTPException(status_code=404, detail="Author not found")
 
     return templates.TemplateResponse(
-        "pages/author_detail.html",
+        TemplateNames.AUTHOR_DETAIL,
         {
-            "request": request,
-            "author": author,
+            ContextKey.REQUEST: request,
+            ContextKey.AUTHOR: author,
         },
     )

@@ -303,6 +303,19 @@ class StoryDownloadService:
             "chapter_numbers": new_chapters,
         }
 
+    def refresh_metadata(self, story: dict) -> dict:
+        story_id = story.get("id")
+        source_url = story.get("source_url")
+        if not story_id or not source_url:
+            return {"story_id": story_id, "skipped": True}
+
+        settings = self._load_patreon_settings(story_id)
+        raw = self._download_raw(source_url, story_match=settings.get("chapter_regex"))
+        parsed = self._parse_raw(raw, settings=settings)
+        self._update_story_metadata(story_id, raw, parsed)
+        self._emit("story_updated", {"story_id": story_id, "title": parsed.get("title") or story.get("title")})
+        return {"story_id": story_id, "title": parsed.get("title") or story.get("title")}
+
     def _handle_integrity_failure(self, story_id: int, source_url: str, check: dict, download_id: str | None) -> None:
         restored = check.get("restored", [])
         not_in_epub = check.get("not_in_epub", [])

@@ -7,6 +7,8 @@ from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from novelcast.api.deps import get_password_reset, get_templates
+from novelcast.core.template_names import TemplateNames
+from novelcast.core.template_context import TemplateContext as ContextKey
 from novelcast.services import PasswordResetService
 
 log = logging.getLogger(__name__)
@@ -17,7 +19,7 @@ router = APIRouter(tags=["auth"])
 @router.get("/forgot-password")
 def forgot_page(templates: Jinja2Templates = Depends(get_templates)):
     # templates.TemplateResponse requires a Request; handled via middleware/dependency upstream
-    return templates.TemplateResponse("pages/forgot_password.html", {})
+    return templates.TemplateResponse(TemplateNames.FORGOT_PASSWORD, {})
 
 
 @router.post("/forgot-password")
@@ -35,7 +37,7 @@ def reset_page(
     token: str,
     templates: Jinja2Templates = Depends(get_templates),
 ):
-    return templates.TemplateResponse("pages/reset_password.html", {"token": token})
+    return templates.TemplateResponse(TemplateNames.RESET_PASSWORD, {ContextKey.TOKEN: token})
 
 
 @router.post("/reset-password")

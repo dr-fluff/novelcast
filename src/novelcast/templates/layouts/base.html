@@ -1,7 +1,20 @@
 <!-- novelcast/templates/layouts/base.html -->
 <!doctype html>
-<html>
+<html data-theme="{{ theme | default('light') }}">
     <head>
+        <script>
+            (() => {
+                const root = document.documentElement;
+                if (root.dataset.theme !== "system") return;
+
+                const media = window.matchMedia("(prefers-color-scheme: dark)");
+                const applySystemTheme = () => {
+                    root.dataset.theme = media.matches ? "dark" : "light";
+                };
+                applySystemTheme();
+                media.addEventListener?.("change", applySystemTheme);
+            })();
+        </script>
         <title>{% block title %}NovelCast{% endblock %}</title>
 
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />

@@ -136,6 +136,25 @@
     font-weight: 600;
 }
 
+.library-user-btn .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.2rem 0.65rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 600;
+}
+
+.library-user-btn .badge--admin {
+    background: #fef9c3;
+    color: #854d0e;
+}
+
+.library-user-btn .badge--user {
+    background: #f3f4f6;
+    color: #6b7280;
+}
+
 /* ── SYNC STATUS DOT ── */
 
 .status-dot {

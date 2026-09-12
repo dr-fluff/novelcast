@@ -16,6 +16,7 @@ from fastapi.templating import Jinja2Templates
 
 from novelcast.api.deps import get_current_user, get_logs, get_settings, get_templates
 from novelcast.core.logging import log_buffer
+from novelcast.core.template_names import TemplateNames
 from novelcast.services import LoggingService, SettingsService
 
 router = APIRouter()
@@ -66,4 +67,4 @@ def logs(
     current_user: dict | None = Depends(get_current_user),
     templates: Jinja2Templates = Depends(get_templates),
 ):
-    return templates.TemplateResponse("pages/index.html", {})
+    return templates.TemplateResponse(TemplateNames.INDEX, {})

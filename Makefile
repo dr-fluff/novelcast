@@ -1,4 +1,4 @@
-.PHONY: install dev backend frontend predev lint format test clean ports db doctor docker-build docker-up docker-down docker-logs docker-rebuild
+.PHONY: install dev backend frontend predev lint format test benchmark clean ports db doctor docker-build docker-up docker-down docker-logs docker-rebuild
 
 VENV ?= .venv
 
@@ -45,6 +45,9 @@ format:
 
 test:
 	$(UV) run pytest tests
+
+benchmark:
+	$(UV) run python scripts/benchmark_pages.py $(ARGS)
 
 
 db:

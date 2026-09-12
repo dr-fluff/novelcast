@@ -6,6 +6,8 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
 from novelcast.api.deps import get_auth, get_current_user, get_templates, get_users
+from novelcast.core.template_context import TemplateContext as ContextKey
+from novelcast.core.template_names import TemplateNames
 from novelcast.services import AuthService, UserService
 from novelcast.utils.password_validation import validate_password_strength
 
@@ -22,12 +24,12 @@ def change_password_page(
         return RedirectResponse("/login", status_code=303)
 
     return templates.TemplateResponse(
-        "pages/change_password.html",
+        TemplateNames.CHANGE_PASSWORD,
         {
-            "request": request,
-            "current_user": current_user,
-            "error": request.query_params.get("error"),
-            "success": request.query_params.get("success"),
+            ContextKey.REQUEST: request,
+            ContextKey.CURRENT_USER: current_user,
+            ContextKey.ERROR: request.query_params.get("error"),
+            ContextKey.SUCCESS: request.query_params.get("success"),
         },
     )
 

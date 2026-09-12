@@ -141,6 +141,23 @@
     margin-top: 0.25rem;
 }
 
+.story-active-tools {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    margin-top: 0.35rem;
+    color: var(--muted, #64748b);
+}
+
+.story-active-tool {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    font-size: 0.82rem;
+}
+
 .story-description {
     margin: 0;
     font-size: 0.92rem;
@@ -195,6 +212,8 @@
 .chapter-item {
     border-radius: 0;
     overflow: hidden;
+    content-visibility: auto;
+    contain-intrinsic-size: 0 58px;
 }
 
 .chapter-item + .chapter-item {
@@ -240,6 +259,9 @@
 }
 
 .chapter-status {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
     font-size: 0.82rem;
     font-weight: 600;
     color: var(--muted, #94a3b8);
@@ -248,12 +270,20 @@
     text-align: right;
 }
 
-.chapter-status.status-read {
+.chapter-status-label.status-read {
     color: #6366f1;
     background: rgba(99, 102, 241, 0.1);
     padding: 0.3rem 0.7rem;
     border-radius: 999px;
     text-align: center;
+}
+
+.chapter-added-date {
+    margin-top: 0.2rem;
+    color: var(--muted, #94a3b8);
+    font-size: 0.7rem;
+    font-weight: 400;
+    white-space: nowrap;
 }
 
 /* ── File table ───────────────────────────────────────────────────────── */
@@ -638,6 +668,7 @@
     }
 
     .chapter-status {
+        align-items: flex-start;
         text-align: left;
     }
 

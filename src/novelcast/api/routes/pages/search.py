@@ -4,6 +4,8 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.templating import Jinja2Templates
 
 from novelcast.api.deps import get_current_user, get_settings, get_templates
+from novelcast.core.template_names import TemplateNames
+from novelcast.core.template_context import TemplateContext as ContextKey
 from novelcast.services.scrapers import scrape_all, scrape_details
 from novelcast.services.search_service import SearchService
 from novelcast.services.settings_service import SettingsService
@@ -18,10 +20,10 @@ def search_page(
     templates: Jinja2Templates = Depends(get_templates),
 ):
     return templates.TemplateResponse(
-        "pages/search.html",
+        TemplateNames.SEARCH,
         {
-            "request": request,
-            "current_user": current_user,
+            ContextKey.REQUEST: request,
+            ContextKey.CURRENT_USER: current_user,
         },
     )
 
@@ -37,12 +39,12 @@ async def search_results(
 
     if not q:
         return templates.TemplateResponse(
-            "partials/search_results.html",
+            TemplateNames.SEARCH_RESULTS,
             {
-                "request": request,
-                "query": None,
-                "parsed": None,
-                "results": [],
+                ContextKey.REQUEST: request,
+                ContextKey.QUERY: None,
+                ContextKey.PARSED: None,
+                ContextKey.RESULTS: [],
                 "error": None,
             },
         )
@@ -69,13 +71,13 @@ async def search_results(
         error = str(e)
 
     return templates.TemplateResponse(
-        "partials/search_results.html",
+        TemplateNames.SEARCH_RESULTS,
         {
-            "request": request,
-            "query": q,
-            "parsed": parsed,
-            "search_urls": search_urls,
-            "results": results,
+            ContextKey.REQUEST: request,
+            ContextKey.QUERY: q,
+            ContextKey.PARSED: parsed,
+            ContextKey.SEARCH_URLS: search_urls,
+            ContextKey.RESULTS: results,
             "error": error,
         },
     )

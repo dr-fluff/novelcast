@@ -21,6 +21,8 @@ from novelcast.services import (
     StatsService,
     StoryService,
 )
+from novelcast.core.template_names import TemplateNames
+from novelcast.core.template_context import TemplateContext as ContextKey
 
 from .helpers import build_reading_progress_card, resolve_progress
 from .preferences import device_preference_key
@@ -52,13 +54,22 @@ def story(
         story_authors = stories.get_story_authors(story_id)
         # extra_patterns = get_chapter_filter(request).get_enabled_regexes()
         chapter_list = chapters.list_by_story_filtered(story_id)
-        story_files = stories.get_story_files(story_id)
+        story_files = None
 
         read_chapters, last_chapter_id, last_read_title = resolve_progress(
             current_user, story_id, chapter_list, progress, chapters
         )
 
         first_unread = next((c["id"] for c in chapter_list if c["id"] not in read_chapters), None)
+        chapter_data = [
+            {
+                "id": chapter["id"],
+                "chapter_number": chapter["chapter_number"],
+                "title": chapter.get("title"),
+                "created_at": chapter["created_at"].isoformat() if chapter.get("created_at") else None,
+            }
+            for chapter in chapter_list
+        ]
 
         progress_card = None
         if current_user and current_user.get("id"):
@@ -91,20 +102,40 @@ def story(
             story_preferences["file_sort"] = file_sort
 
     return templates.TemplateResponse(
-        "pages/story.html",
+        TemplateNames.STORY,
         {
-            "request": request,
-            "current_user": current_user,
-            "story": story,
-            "story_authors": story_authors,
-            "chapters": chapter_list,
-            "story_files": story_files,
-            "read_chapters": read_chapters,
-            "last_chapter_id": last_chapter_id,
-            "last_read_title": last_read_title,
-            "first_unread_chapter_id": first_unread,
-            "story_preferences": story_preferences,
-            "progress_card": progress_card,
+            ContextKey.REQUEST: request,
+            ContextKey.CURRENT_USER: current_user,
+            ContextKey.STORY: story,
+            ContextKey.STORY_AUTHORS: story_authors,
+            ContextKey.CHAPTERS: chapter_list,
+            ContextKey.CHAPTER_DATA: chapter_data,
+            ContextKey.STORY_FILES: story_files,
+            ContextKey.READ_CHAPTERS: read_chapters,
+            ContextKey.LAST_CHAPTER_ID: last_chapter_id,
+            ContextKey.LAST_READ_TITLE: last_read_title,
+            ContextKey.FIRST_UNREAD_CHAPTER_ID: first_unread,
+            ContextKey.STORY_PREFERENCES: story_preferences,
+            ContextKey.PROGRESS_CARD: progress_card,
+        },
+    )
+
+
+@router.get("/api/story-files/{story_id}")
+def story_files(
+    request: Request,
+    story_id: int,
+    stories: StoryService = Depends(get_stories),
+    templates: Jinja2Templates = Depends(get_templates),
+):
+    if not stories.get_story(story_id):
+        raise HTTPException(status_code=404, detail="Story not found")
+
+    return templates.TemplateResponse(
+        TemplateNames.STORY_FILES,
+        {
+            ContextKey.REQUEST: request,
+            ContextKey.STORY_FILES: stories.get_story_files(story_id),
         },
     )
 

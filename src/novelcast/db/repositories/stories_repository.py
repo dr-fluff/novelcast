@@ -354,6 +354,10 @@ def _to_dict(story: Story | None) -> dict | None:
         "id": story.id,
         "title": story.title,
         "author": story.author,
+        "author_id": next(
+            (author.id for author in getattr(story, "authors", []) if author.name == story.author),
+            getattr(story, "authors", [None])[0].id if getattr(story, "authors", []) else None,
+        ),
         "subtitle": getattr(story, "subtitle", None),
         "source_url": story.source_url,
         "story_site_id": story.story_site_id,

@@ -33,7 +33,33 @@ window.toggleSection = function (key) {
     if (!body) return;
     const collapsed = body.classList.toggle('collapsed');
     if (chevron) chevron.classList.toggle('collapsed', collapsed);
+    if (key === 'files' && !collapsed) loadStoryFiles();
 };
+
+let storyFilesLoaded = false;
+let storyFilesLoading = false;
+
+async function loadStoryFiles() {
+    if (storyFilesLoaded || storyFilesLoading) return;
+
+    const section = document.querySelector('.story-page');
+    const content = document.getElementById('storyFilesContent');
+    const storyId = section?.dataset.storyId;
+    if (!storyId || !content) return;
+
+    storyFilesLoading = true;
+    content.innerHTML = '<div class="file-info-loading"><i class="fa-solid fa-spinner fa-spin"></i> Loading files…</div>';
+    try {
+        const response = await fetch(`/api/story-files/${storyId}`);
+        if (!response.ok) throw new Error(`Request failed (${response.status})`);
+        content.innerHTML = await response.text();
+        storyFilesLoaded = true;
+    } catch (error) {
+        content.innerHTML = `<div class="empty-state"><p>Could not load files: ${error.message}</p></div>`;
+    } finally {
+        storyFilesLoading = false;
+    }
+}
 
 const SORT_MODES = ['asc', 'desc'];
 let chapterSortMode = document.querySelector('.story-page')?.dataset.chapterSort || 'asc';
@@ -43,13 +69,26 @@ function applyChapterSort(mode) {
     const list = document.getElementById('chapterList');
     if (!list) return;
 
-    const items = [...list.querySelectorAll('.chapter-item')];
-    items.sort((a, b) => {
-        const na = parseInt(a.dataset.chapterNumber, 10) || 0;
-        const nb = parseInt(b.dataset.chapterNumber, 10) || 0;
-        return mode === 'asc' ? na - nb : nb - na;
-    });
-    items.forEach((el) => list.appendChild(el));
+    if (list.dataset.chapterData) {
+        window.setChapterSortMode?.(mode);
+        const icon = document.getElementById('sortIcon');
+        if (icon) {
+            icon.className = mode === 'asc' ? 'fa-solid fa-arrow-up-wide-short' : 'fa-solid fa-arrow-down-wide-short';
+        }
+        return;
+    }
+
+    // Chapters arrive from the server in ascending order. Avoid touching
+    // hundreds of DOM nodes on every story-page load in the default mode.
+    if (mode === 'desc') {
+        const items = [...list.querySelectorAll('.chapter-item')];
+        items.sort((a, b) => {
+            const na = parseInt(a.dataset.chapterNumber, 10) || 0;
+            const nb = parseInt(b.dataset.chapterNumber, 10) || 0;
+            return nb - na;
+        });
+        items.forEach((el) => list.appendChild(el));
+    }
 
     const icon = document.getElementById('sortIcon');
     if (icon) {
@@ -112,10 +151,38 @@ window.cycleFileSort = function () {
     saveDevicePreference('story.files.sort', fileSortMode);
 };
 
+function focusChapterOnStoryPage() {
+    const chaptersBody = document.getElementById('chaptersBody');
+    const section = document.querySelector('.story-page');
+    if (!chaptersBody || !section) return;
+
+    chaptersBody.classList.remove('collapsed');
+    document.getElementById('chaptersChevron')?.classList.remove('collapsed');
+
+    const targetId = section.dataset.lastChapterId || section.dataset.firstUnreadId;
+    const target = targetId ? document.querySelector(`#chapterList [data-chapter-id="${targetId}"]`) : null;
+        if (!target) {
+            window.showChapterId?.(targetId);
+            return;
+        }
+
+    const items = [...document.querySelectorAll('#chapterList .chapter-item')];
+    const targetIndex = items.indexOf(target);
+    const targetPage = targetIndex >= 0 ? Math.floor(targetIndex / 15) + 1 : 1;
+    const targetPageButton = document.querySelector(`#chapterPager [data-page="${targetPage}"]`);
+
+    if (targetPageButton && !targetPageButton.classList.contains('active')) {
+        targetPageButton.click();
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     applyChapterSort(chapterSortMode);
     applyFileSort(fileSortMode);
+    setTimeout(focusChapterOnStoryPage, 0);
 });
+
+window.addEventListener('pageshow', focusChapterOnStoryPage);
 
 window.goToReading = async function () {
     const section = document.querySelector('.story-page');

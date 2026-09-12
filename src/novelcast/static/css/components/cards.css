@@ -3,6 +3,7 @@
     flex-direction: column;
     overflow: hidden;
     text-decoration: none;
+    cursor: pointer;
     color: var(--text);
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.04));
     border: 1px solid rgba(255, 255, 255, 0.08);
@@ -11,6 +12,13 @@
     transition:
         transform 0.2s ease,
         box-shadow 0.2s ease;
+}
+
+.card-meta a {
+    position: relative;
+    z-index: 1;
+    color: inherit;
+    text-decoration: underline;
 }
 
 .card:hover {

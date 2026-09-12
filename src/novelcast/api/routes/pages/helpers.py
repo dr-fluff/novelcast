@@ -187,6 +187,7 @@ def story_card(story: dict) -> dict:
         "id": story.get("id"),
         "display_title": title,
         "author": story.get("author"),
+        "author_id": story.get("author_id"),
         "thumbnail_letter": title[0].upper() if title else "?",
         "last_chapter": story.get("downloaded_chapters", 0),
         "last_chapter_name": story.get("chapter"),

@@ -7,8 +7,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from novelcast.api.deps import get_library_sync_service, get_stories_service
+from novelcast.api.deps import get_download, get_library_sync_service, get_stories_service
 from novelcast.api.ws.notifications import manager
 from novelcast.services import LibrarySyncService, StoryService
+from novelcast.services import LibrarySyncService, StoryDownloadService, StoryService
 
 router = APIRouter(tags=["sync"])
 
@@ -90,4 +92,21 @@ async def update_story(
         raise HTTPException(status_code=404, detail="Story not found")
     job_id = f"update-{story_id}-{uuid.uuid4().hex[:6]}"
     asyncio.create_task(_tracked(job_id, f"Updating '{story['title']}'", library_sync.update_all, [story_id]))
+    return {"status": "started", "job_id": job_id}
+
+
+@router.post("/metadata/story/{story_id}")
+async def refresh_story_metadata(
+    story_id: int,
+    download: StoryDownloadService = Depends(get_download),
+    stories: StoryService = Depends(get_stories_service),
+):
+    story = stories.get_story(story_id)
+    if not story:
+        raise HTTPException(status_code=404, detail="Story not found")
+    if not story.get("source_url"):
+        raise HTTPException(status_code=400, detail="Story has no source URL")
+
+    job_id = f"metadata-{story_id}-{uuid.uuid4().hex[:6]}"
+    asyncio.create_task(_tracked(job_id, f"Refreshing metadata for '{story['title']}'", download.refresh_metadata, story))
     return {"status": "started", "job_id": job_id}

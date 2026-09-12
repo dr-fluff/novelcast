@@ -39,7 +39,7 @@ class PaginatedEReader {
         // and/or the saved settings load. Once loadSchema() runs, defaults
         // come from the schema instead.
         this.settings = {
-            theme: 'light',
+            theme: 'system',
             fontFamily: 'serif',
             fontSize: 100,
             lineSpacing: 100,
@@ -51,6 +51,7 @@ class PaginatedEReader {
         // Reading settings schema (label/control/options/range per field),
         // provided by the server via data-reading-schema on #settingsPanel.
         this.schema = {};
+        this.baseTheme = document.documentElement.dataset.theme || 'light';
 
         this.deviceId = this.getDeviceId();
         this.userLoaded = false;
@@ -71,6 +72,7 @@ class PaginatedEReader {
         this.loadSchema();
         this.buildSettingsPanel();
         await this.loadUserSettings();
+        this.applyReaderTheme();
         this.updateSettingsUI();
         this.attachEvents();
         this.attachSettingsEvents();
@@ -516,14 +518,15 @@ class PaginatedEReader {
             light: { bg: '#faf8f3', text: '#2c2c2c', secondary: '#666', accent: '#3b82f6', hr: 'rgba(0,0,0,0.12)' },
             sepia: { bg: '#f4eee6', text: '#5c4033', secondary: '#8d6e63', accent: '#8d6e63', hr: 'rgba(0,0,0,0.08)' },
             dark: {
-                bg: '#1a1a1a',
-                text: '#e8e8e8',
-                secondary: '#a8a8a8',
+                bg: '#050a14',
+                text: '#f8fafc',
+                secondary: '#94a3b8',
                 accent: '#60a5fa',
                 hr: 'rgba(255,255,255,0.1)',
             },
         };
-        const c = themes[this.settings.theme] || themes.light;
+        const selectedTheme = this.settings.theme === 'system' ? this.baseTheme : this.settings.theme;
+        const c = themes[selectedTheme] || themes.light;
 
         const fontSerif = `Georgia, "Noto Serif", "Times New Roman", serif`;
         const fontSans = `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
@@ -824,6 +827,7 @@ class PaginatedEReader {
             if (!Number.isNaN(asNumber) && value !== '') value = asNumber;
 
             this.settings[key] = value;
+            if (key === 'theme') this.applyReaderTheme();
             this.updateSettingsUI();
             this.repaginate(this.state.currentPage);
             this.saveUserSettings();
@@ -845,6 +849,12 @@ class PaginatedEReader {
             this.repaginate(this.state.currentPage);
             this.saveUserSettings();
         });
+    }
+
+    applyReaderTheme() {
+        const selectedTheme = this.settings.theme === 'system' ? this.baseTheme : this.settings.theme;
+        const theme = ['light', 'sepia', 'dark'].includes(selectedTheme) ? selectedTheme : 'light';
+        document.documentElement.dataset.theme = theme;
     }
 
     attachEvents() {

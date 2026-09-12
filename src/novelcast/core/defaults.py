@@ -164,9 +164,9 @@ APP_DATE_FORMAT = "date_format"
 APP_DEFAULTS = {
     APP_THEME: {
         "type": TYPE_SELECT,
-        "description": "Default theme for the application",
+        "description": "Theme for the application",
         "default": "dark",
-        "options": ["light", "dark", "sepia"],
+        "options": ["system", "light", "dark", "sepia"],
         "label": "Theme",
     },
     APP_MAX_CONCURRENT_JOBS: {
@@ -546,8 +546,8 @@ US_CONTROL_SLIDER = "slider"
 USER_SETTINGS_SCHEMA = {
     US_THEME: {
         "type": US_TYPE_CHOICE,
-        "choices": ("light", "dark"),
-        "default": "light",
+        "choices": ("system", "light", "dark", "sepia"),
+        "default": "system",
         "category": US_CATEGORY_DISPLAY,
     },
     US_FONT_SIZE: {
@@ -571,12 +571,13 @@ USER_SETTINGS_SCHEMA = {
     },
     US_CHAPTER_THEME: {
         "type": US_TYPE_CHOICE,
-        "choices": ("light", "sepia", "dark"),
-        "default": "light",
+        "choices": ("system", "light", "sepia", "dark"),
+        "default": "system",
         "category": US_CATEGORY_READING,
         "label": "Theme",
         "control": US_CONTROL_BUTTONS,
         "options": [
+            {"value": "system", "label": "System", "icon": "fa-desktop"},
             {"value": "light", "label": "Light", "icon": "fa-sun"},
             {"value": "sepia", "label": "Sepia", "icon": "fa-book"},
             {"value": "dark", "label": "Dark", "icon": "fa-moon"},

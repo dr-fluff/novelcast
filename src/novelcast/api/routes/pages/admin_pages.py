@@ -17,6 +17,8 @@ from novelcast.api.deps import (
     get_users,
 )
 from novelcast.core import setting_keys
+from novelcast.core.template_context import TemplateContext as ContextKey
+from novelcast.core.template_names import TemplateNames
 from novelcast.services import (
     ChapterFilterService,
     HealthCheckService,
@@ -59,13 +61,13 @@ def admin_dashboard(
     health_checks = [r.as_dict() for r in health_svc.run_all(pending_syncs=pending)]
 
     return templates.TemplateResponse(
-        "pages/admin.html",
+        TemplateNames.ADMIN,
         {
-            "request": request,
-            "user": current_user,
-            "stats": stats,
-            "health_checks": health_checks,
-            "users": all_users,
+            ContextKey.REQUEST: request,
+            ContextKey.USER: current_user,
+            ContextKey.STATS: stats,
+            ContextKey.HEALTH_CHECKS: health_checks,
+            ContextKey.USERS: all_users,
         },
     )
 
@@ -99,11 +101,11 @@ def users(
         raise HTTPException(status_code=403, detail="Admin access required")
 
     return templates.TemplateResponse(
-        "pages/users.html",
+        TemplateNames.USERS,
         {
-            "request": request,
-            "user": current_user,
-            "users": users.get_all_users(),
+            ContextKey.REQUEST: request,
+            ContextKey.USER: current_user,
+            ContextKey.USERS: users.get_all_users(),
         },
     )
 
@@ -148,18 +150,18 @@ def edit_user_page(
         raise HTTPException(status_code=404, detail="User not found")
 
     return templates.TemplateResponse(
-        "pages/user_form.html",
+        TemplateNames.USER_FORM,
         {
-            "request": request,
-            "user": current_user,
-            "error": request.query_params.get("error"),
-            "mode": "edit",
-            "form_action": f"/admin/users/{user_id}/edit",
-            "submit_label": "Save Changes",
-            "back_url": "/admin/users",
-            "back_label": "← Back to Users",
-            "show_role": True,
-            "form_user": target_user,
+            ContextKey.REQUEST: request,
+            ContextKey.USER: current_user,
+            ContextKey.ERROR: request.query_params.get("error"),
+            ContextKey.MODE: "edit",
+            ContextKey.FORM_ACTION: f"/admin/users/{user_id}/edit",
+            ContextKey.SUBMIT_LABEL: "Save Changes",
+            ContextKey.BACK_URL: "/admin/users",
+            ContextKey.BACK_LABEL: "← Back to Users",
+            ContextKey.SHOW_ROLE: True,
+            ContextKey.FORM_USER: target_user,
         },
     )
 
@@ -229,11 +231,11 @@ def chapter_patterns_page(
     all_patterns = chapter_filter.get_all_patterns()
 
     return templates.TemplateResponse(
-        "pages/chapter_patterns.html",
+        TemplateNames.CHAPTER_PATTERNS,
         {
-            "request": request,
-            "user": current_user,
-            "chapter_patterns": all_patterns,
+            ContextKey.REQUEST: request,
+            ContextKey.USER: current_user,
+            ContextKey.CHAPTER_PATTERNS: all_patterns,
         },
     )
 
@@ -312,10 +314,10 @@ def logs(
         raise HTTPException(status_code=403, detail="Admin access required")
 
     return templates.TemplateResponse(
-        "pages/logs.html",
+        TemplateNames.LOGS,
         {
-            "request": request,
-            "user": current_user,
+            ContextKey.REQUEST: request,
+            ContextKey.USER: current_user,
         },
     )
 

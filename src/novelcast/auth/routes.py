@@ -4,6 +4,7 @@ from fastapi import APIRouter, Form, Request
 from fastapi.responses import RedirectResponse
 
 from novelcast.utils.password_validation import validate_password_strength
+from novelcast.core.template_names import TemplateNames
 
 from .session import create_session_token
 
@@ -24,7 +25,7 @@ def login_page(request: Request):
         return RedirectResponse("/", status_code=303)
 
     return templates(request).TemplateResponse(
-        "pages/login.html",
+        TemplateNames.LOGIN,
         {
             "request": request,
             "error": request.query_params.get("error"),

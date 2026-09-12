@@ -5,6 +5,9 @@ from fastapi.responses import JSONResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from starlette.exceptions import HTTPException as HTTPException
 
+from novelcast.core.template_names import TemplateNames
+from novelcast.core.template_context import TemplateContext as ContextKey
+
 logger = logging.getLogger(__name__)
 
 
@@ -58,12 +61,12 @@ def error_response(
         )
 
     return templates.TemplateResponse(
-        "pages/error.html",
+        TemplateNames.ERROR,
         {
-            "request": request,
-            "error_code": status_code,
-            "error_message": message,
-            "path": request.url.path,
+            ContextKey.REQUEST: request,
+            ContextKey.ERROR_CODE: status_code,
+            ContextKey.ERROR_MESSAGE: message,
+            ContextKey.PATH: request.url.path,
         },
         status_code=status_code,
     )

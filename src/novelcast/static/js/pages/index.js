@@ -143,7 +143,7 @@
     let prefetchTimer = null;
 
     function prefetchStory(card) {
-        const href = card?.getAttribute('href');
+        const href = card?.getAttribute('href') || card?.dataset.storyUrl;
         const connection = navigator.connection;
         if (
             !href ||
@@ -161,7 +161,7 @@
         document.head.appendChild(link);
     }
 
-    document.querySelectorAll('a.card[href]').forEach((card) => {
+    document.querySelectorAll('a.card[href], .card[data-story-url]').forEach((card) => {
         card.addEventListener('mouseenter', () => {
             clearTimeout(prefetchTimer);
             prefetchTimer = setTimeout(() => prefetchStory(card), 150);

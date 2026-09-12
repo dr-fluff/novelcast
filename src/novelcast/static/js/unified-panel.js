@@ -661,6 +661,42 @@ const UnifiedPanel = (() => {
             }
         },
 
+        async updateNow(panelId) {
+            await this.startToolJob(panelId, `/api/sync/update/story/${this.storyId}`, 'Story update started');
+        },
+
+        async refreshMetadata(panelId) {
+            await this.startToolJob(panelId, `/api/sync/metadata/story/${this.storyId}`, 'Metadata refresh started');
+        },
+
+        async startToolJob(panelId, url, successMessage) {
+            if (!this.storyId) return;
+            setStatus(panelId, 'Starting…', '');
+
+            try {
+                const result = await fetchJSON(url, { method: 'POST' });
+                if (!result.ok) throw new Error(getApiErrorMessage(result, 'Action failed'));
+                setStatus(panelId, successMessage, 'success');
+                setTimeout(() => this.close(panelId), 700);
+            } catch (e) {
+                setStatus(panelId, e.message, 'error');
+            }
+        },
+
+        async resetProgress(panelId) {
+            if (!this.storyId || !confirm('Reset reading progress for this story?')) return;
+            setStatus(panelId, 'Resetting progress…', '');
+
+            try {
+                const result = await fetchJSON(`/api/story-progress/${this.storyId}`, { method: 'DELETE' });
+                if (!result.ok) throw new Error(getApiErrorMessage(result, 'Failed to reset progress'));
+                setStatus(panelId, 'Reading progress reset', 'success');
+                setTimeout(() => window.location.reload(), 700);
+            } catch (e) {
+                setStatus(panelId, e.message, 'error');
+            }
+        },
+
         showAuthorMergePrompt(panelId, conflict) {
             const statusEl = $(`status-${panelId}`);
             if (!statusEl) return;

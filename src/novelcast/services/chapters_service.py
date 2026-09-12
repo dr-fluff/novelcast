@@ -58,7 +58,7 @@ class ChaptersService:
             # Fallback: return all chapters if no filter service
             return self.list_by_story(story_id)
 
-        chapters = self.list_by_story(story_id)
+        chapters = self.repo.get_downloaded_listing(story_id)
         patterns = self.chapter_filter.get_enabled_regexes()
 
         if not patterns:

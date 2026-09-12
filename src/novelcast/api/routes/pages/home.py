@@ -10,6 +10,8 @@ from novelcast.api.deps import (
     get_stories,
     get_templates,
 )
+from novelcast.core.template_names import TemplateNames
+from novelcast.core.template_context import TemplateContext as ContextKey
 from novelcast.services import ProgressService, SettingsService, StoryService
 
 from .helpers import (
@@ -86,19 +88,19 @@ def home(
     cards = [story_card(s) for s in sorted_stories]
 
     return templates.TemplateResponse(
-        "pages/index.html",
+        TemplateNames.INDEX,
         {
-            "request": request,
-            "stories": cards,
-            "sort": sort,
-            "query": query,
-            "genre": genre,
-            "tag": tag,
-            "series": series,
-            "language": language,
-            "status": status,
-            "filter_options": filter_options,
-            "sort_options": [
+            ContextKey.REQUEST: request,
+            ContextKey.STORIES: cards,
+            ContextKey.SORT: sort,
+            ContextKey.QUERY: query,
+            ContextKey.GENRE: genre,
+            ContextKey.TAG: tag,
+            ContextKey.SERIES: series,
+            ContextKey.LANGUAGE: language,
+            ContextKey.STATUS: status,
+            ContextKey.FILTER_OPTIONS: filter_options,
+            ContextKey.SORT_OPTIONS: [
                 {"key": "title", "label": "Title"},
                 {"key": "author", "label": "Author"},
                 {"key": "series", "label": "Series"},
@@ -108,7 +110,7 @@ def home(
                 {"key": "created", "label": "Date added"},
                 {"key": "year", "label": "Publish year"},
             ],
-            "status_options": [
+            ContextKey.STATUS_OPTIONS: [
                 {"key": "", "label": "Any status"},
                 {"key": "unread", "label": "Has unread chapters"},
                 {"key": "no_unread", "label": "Hav no unread chapters"},

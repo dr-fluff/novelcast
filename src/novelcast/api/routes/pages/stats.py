@@ -6,6 +6,8 @@ from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from novelcast.api.deps import get_current_user, get_stats, get_templates
+from novelcast.core.template_names import TemplateNames
+from novelcast.core.template_context import TemplateContext as ContextKey
 from novelcast.services import StatsService
 
 router = APIRouter()
@@ -46,15 +48,15 @@ def stats_page(
     reading_speed_wpm = summary["reading_speed_wpm"]
 
     return templates.TemplateResponse(
-        "pages/stats.html",
+        TemplateNames.STATS,
         {
-            "request": request,
-            "current_user": current_user,
-            "total_read_hours": round(total_read_seconds / 3600, 1),
-            "device_count": summary["device_count"],
-            "chapters_read": summary["chapters_read"],
-            "stories_read": summary["stories_read"],
-            "reading_speed_wpm": round(reading_speed_wpm) if reading_speed_wpm is not None else None,
-            "heatmap_days": heatmap_days,
+            ContextKey.REQUEST: request,
+            ContextKey.CURRENT_USER: current_user,
+            ContextKey.TOTAL_READ_HOURS: round(total_read_seconds / 3600, 1),
+            ContextKey.DEVICE_COUNT: summary["device_count"],
+            ContextKey.CHAPTERS_READ: summary["chapters_read"],
+            ContextKey.STORIES_READ: summary["stories_read"],
+            ContextKey.READING_SPEED_WPM: round(reading_speed_wpm) if reading_speed_wpm is not None else None,
+            ContextKey.HEATMAP_DAYS: heatmap_days,
         },
     )

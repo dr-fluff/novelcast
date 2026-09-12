@@ -16,6 +16,8 @@ from novelcast.api.deps import (
     get_templates,
 )
 from novelcast.api.routes.pages.helpers import strip_duplicate_title_heading
+from novelcast.core.template_names import TemplateNames
+from novelcast.core.template_context import TemplateContext as ContextKey
 from novelcast.services import ChaptersService, ProgressService, SettingsService, StatsService, StoryService
 
 router = APIRouter()
@@ -77,22 +79,22 @@ def chapter(
     content = strip_duplicate_title_heading(content, chapter_title)
 
     return templates.TemplateResponse(
-        "pages/chapter.html",
+        TemplateNames.CHAPTER,
         {
-            "request": request,
-            "title": story.get("title"),
-            "story_link": story.get("source_url"),
-            "author": story.get("author"),
-            "chapter": chapter_title,
-            "content": content,
-            "story_id": story_id,
-            "chapter_id": chapter_id,
-            "prev_chapter_id": prev_id,
-            "next_chapter_id": next_id,
-            "upcoming_chapter_ids": upcoming_chapter_ids,
-            "first_unread_chapter_id": first_unread,
-            "hide_author_notes": hide_author_notes,
-            "reading_settings_schema": reading_settings_schema,
+            ContextKey.REQUEST: request,
+            ContextKey.TITLE: story.get("title"),
+            ContextKey.STORY_LINK: story.get("source_url"),
+            ContextKey.AUTHOR: story.get("author"),
+            ContextKey.CHAPTER: chapter_title,
+            ContextKey.CONTENT: content,
+            ContextKey.STORY_ID: story_id,
+            ContextKey.CHAPTER_ID: chapter_id,
+            ContextKey.PREV_CHAPTER_ID: prev_id,
+            ContextKey.NEXT_CHAPTER_ID: next_id,
+            ContextKey.UPCOMING_CHAPTER_IDS: upcoming_chapter_ids,
+            ContextKey.FIRST_UNREAD_CHAPTER_ID: first_unread,
+            ContextKey.HIDE_AUTHOR_NOTES: hide_author_notes,
+            ContextKey.READING_SETTINGS_SCHEMA: reading_settings_schema,
         },
     )
 
@@ -113,7 +115,7 @@ async def get_chapter_settings(
         logger.error(f"Error fetching chapter settings for user {current_user['id']}: {e}")
         return {
             "settings": {
-                "theme": "light",
+                "theme": "system",
                 "fontFamily": "serif",
                 "fontSize": 100,
                 "lineSpacing": 100,

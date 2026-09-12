@@ -9,34 +9,54 @@ persist_key="library.index" ) }}
 
 <section class="grid">
     {% if stories %} {% for s in stories %}
-    <a class="card" href="{{ s.url }}">
+    <div
+        class="card"
+        data-story-url="{{ s[TemplateContext.URL] }}"
+        role="link"
+        tabindex="0"
+        onclick="window.location.href = this.dataset.storyUrl"
+        onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); window.location.href = this.dataset.storyUrl; }"
+    >
         <div class="card-cover">
-            <img src="{{ s.cover_url or '/static/images/cover-placeholder.svg' }}" alt="{{ s.display_title }} cover" />
-            <div class="card-letter">{{ s.thumbnail_letter }}</div>
-            {% if not s.has_unread %}
+            <img
+                src="{{ s[TemplateContext.COVER_URL] or '/static/images/cover-placeholder.svg' }}"
+                alt="{{ s[TemplateContext.DISPLAY_TITLE] }} cover"
+            />
+            <div class="card-letter">{{ s[TemplateContext.THUMBNAIL_LETTER] }}</div>
+            {% if not s[TemplateContext.HAS_UNREAD] %}
                 <div class="card-badge"><i class="fa-solid fa-check"></i></div>
             {% endif %}
             <div class="card-offline-badge" style="display: none" title="Available offline">
                 <i class="fa-solid fa-cloud-arrow-down"></i>
             </div>
 
-            {% if s.progress_percent > 0 %}
+            {% if s[TemplateContext.PROGRESS_PERCENT] > 0 %}
                 <div class="card-progress-track">
                     <div
-                        class="card-progress-fill{% if s.is_caught_up %} card-progress-complete{% endif %}"
-                        style="width: {{ s.progress_percent }}%;"
+                        class="card-progress-fill{% if s[TemplateContext.IS_CAUGHT_UP] %} card-progress-complete{% endif %}"
+                        style="width: {{ s[TemplateContext.PROGRESS_PERCENT] }}%;"
                     ></div>
                 </div>
             {% endif %}
         </div>
 
         <div class="card-info">
-            <h3>{{ s.display_title }}</h3>
-            <p class="card-meta">{% if s.author %}{{ s.author }}{% endif %}</p>
-            <p class="card-meta">{{ s.last_chapter }} Chapters</p>
-            <p class="card-meta">{{ s.last_chapter_name }}</p>
+            <h3>{{ s[TemplateContext.DISPLAY_TITLE] }}</h3>
+            {% if s[TemplateContext.AUTHOR] %}
+                {% if s[TemplateContext.AUTHOR_ID] %}
+                    <p class="card-meta">
+                        <a href="/authors/{{ s[TemplateContext.AUTHOR_ID] }}" onclick="event.stopPropagation()"
+                            >{{ s[TemplateContext.AUTHOR] }}</a
+                        >
+                    </p>
+                {% else %}
+                    <p class="card-meta">{{ s[TemplateContext.AUTHOR] }}</p>
+                {% endif %}
+            {% endif %}
+            <p class="card-meta">{{ s[TemplateContext.LAST_CHAPTER] }} Chapters</p>
+            <p class="card-meta">{{ s[TemplateContext.LAST_CHAPTER_NAME] }}</p>
         </div>
-    </a>
+    </div>
     {% endfor %} {% else %}
     <div class="empty-state">
         <p>No stories found in your library.</p>

@@ -391,6 +391,20 @@ textarea.form-input {
 
 /* ── Checkbox / Switch ────────────────────────────────────────────────── */
 
+.metadata-tool-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.metadata-tool-actions .btn {
+    justify-content: flex-start;
+    gap: 0.55rem;
+}
+
 .form-checkbox-label {
     display: flex;
     align-items: center;
@@ -414,9 +428,48 @@ textarea.form-input {
 }
 
 .form-switch input[type='checkbox'] {
-    width: 1.1rem;
-    height: 1.1rem;
-    accent-color: #6366f1;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    position: absolute;
+}
+
+.form-switch .toggle {
+    position: relative;
+    width: 42px;
+    height: 24px;
+    display: inline-block;
+    flex-shrink: 0;
+}
+
+.form-switch .slider {
+    position: absolute;
+    inset: 0;
+    background: var(--border, #d1d5db);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.form-switch .slider::before {
+    content: '';
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    left: 3px;
+    top: 3px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 0.2s;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.form-switch input[type='checkbox']:checked + .slider {
+    background: var(--primary, #2563eb);
+}
+
+.form-switch input[type='checkbox']:checked + .slider::before {
+    transform: translateX(18px);
 }
 
 /* ── Description toolbar (for rich text) ───────────────────────────────── */
@@ -537,11 +590,12 @@ textarea.form-input {
 /* ── Cover preview (for metadata panel) ────────────────────────────────── */
 
 .cover-upload {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1.25rem;
-    padding: 2rem 0;
+    display: grid;
+    grid-template-columns: 150px minmax(0, 1fr);
+    align-items: start;
+    gap: 1.5rem;
+    padding: 0.5rem 0;
+    color: #0f172a;
 }
 
 .cover-preview {
@@ -592,12 +646,53 @@ textarea.form-input {
 
 .cover-actions {
     display: flex;
+    align-items: stretch;
     gap: 0.6rem;
     width: 100%;
 }
 
-.cover-actions .form-input {
+.cover-controls {
+    min-width: 0;
+    padding-top: 0.05rem;
+}
+
+.cover-actions .btn {
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.cover-url-row {
+    display: flex;
     flex: 1;
+    gap: 0.6rem;
+    min-width: 0;
+}
+
+.cover-url-row .form-input {
+    flex: 1;
+    min-width: 0;
+}
+
+.cover-divider {
+    height: 1px;
+    margin: 1.35rem 0 0.8rem;
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.cover-local-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    min-height: 2.5rem;
+    color: #334155;
+    font-size: 0.88rem;
+}
+
+.cover-local-row span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 .form-help {
@@ -605,6 +700,24 @@ textarea.form-input {
     font-size: 0.82rem;
     color: #64748b;
     text-align: center;
+}
+
+@media (max-width: 600px) {
+    .cover-upload {
+        grid-template-columns: 1fr;
+    }
+
+    .cover-preview {
+        justify-self: center;
+    }
+
+    .cover-actions {
+        flex-direction: column;
+    }
+
+    .cover-url-row {
+        width: 100%;
+    }
 }
 
 .author-links-list {
@@ -619,6 +732,72 @@ textarea.form-input {
     grid-template-columns: 1fr 1fr auto;
     gap: 0.45rem;
     align-items: center;
+}
+
+/* ── Theme surfaces ──────────────────────────────────────────────────── */
+
+[data-theme='dark'] .unified-panel,
+[data-theme='sepia'] .unified-panel {
+    color: var(--text-primary);
+}
+
+[data-theme='dark'] .unified-panel-title,
+[data-theme='dark'] .unified-panel-tab.active,
+[data-theme='dark'] .unified-panel-tab:hover,
+[data-theme='dark'] .panel-section > h3,
+[data-theme='dark'] .panel-center h3,
+[data-theme='dark'] .form-group label,
+[data-theme='dark'] .form-info-text,
+[data-theme='dark'] .tag-entry,
+[data-theme='sepia'] .unified-panel-title,
+[data-theme='sepia'] .unified-panel-tab.active,
+[data-theme='sepia'] .unified-panel-tab:hover,
+[data-theme='sepia'] .panel-section > h3,
+[data-theme='sepia'] .panel-center h3,
+[data-theme='sepia'] .form-group label,
+[data-theme='sepia'] .form-info-text,
+[data-theme='sepia'] .tag-entry {
+    color: var(--text-primary);
+}
+
+[data-theme='dark'] .unified-panel-tab,
+[data-theme='dark'] .unified-panel-close,
+[data-theme='dark'] .panel-center p,
+[data-theme='dark'] .form-hint,
+[data-theme='dark'] .tag-entry::placeholder,
+[data-theme='sepia'] .unified-panel-tab,
+[data-theme='sepia'] .unified-panel-close,
+[data-theme='sepia'] .panel-center p,
+[data-theme='sepia'] .form-hint,
+[data-theme='sepia'] .tag-entry::placeholder {
+    color: var(--text-secondary);
+}
+
+[data-theme='dark'] .unified-panel-tabs,
+[data-theme='dark'] .form-input,
+[data-theme='dark'] .tags-input,
+[data-theme='dark'] .cover-divider,
+[data-theme='sepia'] .unified-panel-tabs,
+[data-theme='sepia'] .form-input,
+[data-theme='sepia'] .tags-input,
+[data-theme='sepia'] .cover-divider {
+    border-color: var(--border-color);
+}
+
+[data-theme='dark'] .form-input,
+[data-theme='dark'] .tags-input,
+[data-theme='dark'] .cover-preview,
+[data-theme='sepia'] .form-input,
+[data-theme='sepia'] .tags-input,
+[data-theme='sepia'] .cover-preview {
+    background: var(--surface-raised);
+    color: var(--text-primary);
+}
+
+[data-theme='dark'] .unified-panel-close:hover,
+[data-theme='sepia'] .unified-panel-close:hover {
+    background: var(--surface-hover);
+    color: var(--text-primary);
 }
 
 .author-link-row input {

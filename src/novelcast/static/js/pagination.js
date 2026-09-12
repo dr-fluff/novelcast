@@ -12,9 +12,10 @@ const PAGE_SIZE = 15;
  *                                               (handles sort reordering, dynamic adds).
  * @param {HTMLElement}  opts.pagerEl          - The .pagination div to render into.
  * @param {number}       [opts.pageSize]       - Items per page (default PAGE_SIZE).
+ * @param {(items: unknown[]) => void} [opts.renderPage] - Custom page renderer.
  * @returns {{ show: (page: number) => void, refresh: () => void }}
  */
-function createPaginator({ getItems, pagerEl, pageSize = PAGE_SIZE }) {
+function createPaginator({ getItems, pagerEl, pageSize = PAGE_SIZE, renderPage = null }) {
     let currentPage = 1;
 
     function items() {
@@ -32,13 +33,17 @@ function createPaginator({ getItems, pagerEl, pageSize = PAGE_SIZE }) {
         const start = (currentPage - 1) * pageSize;
         const end = start + pageSize;
 
-        all.forEach((el, i) => {
-            if (i >= start && i < end) {
-                el.classList.remove('paged-hidden');
-            } else {
-                el.classList.add('paged-hidden');
-            }
-        });
+        if (renderPage) {
+            renderPage(all.slice(start, end));
+        } else {
+            all.forEach((el, i) => {
+                if (i >= start && i < end) {
+                    el.classList.remove('paged-hidden');
+                } else {
+                    el.classList.add('paged-hidden');
+                }
+            });
+        }
 
         renderButtons(total);
     }
@@ -100,7 +105,50 @@ function createPaginator({ getItems, pagerEl, pageSize = PAGE_SIZE }) {
 (function initChapterPagination() {
     const list = document.getElementById('chapterList');
     if (!list) return;
-    if (list.querySelectorAll('.chapter-item').length <= PAGE_SIZE) return;
+
+    let chapterData = [];
+    try {
+        chapterData = JSON.parse(list.dataset.chapterData || '[]');
+    } catch (error) {
+        console.error('Could not parse chapter data', error);
+    }
+
+    const readChapters = new Set(JSON.parse(list.dataset.readChapters || '[]'));
+    const lastChapterId = Number(list.dataset.lastChapterId) || null;
+    const storyId = list.dataset.storyId;
+    let sortMode = document.querySelector('.story-page')?.dataset.chapterSort || 'asc';
+
+    function sortedItems() {
+        return [...chapterData].sort((a, b) => {
+            const difference = (Number(a.chapter_number) || 0) - (Number(b.chapter_number) || 0);
+            return sortMode === 'desc' ? -difference : difference;
+        });
+    }
+
+    function renderChapter(item) {
+        const chapterId = Number(item.id);
+        const isRead = readChapters.has(chapterId);
+        const isCurrent = lastChapterId === chapterId;
+        const row = document.createElement('li');
+        row.className = `chapter-item${isRead ? ' chapter-read' : ''}${isCurrent ? ' chapter-current' : ''}`;
+        row.dataset.chapterId = String(chapterId);
+        row.dataset.chapterNumber = String(item.chapter_number);
+        const addedDate = item.created_at ? new Date(item.created_at).toISOString().slice(0, 10) : '';
+        row.innerHTML = `
+            <a href="/chapter?story_id=${encodeURIComponent(storyId)}&chapter_id=${chapterId}" class="chapter-link">
+                <div class="chapter-main">
+                    <span class="chapter-number">Chapter ${item.chapter_number}</span>
+                    <span class="chapter-name"></span>
+                    ${isCurrent ? '<span class="chapter-current-badge" title="You\'re currently reading this chapter"><i class="fa-solid fa-bookmark"></i> Continue</span>' : ''}
+                </div>
+                <span class="chapter-status">
+                    <span class="chapter-status-label${isRead ? ' status-read' : ''}">${isRead ? 'Read' : 'Unread'}</span>
+                    ${addedDate ? `<span class="chapter-added-date">Added ${addedDate}</span>` : ''}
+                </span>
+            </a>`;
+        row.querySelector('.chapter-name').textContent = item.title || 'Untitled chapter';
+        return row;
+    }
 
     const pagerEl = document.createElement('div');
     pagerEl.className = 'pagination';
@@ -109,9 +157,23 @@ function createPaginator({ getItems, pagerEl, pageSize = PAGE_SIZE }) {
 
     // Re-query each time so cycleSort() DOM reordering is respected
     const paginator = createPaginator({
-        getItems: () => [...list.querySelectorAll('.chapter-item')],
+        getItems: () => sortedItems(),
         pagerEl,
+        pageSize: PAGE_SIZE,
+        renderPage: (items) => {
+            list.replaceChildren(...items.map(renderChapter));
+        },
     });
+
+    window.chapterPaginator = paginator;
+    window.setChapterSortMode = (mode) => {
+        sortMode = mode;
+        paginator.refresh();
+    };
+    window.showChapterId = (chapterId) => {
+        const index = sortedItems().findIndex((item) => Number(item.id) === Number(chapterId));
+        if (index >= 0) paginator.show(Math.floor(index / PAGE_SIZE) + 1);
+    };
 
     // Hook into cycleSort if it exists: after sort, reset to page 1
     const _origCycleSort = window.cycleSort;
@@ -123,8 +185,6 @@ function createPaginator({ getItems, pagerEl, pageSize = PAGE_SIZE }) {
         };
     }
 
-    // Expose so story_page.js can call window.chapterPaginator.refresh() if needed
-    window.chapterPaginator = paginator;
 })();
 
 /* ── File table pagination ────────────────────────────────────────────── */

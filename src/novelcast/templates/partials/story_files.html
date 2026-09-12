@@ -1,0 +1,48 @@
+{% if story_files %}
+    <table class="file-table">
+        <thead>
+            <tr>
+                <th class="file-col-path">Path</th>
+                <th class="file-col-size">Size</th>
+                <th class="file-col-type">Type</th>
+                <th class="file-col-actions"></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for file in story_files %}
+                {% set ext = file.relative_path.rsplit('.', 1)[-1] | lower if '.' in file.relative_path else '' %}
+                {% set ftype = file.type | lower if file.type is defined else ext %}
+                <tr class="file-row">
+                    <td class="file-col-path">
+                        <span
+                            class="file-path-text"
+                            data-full="{{ file.path | default(file.relative_path) }}"
+                            data-relative="{{ file.relative_path }}"
+                        >
+                            {{ file.relative_path }}
+                        </span>
+                    </td>
+                    <td class="file-col-size">{{ file.size }}</td>
+                    <td class="file-col-type">
+                        <span class="file-type-badge file-type-{{ ftype }}">{{ file.type if file.type is defined else ext }}</span>
+                    </td>
+                    <td class="file-col-actions">
+                        <div class="file-menu-wrapper">
+                            <button
+                                class="btn-file-menu"
+                                title="More options"
+                                onclick="event.stopPropagation(); openFileMenu(this, {{ (file.path | default(file.relative_path)) | tojson }}, {{ (file.type | default(ext)) | tojson }})"
+                            >
+                                <i class="fa-solid fa-ellipsis-vertical"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <div class="empty-state">
+        <p>No files available for this story.</p>
+    </div>
+{% endif %}

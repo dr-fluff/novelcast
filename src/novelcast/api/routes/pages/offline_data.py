@@ -5,6 +5,8 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.templating import Jinja2Templates
 
 from novelcast.api.deps import get_current_user, get_templates
+from novelcast.core.template_names import TemplateNames
+from novelcast.core.template_context import TemplateContext as ContextKey
 
 router = APIRouter()
 
@@ -16,9 +18,9 @@ def offline_data_page(
 ):
 
     return templates.TemplateResponse(
-            "pages/offline_data.html",
+            TemplateNames.OFFLINE_DATA,
             {
-                "request": request,
-                "current_user": current_user,
+                ContextKey.REQUEST: request,
+                ContextKey.CURRENT_USER: current_user,
             },
         )

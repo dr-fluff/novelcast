@@ -1,6 +1,6 @@
 {# novelcast/templates/pages/story.html #} {% extends "layouts/base.html" %}
 {% block title %}
-    {{ story["title"] }}
+    {{ story[TemplateContext.TITLE] }}
     · NovelCast
 {% endblock %}
 {% block head %}
@@ -13,7 +13,7 @@
 
     <section
         class="story-page"
-        data-story-id="{{ story['id'] }}"
+        data-story-id="{{ story[TemplateContext.ID] }}"
         data-first-unread-id="{{ first_unread_chapter_id | default('', true) }}"
         data-last-chapter-id="{{ last_chapter_id | default('', true) }}"
         data-chapter-sort="{{ story_preferences.chapter_sort | default('asc') }}"
@@ -24,8 +24,8 @@
         {# ── Hero ─────────────────────────────────────────────────────────── #}
         <div class="story-hero">
             <div class="story-cover-wrap">
-                {% if story["cover_url"] %}
-                    <img class="story-cover" src="{{ story['cover_url'] }}" alt="Cover for {{ story['title'] }}" />
+                {% if story[TemplateContext.COVER_URL] %}
+                    <img class="story-cover" src="{{ story[TemplateContext.COVER_URL] }}" alt="Cover for {{ story[TemplateContext.TITLE] }}" />
                 {% else %}
                     <div class="story-cover story-cover-placeholder">
                         <i class="fa-solid fa-book-open"></i>
@@ -34,13 +34,13 @@
             </div>
 
             <div class="story-info">
-                <h1 class="story-title">{{ story["title"] }}</h1>
+                <h1 class="story-title">{{ story[TemplateContext.TITLE] }}</h1>
 
-                {% if story["subtitle"] %}
-                    <p class="story-subtitle">{{ story["subtitle"] }}</p>
+                {% if story[TemplateContext.SUBTITLE] %}
+                    <p class="story-subtitle">{{ story[TemplateContext.SUBTITLE] }}</p>
                 {% endif %}
-                {% if story["series"] %}
-                    <p class="story-subtitle">{{ story["series"] }}</p>
+                {% if story[TemplateContext.SERIES] %}
+                    <p class="story-subtitle">{{ story[TemplateContext.SERIES] }}</p>
                 {% endif %}
 
                 <p class="story-author">
@@ -53,63 +53,63 @@
                             {% endif %}
                         {% endfor %}
                     {% else %}
-                        <span class="story-author-name">{{ story["author"] or "Unknown author" }}</span>
+                        <span class="story-author-name">{{ story[TemplateContext.AUTHOR] or "Unknown author" }}</span>
                     {% endif %}
                 </p>
 
                 <dl class="story-meta-grid">
-                    {% if story["narrators"] %}
+                    {% if story[TemplateContext.NARRATORS] %}
                         <div class="meta-row">
                             <dt>Narrators</dt>
-                            <dd>{{ story["narrators"] }}</dd>
+                            <dd>{{ story[TemplateContext.NARRATORS] }}</dd>
                         </div>
                     {% endif %}
-                    {% if story["publish_year"] %}
+                    {% if story[TemplateContext.PUBLISH_YEAR] %}
                         <div class="meta-row">
                             <dt>Publish year</dt>
-                            <dd>{{ story["publish_year"] }}</dd>
+                            <dd>{{ story[TemplateContext.PUBLISH_YEAR] }}</dd>
                         </div>
                     {% endif %}
-                    {% if story["publisher"] %}
+                    {% if story[TemplateContext.PUBLISHER] %}
                         <div class="meta-row">
                             <dt>Publisher</dt>
-                            <dd>{{ story["publisher"] }}</dd>
+                            <dd>{{ story[TemplateContext.PUBLISHER] }}</dd>
                         </div>
                     {% endif %}
-                    {% if story["genres"] %}
+                    {% if story[TemplateContext.GENRES] %}
                         <div class="meta-row">
                             <dt>Genres</dt>
-                            <dd>{{ story["genres"] }}</dd>
+                            <dd>{{ story[TemplateContext.GENRES] }}</dd>
                         </div>
                     {% endif %}
-                    {% if story["tags"] %}
+                    {% if story[TemplateContext.TAGS] %}
                         <div class="meta-row">
                             <dt>Tags</dt>
-                            <dd>{{ story["tags"] }}</dd>
+                            <dd>{{ story[TemplateContext.TAGS] }}</dd>
                         </div>
                     {% endif %}
-                    {% if story["language"] %}
+                    {% if story[TemplateContext.LANGUAGE] %}
                         <div class="meta-row">
                             <dt>Language</dt>
-                            <dd>{{ story["language"] }}</dd>
+                            <dd>{{ story[TemplateContext.LANGUAGE] }}</dd>
                         </div>
                     {% endif %}
-                    {% if story["size"] %}
+                    {% if story[TemplateContext.SIZE] %}
                         <div class="meta-row">
                             <dt>Size</dt>
-                            <dd>{{ story["size"] }}</dd>
+                            <dd>{{ story[TemplateContext.SIZE] }}</dd>
                         </div>
                     {% endif %}
-                    {% if story["source_url"] %}
+                    {% if story[TemplateContext.SOURCE_URL] %}
                         <div class="meta-row">
                             <dt>Source</dt>
                             <dd>
-                                <a href="{{ story['source_url'] }}" target="_blank" rel="noreferrer" class="meta-link"
-                                    >{{ story["source_url"] }}</a
+                                <a href="{{ story[TemplateContext.SOURCE_URL] }}" target="_blank" rel="noreferrer" class="meta-link"
+                                    >{{ story[TemplateContext.SOURCE_URL] }}</a
                                 >
                             </dd>
                         </div>
-                    {% elif not story["narrators"] and not story["publish_year"] %}
+                    {% elif not story[TemplateContext.NARRATORS] and not story[TemplateContext.PUBLISH_YEAR] %}
                         <div class="meta-row">
                             <dt>Source</dt>
                             <dd class="meta-muted">No source URL available.</dd>
@@ -163,6 +163,25 @@
                     </div>
                 {% endif %}
 
+                {% if story[TemplateContext.AUTO_UPDATE] or story[TemplateContext.HIDE_AUTHOR_NOTES] %}
+                    <div class="story-active-tools" aria-label="Active story tools">
+                        {% if story[TemplateContext.AUTO_UPDATE] %}
+                            <span class="story-active-tool" title="Auto-update story" aria-label="Auto-update story">
+                                <i class="fa-solid fa-arrows-rotate" aria-hidden="true"></i>
+                            </span>
+                        {% endif %}
+                        {% if story[TemplateContext.HIDE_AUTHOR_NOTES] %}
+                            <span
+                                class="story-active-tool"
+                                title="Hide author notes in reader"
+                                aria-label="Hide author notes in reader"
+                            >
+                                <i class="fa-solid fa-eye-slash" aria-hidden="true"></i>
+                            </span>
+                        {% endif %}
+                    </div>
+                {% endif %}
+
                 <div class="story-action-row">
                     {% if last_chapter_id or first_unread_chapter_id %}
                         <button class="btn-play" onclick="goToReading()"><i class="fa-solid fa-play"></i> Read</button>
@@ -195,9 +214,9 @@
                     <i class="fa-solid fa-circle-check"></i> Available offline
                 </span>
 
-                {% if story["description"] %}
+                {% if story[TemplateContext.DESCRIPTION] %}
                     <div class="story-description-block">
-                        <p class="story-description" id="storyDescription">{{ story["description"] }}</p>
+                        <p class="story-description" id="storyDescription">{{ story[TemplateContext.DESCRIPTION] }}</p>
                         <button class="read-more-btn" id="readMoreBtn" onclick="toggleDescription()">
                             Read more <i class="fa-solid fa-chevron-down"></i>
                         </button>
@@ -232,36 +251,14 @@
 
             <div class="collapsible-body" id="chaptersBody">
                 {% if chapters %}
-                    <ul class="chapter-list" id="chapterList">
-                        {% for chapter in chapters %}
-                            <li
-                                class="chapter-item {% if chapter['id'] in read_chapters %}chapter-read{% endif %} {% if last_chapter_id and chapter['id'] == last_chapter_id %}chapter-current{% endif %}"
-                                data-chapter-number="{{ chapter['chapter_number'] }}"
-                            >
-                                <a
-                                    href="/chapter?story_id={{ story['id'] }}&chapter_id={{ chapter['id'] }}"
-                                    class="chapter-link"
-                                >
-                                    <div class="chapter-main">
-                                        <span class="chapter-number">Chapter {{ chapter["chapter_number"] }}</span>
-                                        <span class="chapter-name">{{ chapter["title"] or "Untitled chapter" }}</span>
-                                        {% if last_chapter_id and chapter['id'] == last_chapter_id %}
-                                            <span
-                                                class="chapter-current-badge"
-                                                title="You're currently reading this chapter"
-                                            >
-                                                <i class="fa-solid fa-bookmark"></i> Continue
-                                            </span>
-                                        {% endif %}
-                                    </div>
-                                    <span
-                                        class="chapter-status {% if chapter['id'] in read_chapters %}status-read{% endif %}"
-                                    >
-                                        {% if chapter["id"] in read_chapters %}Read{% else %}Unread{% endif %}
-                                    </span>
-                                </a>
-                            </li>
-                        {% endfor %}
+                    <ul
+                        class="chapter-list"
+                        id="chapterList"
+                        data-chapter-data="{{ chapter_data | tojson | forceescape }}"
+                        data-read-chapters="{{ read_chapters | list | tojson | forceescape }}"
+                        data-last-chapter-id="{{ last_chapter_id | default('', true) }}"
+                        data-story-id="{{ story[TemplateContext.ID] }}"
+                    >
                     </ul>
                 {% else %}
                     <div class="empty-state">
@@ -276,9 +273,7 @@
             <div class="collapsible-header" onclick="toggleSection('files')">
                 <div class="collapsible-header-left">
                     <span class="collapsible-title">Library Files</span>
-                    <span class="collapsible-badge"
-                        >{{ story_files | length if story_files else story["file_count"] or 0 }}</span
-                    >
+                    <span class="collapsible-badge">Files</span>
                 </div>
                 <div class="collapsible-header-right">
                     <button
@@ -306,63 +301,7 @@
                 </div>
             </div>
             <div class="collapsible-body collapsed" id="filesBody">
-                {% if story_files %}
-                    <table class="file-table">
-                        <thead>
-                            <tr>
-                                <th class="file-col-path">Path</th>
-                                <th class="file-col-size">Size</th>
-                                <th class="file-col-type">Type</th>
-                                <th class="file-col-actions"></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for file in story_files %}
-                                {%
-                                    set ext = file.relative_path.rsplit('.', 1)[-1] | lower if '.' in
-                                    file.relative_path else ''
-                                %}
-                                {% set ftype = file.type | lower if file.type is defined else ext %}
-                                <tr class="file-row">
-                                    <td class="file-col-path">
-                                        <span
-                                            class="file-path-text"
-                                            data-full="{{ file.path | default(file.relative_path) }}"
-                                            data-relative="{{ file.relative_path }}"
-                                        >
-                                            {{ file.relative_path }}
-                                        </span>
-                                    </td>
-                                    <td class="file-col-size">{{ file.size }}</td>
-                                    <td class="file-col-type">
-                                        <span class="file-type-badge file-type-{{ ftype }}"
-                                            >{{ file.type if file.type is defined else ext }}</span
-                                        >
-                                    </td>
-                                    <td class="file-col-actions">
-                                        <div class="file-menu-wrapper">
-                                            <button
-                                                class="btn-file-menu"
-                                                title="More options"
-                                                onclick="event.stopPropagation(); openFileMenu(
-                                            this,
-                                            {{ (file.path | default(file.relative_path)) | tojson }},
-                                            {{ (file.type | default(ext)) | tojson }}
-                                        )"
-                                            >
-                                                <i class="fa-solid fa-ellipsis-vertical"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                {% else %}
-                    <div class="empty-state">
-                        <p>No files available for this story.</p>
-                    </div>
-                {% endif %}
+                <div id="storyFilesContent" class="story-files-loading">Expand to load library files.</div>
             </div>
         </div>
     </section>
