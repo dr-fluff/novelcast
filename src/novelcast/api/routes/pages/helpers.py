@@ -207,18 +207,21 @@ def resolve_progress(
     story_id: int,
     chapter_list: list[dict],
     progress,
-    chapters,
+    chapters=None,
+    progress_row: dict | None = None,
 ) -> tuple[set[int], int | None, str | None]:
     read_chapters: set[int] = set()
     last_chapter_id = None
     last_read_title = None
 
     if user and user.get("id"):
-        prog = progress.get_progress(user["id"], story_id)
+        prog = progress_row if progress_row is not None else progress.get_progress(user["id"], story_id)
         if prog:
             last_chapter_id = prog.get("last_chapter_id")
             if last_chapter_id:
-                last_chapter = chapters.get_chapter(last_chapter_id)
+                last_chapter = next((chapter for chapter in chapter_list if chapter["id"] == last_chapter_id), None)
+                if last_chapter is None and chapters is not None:
+                    last_chapter = chapters.get_chapter(last_chapter_id)
                 if last_chapter:
                     last_read_title = last_chapter.get("title") or f"Chapter {last_chapter.get('chapter_number')}"
 

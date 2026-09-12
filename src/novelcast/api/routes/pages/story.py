@@ -55,9 +55,10 @@ def story(
         # extra_patterns = get_chapter_filter(request).get_enabled_regexes()
         chapter_list = chapters.list_by_story_filtered(story_id)
         story_files = None
+        progress_row = progress.get_progress(current_user["id"], story_id) if current_user else None
 
         read_chapters, last_chapter_id, last_read_title = resolve_progress(
-            current_user, story_id, chapter_list, progress, chapters
+            current_user, story_id, chapter_list, progress, chapters, progress_row=progress_row
         )
 
         first_unread = next((c["id"] for c in chapter_list if c["id"] not in read_chapters), None)
@@ -73,7 +74,6 @@ def story(
 
         progress_card = None
         if current_user and current_user.get("id"):
-            progress_row = progress.get_progress(current_user["id"], story_id)
             reading_speed_wpm = stats.get_reading_speed_wpm(current_user["id"])
             progress_card = build_reading_progress_card(
                 chapter_list,
