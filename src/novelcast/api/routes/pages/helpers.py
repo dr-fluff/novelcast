@@ -5,7 +5,27 @@ from urllib.parse import quote
 import re
 from bs4 import BeautifulSoup
 
+from novelcast.core.library_constants import (
+    SORT_CREATED,
+    SORT_DIRECTION_ASCENDING,
+    SORT_DIRECTION_DESCENDING,
+    SORT_LAST_READ,
+    SORT_LATEST_CHAPTER_UPDATED,
+    SORT_YEAR,
+)
+
 logger = logging.getLogger(__name__)
+
+DEFAULT_SORT_DIRECTIONS = {
+    SORT_LATEST_CHAPTER_UPDATED: SORT_DIRECTION_DESCENDING,
+    SORT_LAST_READ: SORT_DIRECTION_DESCENDING,
+    SORT_CREATED: SORT_DIRECTION_DESCENDING,
+    SORT_YEAR: SORT_DIRECTION_DESCENDING,
+}
+
+
+def default_sort_direction(sort: str) -> str:
+    return DEFAULT_SORT_DIRECTIONS.get(sort, SORT_DIRECTION_ASCENDING)
 
 
 def _norm(value) -> str:
@@ -55,6 +75,7 @@ def build_story_view_model(story: dict, progress: dict | None) -> dict:
         # keep progress separate (IMPORTANT)
         "progress": {
             "last_read_chapter": furthest_read,
+            "last_read_at": (progress or {}).get("updated_at"),
         },
         # derived UI state (single source of truth)
         "is_caught_up": downloaded > 0 and furthest_read == latest,
@@ -121,8 +142,11 @@ def sort_stories(
     stories: list[dict],
     sort: str,
     ignore_prefixes: list[str] | None = None,  # ← new
+    direction: str | None = None,
 ) -> list[dict]:
     prefixes = ignore_prefixes or []
+    direction = direction if direction in {"asc", "desc"} else default_sort_direction(sort)
+    reverse = direction == "desc"
 
     def title_key(story: dict) -> str:
         return _strip_prefix((story.get("title") or ""), prefixes).lower()
@@ -134,23 +158,28 @@ def sort_stories(
         return story.get(field) is not None, story.get(field)
 
     if sort == "author":
-        return sorted(stories, key=author_key)
+        return sorted(stories, key=author_key, reverse=reverse)
     if sort == "downloaded":
-        return sorted(stories, key=lambda s: s.get("downloaded_chapters", 0), reverse=True)
+        return sorted(stories, key=lambda s: s.get("downloaded_chapters", 0), reverse=reverse)
     if sort == "unread":
-        return sorted(stories, key=lambda s: (not s.get("has_unread"), title_key(s)))
+        return sorted(stories, key=lambda s: (not s.get("has_unread"), title_key(s)), reverse=reverse)
+    if sort == "latest_chapter_updated":
+        return sorted(stories, key=lambda s: date_key(s, "latest_chapter_updated_at"), reverse=reverse)
+    if sort == "last_read":
+        return sorted(stories, key=lambda s: date_key(s.get("progress") or {}, "last_read_at"), reverse=reverse)
     if sort == "updated":
-        return sorted(stories, key=lambda s: date_key(s, "last_updated"), reverse=True)
+        return sorted(stories, key=lambda s: date_key(s, "last_updated"), reverse=reverse)
     if sort == "created":
-        return sorted(stories, key=lambda s: date_key(s, "created_at"), reverse=True)
+        return sorted(stories, key=lambda s: date_key(s, "created_at"), reverse=reverse)
     if sort == "year":
-        return sorted(stories, key=lambda s: s.get("publish_year") or 0, reverse=True)
+        return sorted(stories, key=lambda s: s.get("publish_year") or 0, reverse=reverse)
     if sort == "series":
         return sorted(
             stories,
             key=lambda s: _strip_prefix((s.get("series") or ""), prefixes).lower(),
+            reverse=reverse,
         )
-    return sorted(stories, key=title_key)
+    return sorted(stories, key=title_key, reverse=reverse)
 
 
 def story_filter_options(stories: list[dict]) -> dict[str, list[str]]:

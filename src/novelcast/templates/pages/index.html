@@ -2,7 +2,7 @@
 {% extends "layouts/base.html" %} {% block title %}NovelCast{% endblock %} {% block head %}
 <link rel="stylesheet" href="/static/css/pages/index.css" />
 {% endblock %} {% block content %} {% from "macros/grid_toolbar.html" import render_grid_toolbar %} {% include
-"partials/library_header.html" %} {{ render_grid_toolbar( "/", query, sort, sort_options, filter_options={ "statuses":
+"partials/library_header.html" %} {{ render_grid_toolbar( "/", query, sort, sort_options, sort_direction=sort_direction, filter_options={ "statuses":
 status_options, "genres": filter_options.genres, "tags": filter_options.tags, "series": filter_options.series,
 "languages": filter_options.languages, }, status=status, genre=genre, tag=tag, series=series, language=language,
 persist_key="library.index" ) }}
@@ -69,6 +69,7 @@ persist_key="library.index" ) }}
 <script>
     window.novelcastPageData = {{ {
         "sort": sort,
+        "sort_direction": sort_direction,
         "genre": genre,
         "tag": tag,
         "series": series,

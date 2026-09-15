@@ -17,7 +17,7 @@
 
     const deviceId = getNovelcastDeviceId();
     const libraryStateStorageKey = 'novelcast.library.index';
-    const libraryStateKeys = ['q', 'sort', 'genre', 'tag', 'series', 'language', 'status'];
+    const libraryStateKeys = ['q', 'sort', 'sort_direction', 'genre', 'tag', 'series', 'language', 'status'];
 
     function readLocalLibraryState() {
         try {
@@ -44,6 +44,7 @@
 
     const current = window.novelcastPageData || {
         sort: '',
+        sort_direction: '',
         genre: '',
         tag: '',
         series: '',
@@ -71,6 +72,10 @@
                 params.set(submitter.name, submitter.value);
             }
 
+            if (submitter?.name === 'sort' && submitter.dataset.defaultDirection) {
+                params.set('sort_direction', submitter.dataset.defaultDirection);
+            }
+
             Object.entries(current).forEach(([key, value]) => {
                 if (submitter?.name === key) {
                     return;
@@ -88,6 +93,7 @@
             const value = {
                 q: params.get('q') || '',
                 sort: params.get('sort') || current.sort || 'title',
+                sort_direction: params.get('sort_direction') || current.sort_direction || 'asc',
                 genre: params.get('genre') || '',
                 tag: params.get('tag') || '',
                 series: params.get('series') || '',

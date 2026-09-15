@@ -1,6 +1,6 @@
 """Canonical keys shared by Jinja template contexts."""
 
-
+# novelcast/core/template_context.py
 class TemplateContext:
     REQUEST = "request"
     CURRENT_USER = "current_user"
@@ -58,6 +58,7 @@ class TemplateContext:
     SORT_OPTIONS = "sort_options"
     STATUS_OPTIONS = "status_options"
     SORT = "sort"
+    SORT_DIRECTION = "sort_direction"
     GENRE = "genre"
     TAG = "tag"
     SERIES = "series"

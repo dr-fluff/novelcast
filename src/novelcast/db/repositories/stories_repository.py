@@ -47,15 +47,22 @@ class StoriesRepository(BaseRepository):
                 .subquery()
             )
             rows = db.execute(
-                select(Chapter.story_id, Chapter.title).join(
+                select(Chapter.story_id, Chapter.title, Chapter.created_at).join(
                     subq,
                     (Chapter.story_id == subq.c.story_id) & (Chapter.chapter_number == subq.c.max_num),
                 )
             ).all()
-            latest_title = {row.story_id: row.title for row in rows}
+            latest_chapter = {
+                row.story_id: {"title": row.title, "updated_at": row.created_at} for row in rows
+            }
 
             for d in dicts:
-                d["chapter"] = latest_title.get(d["id"])
+                latest = latest_chapter.get(d["id"], {})
+                d["chapter"] = latest.get("title")
+                # Chapters do not currently have a separate source-update timestamp.
+                # Their creation time records when the newest chapter was added to
+                # NovelCast, which is the best available update signal.
+                d["latest_chapter_updated_at"] = latest.get("updated_at")
 
             return dicts
 

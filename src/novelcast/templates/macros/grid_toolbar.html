@@ -1,11 +1,11 @@
 <!-- novelcast/templates/macros/grid_toolbar.html -->
 {%
-    macro render_grid_toolbar(action, query, sort, sort_options, filter_options=None, status="", genre="", tag="",
+    macro render_grid_toolbar(action, query, sort, sort_options, sort_direction="asc", filter_options=None, status="", genre="", tag="",
     series="", language="", persist_key="")
 %}
     {%
         set has_filters = query or status or genre or tag or series or language or
-        (persist_key and sort and sort != "title")
+        (persist_key and (sort and sort != "title" or sort_direction == "desc"))
     %}
 
     <form
@@ -24,6 +24,20 @@
         </div>
 
         <div class="grid-toolbar-actions">
+            {% if persist_key %}
+                <input type="hidden" name="sort_direction" value="{{ sort_direction }}" />
+                <button
+                    type="submit"
+                    name="sort_direction"
+                    value="{{ 'asc' if sort_direction == 'desc' else 'desc' }}"
+                    class="grid-toolbar-sort-direction"
+                    title="Switch to {{ 'ascending' if sort_direction == 'desc' else 'descending' }} order"
+                    aria-label="Currently sorting {{ 'descending' if sort_direction == 'desc' else 'ascending' }}. Switch to {{ 'ascending' if sort_direction == 'desc' else 'descending' }} order"
+                >
+                    <i class="fa-solid fa-arrow-{{ 'down' if sort_direction == 'desc' else 'up' }}-wide-short"></i>
+                    <span>{{ 'Descending' if sort_direction == 'desc' else 'Ascending' }}</span>
+                </button>
+            {% endif %}
             {% if has_filters %}
                 <a
                     class="btn-secondary grid-toolbar-clear"
@@ -44,6 +58,7 @@
                             type="submit"
                             name="sort"
                             value="{{ option.key }}"
+                            data-default-direction="{{ option.direction | default('asc') }}"
                             class="grid-tool-option {% if option.key == sort %}grid-tool-option--active{% endif %}"
                         >
                             {{ option.label }}
