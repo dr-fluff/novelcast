@@ -802,7 +802,7 @@ const UnifiedPanel = (() => {
                 const removeBtn = $(`coverRemoveBtn-${panelId}`);
                 if (removeBtn) removeBtn.style.display = '';
                 if (statusEl) {
-                    statusEl.textContent = 'Cover updated';
+                    statusEl.textContent = result.data.status === 'linked' ? 'Cover linked' : 'Cover updated';
                     statusEl.className = 'unified-panel-status success';
                 }
             } catch (e) {
@@ -1232,6 +1232,22 @@ const UnifiedPanel = (() => {
 
         confirm(panelId) {
             handlers.add_story?.confirm(panelId);
+        },
+
+        handleCoverFileSelect(panelId, inputEl) {
+            handlers.metadata?.handleCoverFileSelect(panelId, inputEl);
+        },
+
+        toggleCoverUrlInput(panelId) {
+            handlers.metadata?.toggleCoverUrlInput(panelId);
+        },
+
+        fetchCoverFromUrl(panelId) {
+            handlers.metadata?.fetchCoverFromUrl(panelId);
+        },
+
+        removeCover(panelId) {
+            handlers.metadata?.removeCover(panelId);
         },
 
         // Update button text/action based on active tab
