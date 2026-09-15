@@ -4,6 +4,8 @@ from sqlalchemy import select
 from novelcast.db.models import RssEntry
 from novelcast.db.repositories.base import BaseRepository
 
+RSS_ID = "id"
+
 
 class RssEntryRepository(BaseRepository):
     def exists(self, source: str, guid: str) -> bool:
@@ -31,7 +33,7 @@ class RssEntryRepository(BaseRepository):
             db.add(rss)
             db.flush()  # populate rss.id before the row is committed/detached
 
-            return {"id": rss.id}
+            return {RSS_ID: rss.id}
 
     def mark_processed(self, entry_id: int) -> None:
         with self.session() as db:

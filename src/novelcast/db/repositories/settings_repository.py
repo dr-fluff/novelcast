@@ -9,6 +9,8 @@ from sqlalchemy.dialects.sqlite import insert
 from novelcast.db.models.settings import ServerSetting, UserSetting
 from novelcast.db.repositories.base import BaseRepository
 
+SETTINGS_USER_ID = "user_id"
+
 logger = logging.getLogger(__name__)
 
 
@@ -93,7 +95,7 @@ class SettingsRepository(BaseRepository):
             if not rows:
                 return None
 
-            result = {"user_id": user_id}
+            result = {SETTINGS_USER_ID: user_id}
             device_prefix = f"{self.DEVICE_PREFIX}{device_id}." if device_id else None
             device_overrides = {}
 

@@ -7,6 +7,16 @@ from sqlalchemy import select
 from novelcast.db.models.chapter_pattern import ChapterPattern
 from novelcast.db.repositories.base import BaseRepository
 
+PATTERN_ID = "id"
+PATTERN_PATTERN = "pattern"
+PATTERN_DESCRIPTION = "description"
+PATTERN_ENABLED = "enabled"
+PATTERN_IS_BUILTIN = "is_builtin"
+PATTERN_ERROR = "error"
+PATTERN_SAMPLE = "sample"
+PATTERN_MATCHED = "matched"
+PATTERN_GROUPS = "groups"
+
 
 class ChapterPatternRepository(BaseRepository):
     """Repository for chapter pattern management."""
@@ -17,11 +27,11 @@ class ChapterPatternRepository(BaseRepository):
             rows = db.scalars(select(ChapterPattern).order_by(ChapterPattern.id)).all()
             return [
                 {
-                    "id": row.id,
-                    "pattern": row.pattern,
-                    "description": row.description,
-                    "enabled": row.enabled,
-                    "is_builtin": row.is_builtin,
+                    PATTERN_ID: row.id,
+                    PATTERN_PATTERN: row.pattern,
+                    PATTERN_DESCRIPTION: row.description,
+                    PATTERN_ENABLED: row.enabled,
+                    PATTERN_IS_BUILTIN: row.is_builtin,
                 }
                 for row in rows
             ]
@@ -39,11 +49,11 @@ class ChapterPatternRepository(BaseRepository):
             if not row:
                 return None
             return {
-                "id": row.id,
-                "pattern": row.pattern,
-                "description": row.description,
-                "enabled": row.enabled,
-                "is_builtin": row.is_builtin,
+                PATTERN_ID: row.id,
+                PATTERN_PATTERN: row.pattern,
+                PATTERN_DESCRIPTION: row.description,
+                PATTERN_ENABLED: row.enabled,
+                PATTERN_IS_BUILTIN: row.is_builtin,
             }
 
     def create(self, pattern: str, description: str = "") -> int:
@@ -72,11 +82,11 @@ class ChapterPatternRepository(BaseRepository):
             db.flush()
 
             return {
-                "id": row.id,
-                "pattern": row.pattern,
-                "description": row.description,
-                "enabled": row.enabled,
-                "is_builtin": row.is_builtin,
+                PATTERN_ID: row.id,
+                PATTERN_PATTERN: row.pattern,
+                PATTERN_DESCRIPTION: row.description,
+                PATTERN_ENABLED: row.enabled,
+                PATTERN_IS_BUILTIN: row.is_builtin,
             }
 
     def set_enabled(self, pattern_id: int, enabled: bool) -> None:
@@ -122,16 +132,16 @@ class ChapterPatternRepository(BaseRepository):
         try:
             compiled = re.compile(pattern, re.IGNORECASE)
         except re.error as e:
-            return [{"error": str(e)}]
+            return [{PATTERN_ERROR: str(e)}]
 
         results = []
         for sample in samples:
             match = compiled.search(sample)
             results.append(
                 {
-                    "sample": sample,
-                    "matched": bool(match),
-                    "groups": match.groups() if match else None,
+                    PATTERN_SAMPLE: sample,
+                    PATTERN_MATCHED: bool(match),
+                    PATTERN_GROUPS: match.groups() if match else None,
                 }
             )
         return results

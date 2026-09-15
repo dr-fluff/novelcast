@@ -5,6 +5,12 @@ from sqlalchemy import func, select
 from novelcast.db.models.user import User
 from novelcast.db.repositories.base import BaseRepository
 
+USER_ID = "id"
+USER_USERNAME = "username"
+USER_PASSWORD_HASH = "password_hash"
+USER_IS_ROOT = "is_root"
+USER_CREATED_AT = "created_at"
+
 
 class UsersRepository(BaseRepository):
     def get_by_id(self, user_id: int) -> dict | None:
@@ -83,9 +89,9 @@ def _to_dict(user: User | None) -> dict | None:
     if user is None:
         return None
     return {
-        "id": user.id,
-        "username": user.username,
-        "password_hash": user.password_hash,
-        "is_root": int(user.is_root),
-        "created_at": user.created_at,
+        USER_ID: user.id,
+        USER_USERNAME: user.username,
+        USER_PASSWORD_HASH: user.password_hash,
+        USER_IS_ROOT: int(user.is_root),
+        USER_CREATED_AT: user.created_at,
     }

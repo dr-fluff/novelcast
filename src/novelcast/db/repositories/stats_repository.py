@@ -11,6 +11,9 @@ from novelcast.db.models.progress import ReadingProgress
 from novelcast.db.models.stats import UserDailyActivity, UserDevice
 from novelcast.db.repositories.base import BaseRepository
 
+ACTIVITY_DATE = "date"
+ACTIVITY_READ_SECONDS = "read_seconds"
+
 
 class StatsRepository(BaseRepository):
     # ── read time / heartbeat ───────────────────────────────────────────
@@ -62,7 +65,10 @@ class StatsRepository(BaseRepository):
                 )
                 .order_by(UserDailyActivity.activity_date)
             ).all()
-            return [{"date": activity_date, "read_seconds": read_seconds} for activity_date, read_seconds in rows]
+            return [
+                {ACTIVITY_DATE: activity_date, ACTIVITY_READ_SECONDS: read_seconds}
+                for activity_date, read_seconds in rows
+            ]
 
     # ── devices ──────────────────────────────────────────────────────────
 

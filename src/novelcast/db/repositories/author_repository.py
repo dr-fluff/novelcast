@@ -10,6 +10,24 @@ from novelcast.db.models.relationships import story_author
 from novelcast.db.models.story import Story
 from novelcast.db.repositories.base import BaseRepository
 
+AUTHOR_ID = "id"
+AUTHOR_NAME = "name"
+AUTHOR_BIO = "bio"
+AUTHOR_PICTURE_PATH = "picture_path"
+AUTHOR_LINKS = "links"
+AUTHOR_STORIES = "stories"
+AUTHOR_STORY_COUNT = "story_count"
+AUTHOR_LAST_UPDATED = "last_updated"
+AUTHOR_FIRST_STORY_AT = "first_story_at"
+AUTHOR_LABEL = "label"
+AUTHOR_URL = "url"
+AUTHOR_TITLE = "title"
+AUTHOR_SOURCE_URL = "source_url"
+AUTHOR_COVER_PATH = "cover_path"
+AUTHOR_DOWNLOADED_CHAPTERS = "downloaded_chapters"
+AUTHOR_TOTAL_CHAPTERS = "total_chapters"
+AUTHOR_CONFLICT = "conflict"
+
 
 class AuthorRepository(BaseRepository):
     # ── reads ──────────────────────────────────────────────────────────────
@@ -38,14 +56,14 @@ class AuthorRepository(BaseRepository):
                 author = row[0]
                 result.append(
                     {
-                        "id": author.id,
-                        "name": author.name,
-                        "bio": author.bio,
-                        "picture_path": author.picture_path,
-                        "links": [_link_to_dict(lnk) for lnk in author.links],
-                        "story_count": row.story_count or 0,
-                        "last_updated": row.last_updated,
-                        "first_story_at": row.first_story_at,
+                        AUTHOR_ID: author.id,
+                        AUTHOR_NAME: author.name,
+                        AUTHOR_BIO: author.bio,
+                        AUTHOR_PICTURE_PATH: author.picture_path,
+                        AUTHOR_LINKS: [_link_to_dict(lnk) for lnk in author.links],
+                        AUTHOR_STORY_COUNT: row.story_count or 0,
+                        AUTHOR_LAST_UPDATED: row.last_updated,
+                        AUTHOR_FIRST_STORY_AT: row.first_story_at,
                     }
                 )
             return result
@@ -64,12 +82,12 @@ class AuthorRepository(BaseRepository):
             ).all()
 
             return {
-                "id": author.id,
-                "name": author.name,
-                "bio": author.bio,
-                "picture_path": author.picture_path,
-                "links": [_link_to_dict(lnk) for lnk in author.links],
-                "stories": [_story_to_dict(s) for s in stories],
+                AUTHOR_ID: author.id,
+                AUTHOR_NAME: author.name,
+                AUTHOR_BIO: author.bio,
+                AUTHOR_PICTURE_PATH: author.picture_path,
+                AUTHOR_LINKS: [_link_to_dict(lnk) for lnk in author.links],
+                AUTHOR_STORIES: [_story_to_dict(s) for s in stories],
             }
 
     def get_for_story(self, story_id: int) -> list[dict]:
@@ -143,7 +161,7 @@ class AuthorRepository(BaseRepository):
                 target = _normalize_author_name(name)
                 for a in db.scalars(select(Author)).all():
                     if a.id != author_id and _normalize_author_name(a.name) == target:
-                        return {"conflict": _author_to_dict(a)}
+                        return {AUTHOR_CONFLICT: _author_to_dict(a)}
 
             author.name = name
             author.bio = bio
@@ -265,25 +283,29 @@ def _author_to_dict(author: Author | None) -> dict | None:
     if author is None:
         return None
     return {
-        "id": author.id,
-        "name": author.name,
-        "bio": author.bio,
-        "picture_path": author.picture_path,
-        "links": [_link_to_dict(lnk) for lnk in author.links],
+        AUTHOR_ID: author.id,
+        AUTHOR_NAME: author.name,
+        AUTHOR_BIO: author.bio,
+        AUTHOR_PICTURE_PATH: author.picture_path,
+        AUTHOR_LINKS: [_link_to_dict(lnk) for lnk in author.links],
     }
 
 
 def _link_to_dict(link: AuthorLink) -> dict:
-    return {"id": link.id, "label": link.label, "url": link.url}
+    return {
+        AUTHOR_ID: link.id,
+        AUTHOR_LABEL: link.label,
+        AUTHOR_URL: link.url,
+    }
 
 
 def _story_to_dict(story: Story) -> dict:
     return {
-        "id": story.id,
-        "title": story.title,
-        "source_url": story.source_url,
-        "cover_path": story.cover_path,
-        "downloaded_chapters": story.downloaded_chapters,
-        "total_chapters": story.total_chapters,
-        "last_updated": story.last_updated,
+        AUTHOR_ID: story.id,
+        AUTHOR_TITLE: story.title,
+        AUTHOR_SOURCE_URL: story.source_url,
+        AUTHOR_COVER_PATH: story.cover_path,
+        AUTHOR_DOWNLOADED_CHAPTERS: story.downloaded_chapters,
+        AUTHOR_TOTAL_CHAPTERS: story.total_chapters,
+        AUTHOR_LAST_UPDATED: story.last_updated,
     }

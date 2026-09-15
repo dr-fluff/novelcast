@@ -9,6 +9,13 @@
 from novelcast.db.models.chapter import ChapterFile
 from novelcast.db.repositories.base import BaseRepository
 
+FILE_ID = "id"
+FILE_CHAPTER_ID = "chapter_id"
+FILE_PATH = "file_path"
+FILE_FORMAT = "format"
+FILE_IS_CANONICAL = "is_canonical"
+FILE_CREATED_AT = "created_at"
+
 
 class FilesRepository(BaseRepository):
     def get_by_id(self, file_id: int) -> dict | None:
@@ -26,10 +33,10 @@ def _file_to_dict(row: ChapterFile | None) -> dict | None:
     if row is None:
         return None
     return {
-        "id": row.id,
-        "chapter_id": row.chapter_id,
-        "file_path": row.file_path,
-        "format": row.format,
-        "is_canonical": row.is_canonical,
-        "created_at": row.created_at,
+        FILE_ID: row.id,
+        FILE_CHAPTER_ID: row.chapter_id,
+        FILE_PATH: row.file_path,
+        FILE_FORMAT: row.format,
+        FILE_IS_CANONICAL: row.is_canonical,
+        FILE_CREATED_AT: row.created_at,
     }

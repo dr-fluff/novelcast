@@ -1,43 +1,49 @@
 # novelcast/db/models/relationships.py
 
-
-from sqlalchemy import Column, ForeignKey, Table
+from sqlalchemy import ForeignKey
+from sqlalchemy.orm import Mapped, mapped_column
 
 from novelcast.db.base import Base
 
-# Many-to-many: stories ↔ authors
-story_author = Table(
-    "story_author",
-    Base.metadata,
-    Column("story_id", ForeignKey("stories.id", ondelete="CASCADE"), primary_key=True),
-    Column("author_id", ForeignKey("authors.id", ondelete="CASCADE"), primary_key=True),
-)
 
-# Many-to-many: users ↔ groups
-user_groups = Table(
-    "user_groups",
-    Base.metadata,
-    Column("user_id", ForeignKey("users.id", ondelete="CASCADE"), primary_key=True),
-    Column("group_id", ForeignKey("groups.id", ondelete="CASCADE"), primary_key=True),
-)
+class StoryAuthor(Base):
+    __tablename__ = "story_author"
 
-story_tags = Table(
-    "story_tags",
-    Base.metadata,
-    Column("story_id", ForeignKey("stories.id", ondelete="CASCADE"), primary_key=True),
-    Column("tag_id", ForeignKey("tags.id", ondelete="CASCADE"), primary_key=True),
-)
+    story_id: Mapped[int] = mapped_column(ForeignKey("stories.id", ondelete="CASCADE"), primary_key=True)
+    author_id: Mapped[int] = mapped_column(ForeignKey("authors.id", ondelete="CASCADE"), primary_key=True)
 
-story_genres = Table(
-    "story_genres",
-    Base.metadata,
-    Column("story_id", ForeignKey("stories.id", ondelete="CASCADE"), primary_key=True),
-    Column("genre_id", ForeignKey("genres.id", ondelete="CASCADE"), primary_key=True),
-)
 
-story_series = Table(
-    "story_series",
-    Base.metadata,
-    Column("story_id", ForeignKey("stories.id", ondelete="CASCADE"), primary_key=True),
-    Column("series_id", ForeignKey("series.id", ondelete="CASCADE"), primary_key=True),
-)
+class UserGroup(Base):
+    __tablename__ = "user_groups"
+
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    group_id: Mapped[int] = mapped_column(ForeignKey("groups.id", ondelete="CASCADE"), primary_key=True)
+
+
+class StoryTag(Base):
+    __tablename__ = "story_tags"
+
+    story_id: Mapped[int] = mapped_column(ForeignKey("stories.id", ondelete="CASCADE"), primary_key=True)
+    tag_id: Mapped[int] = mapped_column(ForeignKey("tags.id", ondelete="CASCADE"), primary_key=True)
+
+
+class StoryGenre(Base):
+    __tablename__ = "story_genres"
+
+    story_id: Mapped[int] = mapped_column(ForeignKey("stories.id", ondelete="CASCADE"), primary_key=True)
+    genre_id: Mapped[int] = mapped_column(ForeignKey("genres.id", ondelete="CASCADE"), primary_key=True)
+
+
+class StorySeries(Base):
+    __tablename__ = "story_series"
+
+    story_id: Mapped[int] = mapped_column(ForeignKey("stories.id", ondelete="CASCADE"), primary_key=True)
+    series_id: Mapped[int] = mapped_column(ForeignKey("series.id", ondelete="CASCADE"), primary_key=True)
+
+
+# Preserve the public names used by the existing relationship declarations.
+story_author = StoryAuthor.__table__
+user_groups = UserGroup.__table__
+story_tags = StoryTag.__table__
+story_genres = StoryGenre.__table__
+story_series = StorySeries.__table__

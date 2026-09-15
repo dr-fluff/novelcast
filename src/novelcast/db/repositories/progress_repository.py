@@ -10,6 +10,17 @@ from novelcast.db.models.chapter import Chapter, ChapterProgress
 from novelcast.db.models.progress import ReadingProgress
 from novelcast.db.repositories.base import BaseRepository
 
+PROGRESS_USER_ID = "user_id"
+PROGRESS_STORY_ID = "story_id"
+PROGRESS_LAST_CHAPTER_ID = "last_chapter_id"
+PROGRESS_LAST_CHAPTER_NUMBER = "last_chapter_number"
+PROGRESS_LAST_POSITION = "last_position"
+PROGRESS_FURTHEST_CHAPTER_ID = "furthest_chapter_id"
+PROGRESS_FURTHEST_CHAPTER_NUMBER = "furthest_chapter_number"
+PROGRESS_UPDATED_AT = "updated_at"
+PROGRESS_PAGE = "page"
+PROGRESS_ANCHOR = "anchor"
+
 
 class ProgressRepository(BaseRepository):
     def get_progress(self, user_id: int, story_id: int) -> dict | None:
@@ -122,7 +133,7 @@ class ProgressRepository(BaseRepository):
             ).first()
             if not row:
                 return None
-            return {"page": row.page, "anchor": row.anchor}
+            return {PROGRESS_PAGE: row.page, PROGRESS_ANCHOR: row.anchor}
 
     def set_chapter_page(self, user_id: int, chapter_id: int, page: int, anchor: int) -> None:
         with self.session() as db:
@@ -165,12 +176,12 @@ def _progress_to_dict(
     if row is None:
         return None
     return {
-        "user_id": row.user_id,
-        "story_id": row.story_id,
-        "last_chapter_id": row.last_chapter_id,
-        "last_chapter_number": last_chapter_number,
-        "last_position": row.last_position,
-        "furthest_chapter_id": row.furthest_chapter_id,
-        "furthest_chapter_number": furthest_chapter_number,
-        "updated_at": row.updated_at,
+        PROGRESS_USER_ID: row.user_id,
+        PROGRESS_STORY_ID: row.story_id,
+        PROGRESS_LAST_CHAPTER_ID: row.last_chapter_id,
+        PROGRESS_LAST_CHAPTER_NUMBER: last_chapter_number,
+        PROGRESS_LAST_POSITION: row.last_position,
+        PROGRESS_FURTHEST_CHAPTER_ID: row.furthest_chapter_id,
+        PROGRESS_FURTHEST_CHAPTER_NUMBER: furthest_chapter_number,
+        PROGRESS_UPDATED_AT: row.updated_at,
     }

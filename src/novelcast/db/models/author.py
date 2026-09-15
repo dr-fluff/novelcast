@@ -18,7 +18,7 @@ class Author(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
     bio: Mapped[str | None] = mapped_column(Text)
-    picture_path: Mapped[str | None] = mapped_column(String)  # local path or URL
+    picture_path: Mapped[str | None] = mapped_column(String)
 
     stories: Mapped[list["Story"]] = relationship("Story", secondary="story_author", back_populates="authors")
     links: Mapped[list["AuthorLink"]] = relationship(

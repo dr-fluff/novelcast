@@ -7,6 +7,13 @@ from sqlalchemy import select
 from novelcast.db.models.user import PasswordResetToken
 from novelcast.db.repositories.base import BaseRepository
 
+TOKEN_ID = "id"
+TOKEN_USER_ID = "user_id"
+TOKEN_TOKEN = "token"
+TOKEN_EXPIRES_AT = "expires_at"
+TOKEN_USED = "used"
+TOKEN_CREATED_AT = "created_at"
+
 
 class PasswordResetRepository(BaseRepository):
     def create_token(self, user_id: int, token: str, expires_at: str) -> None:
@@ -40,10 +47,10 @@ def _token_to_dict(row: PasswordResetToken | None) -> dict | None:
     if row is None:
         return None
     return {
-        "id": row.id,
-        "user_id": row.user_id,
-        "token": row.token,
-        "expires_at": row.expires_at.isoformat(),
-        "used": int(row.used),
-        "created_at": row.created_at,
+        TOKEN_ID: row.id,
+        TOKEN_USER_ID: row.user_id,
+        TOKEN_TOKEN: row.token,
+        TOKEN_EXPIRES_AT: row.expires_at.isoformat(),
+        TOKEN_USED: int(row.used),
+        TOKEN_CREATED_AT: row.created_at,
     }
