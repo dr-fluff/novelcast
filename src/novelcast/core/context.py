@@ -120,19 +120,29 @@ class AppContext:
     # DATABASE
     # ─────────────────────────────
     def _init_database(self):
-        resolved_path = Path(db_path_from_url(self.app_config.database_url)).resolve()
-        print(f"[STARTUP] DATABASE_URL={self.app_config.database_url!r}")
-        print(f"[STARTUP] Resolved DB path: {resolved_path}")
-        print(f"[STARTUP] File exists: {resolved_path.exists()}")
-        if resolved_path.exists():
-            print(f"[STARTUP] File size: {resolved_path.stat().st_size} bytes")
+        resolved_path = Path(
+            db_path_from_url(self.app_config.database_url)
+        ).resolve()
+
         logger.info(
             "Database path resolved",
-            extra={"database_url": self.app_config.database_url, "resolved_path": str(resolved_path)},
+            extra={
+                "extra_data": {
+                    "database_url": self.app_config.database_url,
+                    "resolved_path": str(resolved_path),
+                    "file_exists": resolved_path.exists(),
+                    "file_size": (
+                        resolved_path.stat().st_size
+                        if resolved_path.exists()
+                        else None
+                    ),
+                }
+            },
         )
 
         logger.info("Initializing database...")
         init_db()
+
         self.SessionLocal = SessionLocal
         self.engine = engine
         self.database_relocation = DatabaseRelocationService(
