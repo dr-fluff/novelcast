@@ -40,20 +40,23 @@ async def lifespan(app: FastAPI):
     try:
         logger.info("Application starting...")
 
-        # ─────────────────────────────
         # CORE CONTEXT
-        # ─────────────────────────────
         ctx = AppContext(app.state.config)
         app.state.ctx = ctx
 
+        # Reconfigure logging from database/settings
         logging_service = LoggingService(ctx.settings)
         logging_service.apply()
+
         ctx.logging_service = logging_service
         ctx.log_buffer = log_buffer
 
         try:
             added = ctx.chapter_pattern_repo.seed_defaults(DEFAULT_CHAPTER_PATTERNS)
-            logger.info("Added %d missing chapter patterns" if added else "Chapter patterns already exist")
+            if added:
+                logger.info("Added %d missing chapter patterns", added)
+            else:
+                logger.info("Chapter patterns already exist")
         except Exception:
             logger.exception("Failed to seed chapter patterns")
 

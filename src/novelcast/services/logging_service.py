@@ -26,9 +26,11 @@ class LoggingService:
     def apply(self) -> LogConfig:
         try:
             cfg = LogConfig.from_settings_service(self._settings)
-        except Exception as exc:
+        except Exception:
+            logger.exception(
+                "Failed to load logging configuration from settings; using defaults"
+            )
             cfg = LogConfig()
-            print(f"[LoggingService] DB not ready, using defaults: {exc}")
 
         setup_logging(cfg)
 
