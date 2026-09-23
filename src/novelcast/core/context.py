@@ -2,6 +2,7 @@
 import logging
 import threading
 from queue import Queue
+from pathlib import Path
 
 from novelcast.core import setting_keys
 from novelcast.core.defaults import (
@@ -119,6 +120,17 @@ class AppContext:
     # DATABASE
     # ─────────────────────────────
     def _init_database(self):
+        resolved_path = Path(db_path_from_url(self.app_config.database_url)).resolve()
+        print(f"[STARTUP] DATABASE_URL={self.app_config.database_url!r}")
+        print(f"[STARTUP] Resolved DB path: {resolved_path}")
+        print(f"[STARTUP] File exists: {resolved_path.exists()}")
+        if resolved_path.exists():
+            print(f"[STARTUP] File size: {resolved_path.stat().st_size} bytes")
+        logger.info(
+            "Database path resolved",
+            extra={"database_url": self.app_config.database_url, "resolved_path": str(resolved_path)},
+        )
+
         logger.info("Initializing database...")
         init_db()
         self.SessionLocal = SessionLocal
