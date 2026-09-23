@@ -5,13 +5,15 @@ from queue import Queue
 
 from novelcast.core import setting_keys
 from novelcast.core.defaults import (
+    LIBRARY_DATABASE_PATH,
     REQUIRED_USER_SETTINGS,
+    SECTION_LIBRARY,
     SECTION_RSS,
     SECTION_TELEGRAM,
     SETTINGS,
     USER_SETTINGS_SCHEMA,
 )
-from novelcast.db.engine import engine
+from novelcast.db.engine import db_path_from_url, engine
 from novelcast.db.init_db import init_db
 from novelcast.db.repositories import (
     AuthorRepository,
@@ -60,12 +62,18 @@ from novelcast.services import (
     UserService,
 )
 from novelcast.services.chapter_filter_service import ChapterFilterService
+from novelcast.services.database_relocation_service import (
+    DatabaseRelocationError,
+    DatabaseRelocationService,
+)
 from novelcast.services.stats_service import StatsService
 from novelcast.utils.files import FileUtils
 
 logger = logging.getLogger(__name__)
 
 _RESTART_DEBOUNCE_SECONDS = 1.0
+_DATABASE_PATH_KEY = f"{SECTION_LIBRARY}.{LIBRARY_DATABASE_PATH}"
+_DATABASE_RELOCATION_TIMER_KEY = "database_path"
 
 
 class AppContext:
@@ -115,6 +123,15 @@ class AppContext:
         init_db()
         self.SessionLocal = SessionLocal
         self.engine = engine
+        self.database_relocation = DatabaseRelocationService(
+            engine=self.engine,
+            session_factory=self.SessionLocal,
+            current_db_path=db_path_from_url(self.app_config.database_url),
+            on_engine_replaced=self._on_engine_replaced,
+        )
+
+    def _on_engine_replaced(self, new_engine):
+        self.engine = new_engine
 
     def get_db(self):
         return self.SessionLocal()
@@ -198,6 +215,10 @@ class AppContext:
         self.settings_repo.on_change = self._on_settings_change
 
     def _on_settings_change(self, key: str):
+        if key == _DATABASE_PATH_KEY:
+            self._handle_database_relocation(key)
+            return
+
         for cfg in self.engines_config.values():
             if key.startswith(cfg["prefix"]):
                 cfg["writer"].write_config(force=False)
@@ -207,6 +228,17 @@ class AppContext:
             if key.startswith(f"{prefix}."):
                 self._schedule_restart(prefix, service, key)
                 return
+
+    def _handle_database_relocation(self, key: str):
+        new_path = self.settings_repo.get_server_setting(key)
+        if not new_path:
+            logger.warning("Database relocation triggered but no path found for %s", key)
+            return
+
+        try:
+            self.database_relocation.relocate(new_path)
+        except DatabaseRelocationError:
+            logger.exception("Database relocation to %r failed", new_path)
 
     def _schedule_restart(self, prefix: str, service, key: str):
 
@@ -237,6 +269,44 @@ class AppContext:
             timer = threading.Timer(_RESTART_DEBOUNCE_SECONDS, _do_restart)
             timer.daemon = True
             self._restart_timers[prefix] = timer
+            timer.start()
+
+    def _schedule_database_relocation(self, key: str):
+        def _do_relocate():
+            new_path = self.settings_repo.get_server_setting(key)
+            if not new_path:
+                logger.warning("Database relocation triggered but no path found for %s", key)
+                return
+
+            if self.app_config.reload:
+                logger.error(
+                    "Refusing to relocate database while auto-reload is enabled (RELOAD=true): "
+                    "the app cannot safely continue running against the old engine after the "
+                    "file is moved, and reload mode won't restart the process automatically. "
+                    "Set RELOAD=false (or run via `docker compose up`) before changing this setting."
+                )
+                return
+
+            try:
+                self.database_relocation.prepare(new_path)
+            except DatabaseRelocationError:
+                logger.exception("Database relocation to %r failed", new_path)
+                return
+
+            logger.info("Database relocated to %r; restarting", new_path)
+            self.database_relocation.restart()
+
+            with self._restart_lock:
+                self._restart_timers.pop(_DATABASE_RELOCATION_TIMER_KEY, None)
+
+        with self._restart_lock:
+            existing = self._restart_timers.get(_DATABASE_RELOCATION_TIMER_KEY)
+            if existing:
+                existing.cancel()
+
+            timer = threading.Timer(_RESTART_DEBOUNCE_SECONDS, _do_relocate)
+            timer.daemon = True
+            self._restart_timers[_DATABASE_RELOCATION_TIMER_KEY] = timer
             timer.start()
 
     # ─────────────────────────────

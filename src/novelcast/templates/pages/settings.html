@@ -102,6 +102,37 @@
                             {% endif %}
                         {% endfor %}
 
+                        {% if section_name == "library" %}
+                            <div class="section-card">
+                                <div class="field-card">
+                                    <div class="field-card__label-col">
+                                        <span class="field-label">Database location</span>
+                                        <span class="field-hint"
+                                            >Moves the database file to a new path and restarts the app to apply it. Current
+                                            value comes from server configuration, not this form.</span
+                                        >
+                                    </div>
+                                    <div class="field-card__input-col">
+                                        <input type="text" id="db-relocate-path" class="text-input" placeholder="/new/path/novelcast.db" />
+                                        <button
+                                            type="button"
+                                            class="btn-secondary"
+                                            hx-post="/admin/database/relocate"
+                                            hx-ext="json-enc"
+                                            hx-include="#db-relocate-path"
+                                            hx-vals='js:{new_path: document.getElementById("db-relocate-path").value}'
+                                            hx-target="#db-relocate-result"
+                                            hx-swap="innerHTML"
+                                            hx-confirm="This will move the database file and restart the app. Continue?"
+                                        >
+                                            Move Database
+                                        </button>
+                                        <div id="db-relocate-result" class="mt-2 text-sm"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+
                         {% if section_name == "telegram" %}
                             <div class="section-card">
                                 <div class="field-card">

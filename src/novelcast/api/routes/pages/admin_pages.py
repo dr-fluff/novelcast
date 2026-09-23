@@ -1,3 +1,4 @@
+#novelcast/api/routes/pages/admin_pages.py
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
@@ -28,6 +29,18 @@ from novelcast.services import (
     UserService,
 )
 from novelcast.utils.password_validation import validate_password_strength
+
+from starlette.background import BackgroundTask
+from starlette.responses import JSONResponse
+
+from novelcast.api.deps import get_database_relocation
+from novelcast.services.database_relocation_service import (
+    DatabaseRelocationError,
+    DatabaseRelocationService,
+)
+class DatabaseRelocationRequest(BaseModel):
+    new_path: str
+
 
 router = APIRouter()
 
@@ -349,3 +362,21 @@ def raw_logs(
     response.headers["Content-Disposition"] = f'inline; filename="{files[0].name}"'
 
     return response
+
+
+@router.post("/admin/database/relocate")
+def relocate_database(
+    req: DatabaseRelocationRequest,
+    relocation: DatabaseRelocationService = Depends(get_database_relocation),
+    current_user: dict | None = Depends(get_current_user),
+):
+    if not current_user or not current_user.get("is_root"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    try:
+        relocation.relocate(req.new_path)
+    except DatabaseRelocationError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+    return {"success": True, "message": "Database moved and is now live at the new location."}
+

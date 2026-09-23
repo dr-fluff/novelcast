@@ -4,6 +4,8 @@ from contextlib import contextmanager
 
 from sqlalchemy.orm import Session
 
+from novelcast.db.access_gate import db_access
+
 
 class BaseRepository:
     def __init__(self, session_factory):
@@ -19,23 +21,26 @@ class BaseRepository:
                 db.add(thing)
                 # commits on exit, rolls back on exception
         """
-        db: Session = self._session_factory()
-        try:
-            yield db
-            db.commit()
-        except Exception:
-            db.rollback()
-            raise
-        finally:
-            db.close()
+        with db_access():
+            db: Session = self._session_factory()
+            try:
+                yield db
+                db.commit()
+            except Exception:
+                db.rollback()
+                raise
+            finally:
+                db.close()
 
     @contextmanager
     def session_no_commit(self):
         """
         Use when you only need to read — skips the commit overhead.
         """
-        db: Session = self._session_factory()
-        try:
-            yield db
-        finally:
-            db.close()
+        with db_access():
+            db: Session = self._session_factory()
+            try:
+                yield db
+            finally:
+                db.close()
+                

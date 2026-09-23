@@ -18,6 +18,7 @@ from novelcast.services import (
     StoryService,
     TelegramService,
     UserService,
+    DatabaseRelocationService,
 )
 
 # ─────────────────────────────
@@ -116,3 +117,6 @@ def get_patreon_engine(request: Request) -> PatreonEngine:
 
 def get_stats(request: Request):
     return request.app.state.ctx.stats
+
+def get_database_relocation(request: Request) -> DatabaseRelocationService:
+    return request.app.state.ctx.database_relocation
