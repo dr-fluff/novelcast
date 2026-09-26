@@ -73,7 +73,7 @@ def story(
         ]
 
         progress_card = None
-        if current_user and current_user.get("id"):
+        if current_user and current_user.get("id") and progress_row:
             reading_speed_wpm = stats.get_reading_speed_wpm(current_user["id"])
             progress_card = build_reading_progress_card(
                 chapter_list,
