@@ -150,7 +150,7 @@ class ProgressRepository(BaseRepository):
                 )
             )
             db.execute(stmt)
-            
+
     def delete_progress(self, user_id: int, story_id: int) -> None:
         with self.session() as db:
             db.execute(
@@ -164,9 +164,40 @@ class ProgressRepository(BaseRepository):
                 delete(ChapterProgress).where(
                     ChapterProgress.user_id == user_id,
                     ChapterProgress.chapter_id.in_(chapter_ids_subq),
-                    )
                 )
+            )
+    def get_downloaded_listing_for_stories(self, story_ids: list[int]) -> list[dict]:
+            if not story_ids:
+                return []
 
+            with self.session_no_commit() as db:
+                rows = db.execute(
+                    select(
+                        Chapter.id,
+                        Chapter.story_id,
+                        Chapter.chapter_number,
+                        Chapter.title,
+                        Chapter.created_at,
+                    )
+                    .where(
+                        Chapter.story_id.in_(story_ids),
+                        Chapter.is_downloaded,
+                    )
+                    .order_by(Chapter.story_id, Chapter.chapter_number)
+                ).all()
+                return [
+                    {
+                        "id": row.id,
+                        "story_id": row.story_id,
+                        "chapter_number": row.chapter_number,
+                        "title": row.title,
+                        "url": None,
+                        "file_path": None,
+                        "is_downloaded": 1,
+                        "created_at": row.created_at,
+                    }
+                    for row in rows
+                ]
 
 def _progress_to_dict(
     row: ReadingProgress | None,
@@ -185,3 +216,5 @@ def _progress_to_dict(
         PROGRESS_FURTHEST_CHAPTER_NUMBER: furthest_chapter_number,
         PROGRESS_UPDATED_AT: row.updated_at,
     }
+    
+    

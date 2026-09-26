@@ -69,3 +69,38 @@ class ChaptersService:
 
         # Return chapters that match any pattern
         return [ch for ch in chapters if any(r.search(ch.get("title", "")) for r in compiled)]
+
+    def list_by_stories_filtered(self, story_ids: list[int]) -> dict[int, list[dict]]:
+        """Bulk variant of list_by_story_filtered() for many stories at once.
+        Applies the identical title-regex filter, but in a single query plus
+        a single pass over the combined result, instead of one query and one
+        regex pass per story. Used by pages that render the whole library
+        (e.g. the index page) so their progress percentages match the story
+        page exactly, without an N+1.
+
+        Returns a dict of story_id -> filtered chapter list. Stories with no
+        matching chapters are omitted (callers should default to [] when
+        looking up a story_id not present in the result).
+        """
+        if not story_ids:
+            return {}
+
+        chapters = self.repo.get_downloaded_listing_for_stories(story_ids)
+
+        if not self.chapter_filter:
+            grouped: dict[int, list[dict]] = {}
+            for ch in chapters:
+                grouped.setdefault(ch["story_id"], []).append(ch)
+            return grouped
+
+        patterns = self.chapter_filter.get_enabled_regexes()
+        if not patterns:
+            return {}
+
+        compiled = [re.compile(p, re.IGNORECASE) for p in patterns]
+
+        grouped: dict[int, list[dict]] = {}
+        for ch in chapters:
+            if any(r.search(ch.get("title", "")) for r in compiled):
+                grouped.setdefault(ch["story_id"], []).append(ch)
+        return grouped

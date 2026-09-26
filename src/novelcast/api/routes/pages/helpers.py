@@ -65,28 +65,50 @@ def story_has_not_unread(story: dict) -> bool:
         return False
 
 
-def build_story_view_model(story: dict, progress: dict | None) -> dict:
-    furthest_read = int((progress or {}).get("furthest_chapter_number") or 0)
-    latest = int(_story_latest_downloaded(story) or 0)
-    downloaded = int(story.get("downloaded_chapters") or 0)
+def build_story_view_model(story: dict, progress: dict | None, chapter_list: list[dict] | None = None) -> dict:
+    # chapter_list must be the same title-filtered set the story page uses
+    # (ChaptersService.list_by_story_filtered / list_by_stories_filtered),
+    # not the raw downloaded_chapters count — otherwise numerator and
+    # denominator here can disagree with the story page's regardless of how
+    # the percentage math itself is written.
+    chapter_list = chapter_list or []
+    total = len(chapter_list)
+    furthest_chapter_id = (progress or {}).get("furthest_chapter_id")
+    chapters_read = sum(1 for c in chapter_list if furthest_chapter_id and c["id"] <= furthest_chapter_id)
 
     return {
         **story,
+        # override with the filtered count so story_card's percent
+        # calculation and the "N Chapters" display use the same set
+        # the story page's percentage is based on
+        "downloaded_chapters": total,
         # keep progress separate (IMPORTANT)
         "progress": {
-            "last_read_chapter": furthest_read,
+            "last_read_chapter": chapters_read,
             "last_read_at": (progress or {}).get("updated_at"),
         },
         # derived UI state (single source of truth)
-        "is_caught_up": downloaded > 0 and furthest_read == latest,
-        "has_unread": downloaded > 0 and furthest_read < latest,
+        "is_caught_up": total > 0 and chapters_read == total,
+        "has_unread": total > 0 and chapters_read < total,
     }
 
 
-def enrich_story_progress(stories: list[dict], progress_rows: list[dict]) -> list[dict]:
+def enrich_story_progress(
+    stories: list[dict],
+    progress_rows: list[dict],
+    chapters_by_story: dict[int, list[dict]] | None = None,
+) -> list[dict]:
     progress_by_story = {row["story_id"]: row for row in progress_rows}
+    chapters_by_story = chapters_by_story or {}
 
-    return [build_story_view_model(story, progress_by_story.get(story.get("id"))) for story in stories]
+    return [
+        build_story_view_model(
+            story,
+            progress_by_story.get(story.get("id")),
+            chapters_by_story.get(story.get("id"), []),
+        )
+        for story in stories
+    ]
 
 
 def filter_stories(
@@ -211,6 +233,7 @@ def story_card(story: dict) -> dict:
     last_read = (story.get("progress") or {}).get("last_read_chapter", 0) or 0
     progress_percent = int(round((last_read / downloaded) * 100)) if downloaded else 0
     progress_percent = max(0, min(100, progress_percent))
+    
 
     return {
         "id": story.get("id"),
@@ -271,6 +294,15 @@ def _format_duration(minutes: float) -> str:
         return f"{hours} hr"
     return f"{mins} min"
 
+def progress_percent(chapter_list: list[dict], read_chapters: set[int], progress_row: dict | None, last_chapter_id: int | None) -> int:
+    total_chapters = len(chapter_list)
+    if not progress_row or not last_chapter_id or total_chapters <= 0:
+        return None
+
+    chapters_read = len(read_chapters)
+    percent_complete = max(0, min(100, int(round((chapters_read / total_chapters) * 100))))
+    return percent_complete
+
 
 def build_reading_progress_card(
     chapter_list: list[dict],
@@ -280,18 +312,10 @@ def build_reading_progress_card(
     progress_row: dict | None,
     reading_speed_wpm: float | None,
 ) -> dict | None:
-    """Builds the 'Your Progress' card view model for the story page.
+    percent_complete = progress_percent(chapter_list, read_chapters, progress_row, last_chapter_id)
 
-    Returns None when the user hasn't started the story yet (no progress
-    row, or no continue-reading pointer set), so the template can skip
-    rendering the card entirely rather than showing a 0% box.
-    """
     total_chapters = len(chapter_list)
-    if not progress_row or not last_chapter_id or total_chapters <= 0:
-        return None
-
     chapters_read = len(read_chapters)
-    percent_complete = max(0, min(100, int(round((chapters_read / total_chapters) * 100))))
 
     last_chapter_number = next(
         (c.get("chapter_number") for c in chapter_list if c["id"] == last_chapter_id),
@@ -300,8 +324,6 @@ def build_reading_progress_card(
 
     unread_chapters = [c for c in chapter_list if c["id"] not in read_chapters]
     remaining_words = sum(c.get("word_count") or 0 for c in unread_chapters)
-    # Only trust the estimate if every remaining chapter actually has a
-    # word count — a partial sum would understate time remaining.
     has_full_word_data = bool(unread_chapters) and all(c.get("word_count") for c in unread_chapters)
 
     time_remaining_display = None
@@ -317,7 +339,6 @@ def build_reading_progress_card(
         "last_read_at": progress_row.get("updated_at"),
         "time_remaining_display": time_remaining_display,
     }
-
 
 def parse_settings_form(form: dict) -> tuple[dict, dict]:
     user_updates: dict = {}

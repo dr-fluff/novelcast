@@ -4,6 +4,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from novelcast.api.deps import (
+    get_chapters,
     get_current_user,
     get_progress,
     get_settings,
@@ -24,7 +25,7 @@ from novelcast.core.library_constants import (
     SORT_UNREAD,
     SORT_YEAR,
 )
-from novelcast.services import ProgressService, SettingsService, StoryService
+from novelcast.services import ChaptersService, ProgressService, SettingsService, StoryService
 
 from .helpers import (
     default_sort_direction,
@@ -105,6 +106,7 @@ STATUS_OPTIONS = (
 def home(
     request: Request,
     stories: StoryService = Depends(get_stories),
+    chapters: ChaptersService = Depends(get_chapters),
     progress: ProgressService = Depends(get_progress),
     settings: SettingsService = Depends(get_settings),
     current_user: dict | None = Depends(get_current_user),
@@ -148,7 +150,11 @@ def home(
     all_stories = stories.get_all_stories()
     filter_options = story_filter_options(all_stories)
     progress_rows = progress.get_all_for_user(current_user[USER_ID_KEY]) if current_user else []
-    all_stories = enrich_story_progress(all_stories, progress_rows)
+
+    story_ids = [s["id"] for s in all_stories if s.get("id") is not None]
+    chapters_by_story = chapters.list_by_stories_filtered(story_ids)
+
+    all_stories = enrich_story_progress(all_stories, progress_rows, chapters_by_story)
     filtered_stories = filter_stories(
         all_stories,
         query,
