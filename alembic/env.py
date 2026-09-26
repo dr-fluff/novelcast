@@ -1,3 +1,4 @@
+import os
 import sys
 from logging.config import fileConfig
 from pathlib import Path
@@ -10,8 +11,8 @@ from novelcast.db.base import Base
 # Register all models on Base.metadata for autogenerate
 
 sys.path.append(str(Path(__file__).resolve().parents[1] / "src"))
-db_path = Path(__file__).resolve().parents[1] / "data" / "novelcast.db"
-DATABASE_URL = f"sqlite:///{db_path}"
+
+DATABASE_URL = os.environ["DATABASE_URL"]
 
 
 # this is the Alembic Config object, which provides
