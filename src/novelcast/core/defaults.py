@@ -178,7 +178,6 @@ DOWNLOAD_DEFAULTS = {
 # app
 # ─────────────────────────────
 
-APP_THEME = "theme"
 APP_MAX_CONCURRENT_JOBS = "max_concurrent_jobs"
 APP_DEFAULT_SORT = "default_sort"
 APP_DEFAULT_CHAPTER_SORT = "default_chapter_sort"
@@ -188,13 +187,6 @@ APP_TIME_FORMAT = "time_format"
 APP_DATE_FORMAT = "date_format"
 
 APP_DEFAULTS = {
-    APP_THEME: {
-        KEY_TYPE: TYPE_SELECT,
-        KEY_DESCRIPTION: "Theme for the application",
-        KEY_DEFAULT: "dark",
-        KEY_OPTIONS: ["system", "light", "dark", "sepia"],
-        KEY_LABEL: "Theme",
-    },
     APP_MAX_CONCURRENT_JOBS: {
         KEY_TYPE: TYPE_NUMBER,
         KEY_DESCRIPTION: "Maximum number of concurrent download jobs",
@@ -539,7 +531,6 @@ SETTINGS = {
 # user settings — field-name constants
 # ─────────────────────────────
 
-US_THEME = "theme"
 US_FONT_SIZE = "font_size"
 US_LINE_HEIGHT = "line_height"
 US_AUTO_UPDATE = "auto_update"
@@ -572,12 +563,6 @@ US_CONTROL_SLIDER = "slider"
 """
 
 USER_SETTINGS_SCHEMA = {
-    US_THEME: {
-        KEY_TYPE: US_TYPE_CHOICE,
-        KEY_CHOICES: ("system", "light", "dark", "sepia"),
-        KEY_DEFAULT: "system",
-        KEY_CATEGORY: US_CATEGORY_DISPLAY,
-    },
     US_FONT_SIZE: {
         KEY_TYPE: US_TYPE_INT_RANGE,
         KEY_MIN: 10,
@@ -688,7 +673,7 @@ USER_SETTINGS_SCHEMA = {
     },
 }
 
-REQUIRED_USER_SETTINGS = {US_THEME, US_FONT_SIZE, US_LINE_HEIGHT, US_AUTO_UPDATE}
+REQUIRED_USER_SETTINGS = {US_FONT_SIZE, US_LINE_HEIGHT, US_AUTO_UPDATE}
 
 """"
     ------------- Chapter patterns for titles -------------

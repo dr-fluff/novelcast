@@ -22,7 +22,8 @@ class FakePipeline:
 
     def append_new_chapters(self, story_id, parsed):
         self.append_calls.append((story_id, parsed))
-        return [ch["number"] for ch in parsed.get("chapters", [])]
+        existing = set(self.chapters_repo.get_chapter_numbers(story_id) or [])
+        return [ch["number"] for ch in parsed.get("chapters", []) if ch["number"] not in existing]
 
 
 class TestStoryDownloadService(unittest.TestCase):
@@ -111,7 +112,8 @@ class TestStoryDownloadService(unittest.TestCase):
         self.assertEqual(result["story_id"], 101)
         self.assertEqual(result["new_chapters"], 1)
         self.assertEqual(result["chapter_numbers"], [2])
-        self.assertEqual(len(self.pipeline.persist_calls), 1)
+        self.assertEqual(self.pipeline.persist_calls, [])
+        self.assertEqual(len(self.pipeline.append_calls), 1)
 
     def test_check_story_updates_returns_pending_chapters(self):
         story = {"id": 200, "source_url": "https://example.com/story"}

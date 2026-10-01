@@ -51,7 +51,8 @@ class PaginatedEReader {
         // Reading settings schema (label/control/options/range per field),
         // provided by the server via data-reading-schema on #settingsPanel.
         this.schema = {};
-        this.baseTheme = document.documentElement.dataset.theme || 'light';
+        this.systemColorScheme = window.matchMedia('(prefers-color-scheme: dark)');
+        this.baseTheme = this.systemColorScheme.matches ? 'dark' : 'light';
 
         this.deviceId = this.getDeviceId();
         this.userLoaded = false;
@@ -73,6 +74,13 @@ class PaginatedEReader {
         this.buildSettingsPanel();
         await this.loadUserSettings();
         this.applyReaderTheme();
+        this.systemColorScheme.addEventListener?.('change', () => {
+            this.baseTheme = this.systemColorScheme.matches ? 'dark' : 'light';
+            if (this.settings.theme === 'system') {
+                this.applyReaderTheme();
+                this.repaginate(this.state.currentPage);
+            }
+        });
         this.updateSettingsUI();
         this.attachEvents();
         this.attachSettingsEvents();
@@ -89,11 +97,16 @@ class PaginatedEReader {
     }
 
     getDeviceId() {
+        if (typeof window.getNovelcastDeviceId === 'function') return window.getNovelcastDeviceId();
+
         // Try localStorage first (works in normal browsing, may be blocked
         // under strict tracking protection or private browsing).
         try {
             let id = localStorage.getItem('nc_device_id');
-            if (id) return id;
+            if (id) {
+                document.cookie = `nc_device_id=${encodeURIComponent(id)}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`;
+                return id;
+            }
         } catch (e) {
             /* localStorage blocked, fall through to cookie */
         }
@@ -759,7 +772,12 @@ class PaginatedEReader {
                 const btnGroup = document.createElement('div');
                 btnGroup.className = 'button-group';
 
-                (spec.options || []).forEach((opt) => {
+                const options = [...(spec.options || [])];
+                if (key === 'theme' && !options.some((option) => option.value === 'system')) {
+                    options.unshift({ value: 'system', label: 'System', icon: 'fa-desktop' });
+                }
+
+                options.forEach((opt) => {
                     const btn = document.createElement('button');
                     btn.type = 'button';
                     btn.className = 'setting-btn';
@@ -854,6 +872,7 @@ class PaginatedEReader {
     applyReaderTheme() {
         const selectedTheme = this.settings.theme === 'system' ? this.baseTheme : this.settings.theme;
         const theme = ['light', 'sepia', 'dark'].includes(selectedTheme) ? selectedTheme : 'light';
+        document.documentElement.dataset.themeMode = this.settings.theme;
         document.documentElement.dataset.theme = theme;
     }
 

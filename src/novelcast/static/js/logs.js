@@ -12,8 +12,14 @@ function connectLogs() {
     socket = new WebSocket(`${protocol}//${window.location.host}/api/admin/logs/tail`);
 
     socket.onmessage = function (event) {
-        const data = JSON.parse(event.data);
-        if (data.type === 'backlog' || data.type === 'lines') {
+        let data;
+        try {
+            data = JSON.parse(event.data);
+        } catch {
+            return;
+        }
+
+        if (data && Array.isArray(data.lines) && (data.type === 'backlog' || data.type === 'lines')) {
             appendLogs(data.lines);
         }
     };

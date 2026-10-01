@@ -257,6 +257,87 @@
     gap: 0.25rem;
 }
 
+.user-menu-reader-settings[hidden],
+#user-menu-links[hidden] {
+    display: none;
+}
+
+.user-menu-reader-settings-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.user-menu-reader-settings-header h2 {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: var(--font-size-base);
+}
+
+.user-menu-reader-group {
+    margin-bottom: 1rem;
+}
+
+.user-menu-reader-group > label {
+    display: block;
+    margin-bottom: 0.4rem;
+    color: var(--text-secondary);
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.user-menu-reader-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.35rem;
+}
+
+.user-menu-reader-settings .setting-btn {
+    min-width: 0;
+    min-height: 36px;
+    padding: 0.45rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text-primary);
+    font: inherit;
+    font-size: var(--font-size-xs);
+    cursor: pointer;
+}
+
+.user-menu-reader-settings .setting-btn.active {
+    border-color: var(--accent-color);
+    background: var(--accent-subtle);
+}
+
+.user-menu-reader-slider {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.user-menu-reader-slider input {
+    width: 100%;
+    min-width: 0;
+    accent-color: var(--accent-color);
+}
+
+.user-menu-reader-value {
+    min-width: 3rem;
+    color: var(--text-secondary);
+    text-align: right;
+    font-size: var(--font-size-xs);
+}
+
+.user-menu-reader-status {
+    min-height: 1.2em;
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: var(--font-size-xs);
+}
+
 .user-menu-item {
     display: flex;
     align-items: center;

@@ -36,7 +36,6 @@ def create_app(config: AppConfig) -> FastAPI:
     app.state.config = config
     app.state.templates = AppTemplates(directory=str(TEMPLATES_DIR))
     app.state.templates = AppTemplates(directory=str(TEMPLATES_DIR))
-    app.state.templates.env.globals["api_port"] = config.port
 
     app.add_middleware(RequestIDMiddleware)
     app.add_middleware(AuthMiddleware)

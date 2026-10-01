@@ -3,8 +3,8 @@
 
 importScripts('/static/js/offline-db.js');
 
-const CACHE_NAME = 'novelcast-chapters-v1';
-const SHELL_CACHE_NAME = 'novelcast-shell-v1';
+const CACHE_NAME = 'novelcast-chapters-v2';
+const SHELL_CACHE_NAME = 'novelcast-shell-v2';
 const MAX_RETRIES = 3;
 const RETRY_BASE_DELAY_MS = 1000;
 

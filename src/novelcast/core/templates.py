@@ -22,15 +22,21 @@ class AppTemplates(Jinja2Templates):
         if request and "current_user" not in context:
             context["current_user"] = getattr(request.state, "user", None)
 
+        if request and "reading_settings_schema" not in context:
+            try:
+                context["reading_settings_schema"] = request.app.state.ctx.settings.get_reading_settings_schema()
+            except (AttributeError, KeyError):
+                context["reading_settings_schema"] = {}
+
         if request and "theme" not in context:
-            theme = "light"
+            theme = "system"
             try:
                 current_user = context.get("current_user")
                 settings = request.app.state.ctx.settings
                 if current_user:
-                    theme = settings.get_user_settings(current_user["id"]).get("theme") or theme
-                else:
-                    theme = settings.get_resolved_server_settings().get("app", {}).get("theme") or theme
+                    device_id = request.cookies.get("nc_device_id")
+                    user_settings = settings.get_user_settings(current_user["id"], device_id=device_id)
+                    theme = user_settings.get("chapter_theme") or theme
             except (AttributeError, KeyError):
                 pass
             context["theme"] = theme if theme in {"system", "light", "dark", "sepia"} else "system"

@@ -240,14 +240,7 @@ class StoryDownloadService:
         parsed = self._parse_raw(raw, settings=settings)
         self._update_story_metadata(story_id, raw, parsed)
 
-        existing_numbers = self.pipeline.chapters_repo.get_chapter_numbers(story_id)
-        parsed_numbers = [ch["number"] for ch in parsed.get("chapters", [])]
-        new_chapters = [number for number in parsed_numbers if number not in existing_numbers]
-
-        if raw.get("file_path"):
-            self.pipeline.persist(story_id, parsed)
-        else:
-            new_chapters = self.pipeline.append_new_chapters(story_id, parsed)
+        new_chapters = self.pipeline.append_new_chapters(story_id, parsed)
 
         self._refresh_metadata_from_json(story_id)
 

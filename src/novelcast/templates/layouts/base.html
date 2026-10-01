@@ -1,14 +1,15 @@
 <!-- novelcast/templates/layouts/base.html -->
 <!doctype html>
-<html data-theme="{{ theme | default('light') }}">
+<html data-theme="{{ theme | default('system') }}" data-theme-mode="{{ theme | default('system') }}">
     <head>
         <script>
             (() => {
                 const root = document.documentElement;
-                if (root.dataset.theme !== "system") return;
+                if (root.dataset.themeMode !== "system") return;
 
                 const media = window.matchMedia("(prefers-color-scheme: dark)");
                 const applySystemTheme = () => {
+                    if (root.dataset.themeMode !== "system") return;
                     root.dataset.theme = media.matches ? "dark" : "light";
                 };
                 applySystemTheme();
@@ -58,14 +59,6 @@
     </head>
 
     <body>
-        <script>
-            window.NOVELCAST_API_HOST = '{{ api_host }}';
-        </script>
-        <script>
-            window.NOVELCAST_API_HOST =
-                "{{ request.client.host if false else '' }}{{ request.url.hostname }}:{{ api_port }}";
-        </script>
-
         {% include "partials/add_story_panel_unified.html" %}
         {% include "partials/metadata_author_panels_unified.html" %}
         {% include "partials/metadata_panels_unified.html" %}

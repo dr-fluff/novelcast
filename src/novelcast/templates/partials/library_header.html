@@ -60,24 +60,47 @@
     </div>
 
     <div class="user-menu-panel-body">
-        <a class="user-menu-item" href="/stats">
-            <i class="fa-solid fa-chart-simple"></i>
-            <span>Stats</span>
-        </a>
+        <div id="user-menu-links">
+            <button class="user-menu-item" type="button" onclick="openReaderSettings()">
+                <i class="fa-solid fa-sliders"></i>
+                <span>GUI settings</span>
+            </button>
 
-        <a class="user-menu-item" href="/account/password">
-            <i class="fa-solid fa-key"></i>
-            <span>Change password</span>
-        </a>
+            <a class="user-menu-item" href="/stats">
+                <i class="fa-solid fa-chart-simple"></i>
+                <span>Stats</span>
+            </a>
 
-        <a class="user-menu-item" href="/offline_data">
-            <i class="fa-solid fa-plane"></i>
-            <span>Offline data</span>
-        </a>
+            <a class="user-menu-item" href="/account/password">
+                <i class="fa-solid fa-key"></i>
+                <span>Change password</span>
+            </a>
 
-        <button class="user-menu-item user-menu-item--danger" onclick="logoutUser()">
-            <i class="fa-solid fa-right-from-bracket"></i>
-            <span>Logout</span>
-        </button>
+            <a class="user-menu-item" href="/offline_data">
+                <i class="fa-solid fa-plane"></i>
+                <span>Offline data</span>
+            </a>
+
+            <button class="user-menu-item user-menu-item--danger" onclick="logoutUser()">
+                <i class="fa-solid fa-right-from-bracket"></i>
+                <span>Logout</span>
+            </button>
+        </div>
+
+        <section
+            class="user-menu-reader-settings"
+            id="user-menu-reader-settings"
+            data-reading-schema='{{ reading_settings_schema | default({}) | tojson }}'
+            hidden
+        >
+            <div class="user-menu-reader-settings-header">
+                <button class="icon-button" type="button" onclick="closeReaderSettings()" title="Back to menu">
+                    <i class="fa-solid fa-arrow-left"></i>
+                </button>
+                <h2>Reader settings</h2>
+            </div>
+            <div id="user-menu-reader-fields"></div>
+            <p class="user-menu-reader-status" id="user-menu-reader-status" role="status"></p>
+        </section>
     </div>
 </aside>
