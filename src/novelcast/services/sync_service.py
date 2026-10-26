@@ -111,10 +111,10 @@ class LibrarySyncService:
                     result = self.download.update_story(story)
                 except Exception:
                     logger.exception(
-                        "Failed to update story id=%s title=%r file=%s",
-                        story.id,
-                        getattr(story, "title", None),
-                        getattr(story, "file_path", None),
+                        "Failed to update story id=%s title=%r source_url=%r",
+                        story.get("id"),
+                        story.get("title"),
+                        story.get("source_url"),
                     )
                     self._emit(
                         "sync_story_failed",
