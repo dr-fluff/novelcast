@@ -48,6 +48,19 @@
     </div>
 </header>
 
+{% if current_user and current_user.get("is_root") and release_update %}
+    <aside class="release-update-banner" role="status">
+        <div class="release-update-banner__inner">
+            <i class="fa-solid fa-arrow-up-right-dots" aria-hidden="true"></i>
+            <span>
+                NovelCast {{ release_update.latest_version }} is available
+                <span class="release-update-banner__current">(you have {{ release_update.current_version }})</span>.
+            </span>
+            <a href="{{ release_update.release_url }}" target="_blank" rel="noopener noreferrer">View release</a>
+        </div>
+    </aside>
+{% endif %}
+
 <!-- USER MENU SLIDE-OUT PANEL -->
 <div class="user-menu-overlay" id="user-menu-overlay" onclick="closeUserMenu()"></div>
 

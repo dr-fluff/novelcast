@@ -44,6 +44,10 @@ class AppConfig(BaseSettings):
     log_level: str = "info"
     log_file: str = "novelcast.log"
 
+    # GitHub repository used for the administrator-only release notice.
+    # Set GITHUB_REPOSITORY to an empty value to disable the check.
+    github_repository: str | None = "dr-fluff/novelcast"
+
     # ─────────────────────────────
     # CORS
     # ─────────────────────────────

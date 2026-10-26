@@ -1,138 +1,123 @@
 #!/usr/bin/env bash
 
+# Install NovelCast from a checked-out Git repository and register it as a
+# per-user background service. Application data remains in this checkout.
 set -euo pipefail
 
-
-echo "=== Novelcast installer ==="
-
-
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+RUNNER="$REPO_DIR/scripts/run-service.sh"
 OS="$(uname -s)"
-ARCH="$(uname -m)"
 
-
-echo "Detected:"
-echo " OS: $OS"
-echo " ARCH: $ARCH"
-
-
-install_linux_packages()
-{
-    if command -v apt >/dev/null; then
-
-        sudo apt update
-
-        sudo apt install -y \
-            curl \
-            git \
-            python3 \
-            python3-pip \
-            python3-venv \
-            build-essential
-
-    fi
+fail() {
+    printf 'Error: %s\n' "$*" >&2
+    exit 1
 }
 
+command -v git >/dev/null || fail "Git is required. Install Git, then run ./install again."
+command -v python3 >/dev/null || fail "Python 3.11 or later is required."
+git -C "$REPO_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1 || fail "Run this from a Git clone."
 
-install_node()
-{
-    if command -v node >/dev/null; then
-
-        NODE_VERSION=$(node -v | sed 's/v//' | cut -d. -f1)
-
-        if [ "$NODE_VERSION" -ge 18 ]; then
-            echo "Node OK"
-            return
-        fi
-
-    fi
-
-
-    echo "Installing Node.js"
-
-
-    curl -fsSL https://deb.nodesource.com/setup_22.x | sudo bash -
-
-    sudo apt install -y nodejs
-}
-
-
-install_uv()
-{
+install_uv() {
     if command -v uv >/dev/null; then
-        echo "uv OK"
+        command -v uv
         return
     fi
 
-
-    echo "Installing uv"
-
-    curl -LsSf https://astral.sh/uv/install.sh | sh
-
-
-    export PATH="$HOME/.local/bin:$PATH"
-
-
-    if ! command -v uv >/dev/null; then
-        echo "uv installation failed"
-        exit 1
+    local_uv="$REPO_DIR/.tools/bin/uv"
+    if [ -x "$local_uv" ]; then
+        printf '%s\n' "$local_uv"
+        return
     fi
+
+    command -v curl >/dev/null || fail "curl is required to install uv."
+    echo "Installing uv locally in .tools/bin..." >&2
+    mkdir -p "$REPO_DIR/.tools/bin"
+    curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR="$REPO_DIR/.tools/bin" sh
+    [ -x "$local_uv" ] || fail "uv installation failed."
+    printf '%s\n' "$local_uv"
 }
 
+UV_BIN="$(install_uv)"
 
+create_env_file() {
+    [ -f "$REPO_DIR/.env" ] && return
 
-case "$OS" in
+    echo "Creating .env with production defaults..."
+    umask 077
+    secret="$($UV_BIN run --no-project python -c 'import secrets; print(secrets.token_urlsafe(32))')"
+    cat > "$REPO_DIR/.env" <<EOF
+ENV=production
+RELOAD=false
+HOST=127.0.0.1
+PORT=8000
+SECRET_KEY=$secret
+LOG_LEVEL=info
+EOF
+}
 
-Linux*)
-    install_linux_packages
-    ;;
+install_service() {
+    case "$OS" in
+        Darwin)
+            local label="com.novelcast.app"
+            local plist="$HOME/Library/LaunchAgents/$label.plist"
+            mkdir -p "$HOME/Library/LaunchAgents"
+            cat > "$plist" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>$label</string>
+  <key>ProgramArguments</key><array><string>$RUNNER</string></array>
+  <key>WorkingDirectory</key><string>$REPO_DIR</string>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>StandardOutPath</key><string>$REPO_DIR/logs/service.out.log</string>
+  <key>StandardErrorPath</key><string>$REPO_DIR/logs/service.err.log</string>
+</dict></plist>
+EOF
+            launchctl bootout "gui/$(id -u)" "$plist" >/dev/null 2>&1 || true
+            launchctl bootstrap "gui/$(id -u)" "$plist"
+            ;;
+        Linux)
+            local service_dir="$HOME/.config/systemd/user"
+            local service="$service_dir/novelcast.service"
+            mkdir -p "$service_dir"
+            cat > "$service" <<EOF
+[Unit]
+Description=NovelCast
+After=network-online.target
+Wants=network-online.target
 
-Darwin*)
-    echo "macOS detected"
+[Service]
+Type=simple
+WorkingDirectory=$REPO_DIR
+ExecStart=$RUNNER
+Restart=on-failure
+RestartSec=5
 
-    if ! command -v brew >/dev/null; then
-        echo "Homebrew required"
-        echo "Install from https://brew.sh"
-        exit 1
-    fi
+[Install]
+WantedBy=default.target
+EOF
+            systemctl --user daemon-reload
+            systemctl --user enable --now novelcast.service
+            ;;
+        *) fail "Unsupported operating system: $OS. macOS and Linux are supported." ;;
+    esac
+}
 
-    brew install python node curl
+echo "==> Installing NovelCast from $REPO_DIR"
+mkdir -p "$REPO_DIR/data" "$REPO_DIR/config" "$REPO_DIR/logs"
+create_env_file
 
-    ;;
+echo "==> Installing locked production dependencies"
+"$UV_BIN" sync --frozen --no-dev
 
-*)
-    echo "Unsupported OS: $OS"
-    exit 1
+echo "==> Applying database migrations"
+"$UV_BIN" run --no-sync alembic upgrade head
 
-esac
+echo "==> Registering background service"
+install_service
 
-
-
-install_node
-install_uv
-
-
-
-echo "Installing Python dependencies"
-
-uv sync
-
-
-
-echo "Installing frontend dependencies"
-
-npm install
-
-echo "Installing Prettier"
-
-npm install --save-dev prettier
-
-
-
-echo ""
-echo "================================"
-echo " Installation complete"
-echo " Run:"
-echo ""
-echo "   make dev"
-echo ""
-echo "================================"
+echo
+echo "NovelCast is running at the address configured in .env (default: http://127.0.0.1:8000)"
+echo "Update later with: ./update"
+echo "Service controls: ./scripts/service.sh start|status|restart|stop"

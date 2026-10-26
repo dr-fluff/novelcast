@@ -5,9 +5,9 @@ from pathlib import Path
 from xml.etree import ElementTree as ET
 from zipfile import ZipFile
 
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 
-from novelcast.parser.base import BaseParser, Story
+from novelcast.parser.base import BaseParser, Chapter, Story
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +66,7 @@ class EpubParser(BaseParser):
             "raw_metadata": raw_metadata,
         }
 
-    def extract(self, epub_path: Path) -> list[dict]:
+    def extract(self, epub_path: Path) -> list[Chapter]:
         logger.info("Extracting EPUB: %s", epub_path)
         if not epub_path.exists():
             raise FileNotFoundError(f"EPUB file not found: {epub_path}")
@@ -82,8 +82,7 @@ class EpubParser(BaseParser):
             )
             base_path = Path(root_file_path).parent
 
-            chapters = []
-            number = 0  # only incremented for recognized chapters
+            chapters: list[Chapter] = []
 
             for itemref in spine:
                 href = manifest.get(itemref)
@@ -110,11 +109,13 @@ class EpubParser(BaseParser):
                     logger.debug("Skipping non-chapter item: %r", title)
                     continue
 
-                parsed_number = self._parse_chapter_number(title)
-                if parsed_number is not None:
-                    number = parsed_number
-                else:
-                    number += 1
+                # ``chapter_number`` is NovelCast's stable, contiguous index
+                # into an EPUB, not the label printed by its author.  A title
+                # such as "2.10" must therefore be chapter 12 (for example),
+                # rather than integer 2.  Using the spine order also avoids
+                # collisions when an EPUB mixes labels like "2.", "2.1",
+                # and "3.".
+                number = len(chapters) + 1
 
                 chapters.append(
                     {
@@ -259,12 +260,16 @@ class EpubParser(BaseParser):
         if not title_tag:
             title_tag = soup.find("meta", attrs={"name": "chaptertoctitle"})
 
+        # BeautifulSoup's ``find`` may return a text node.  Only tags have
+        # attributes or ``get_text``, so narrow it before using either.
+        title_tag = title_tag if isinstance(title_tag, Tag) else None
         if title_tag and title_tag.name == "meta":
-            title = title_tag.get("content", "").strip()
+            title = str(title_tag.get("content") or "").strip()
         else:
             title = title_tag.get_text(strip=True) if title_tag else ""
 
-        body = soup.find("body")
+        body_candidate = soup.find("body")
+        body = body_candidate if isinstance(body_candidate, Tag) else None
         if not body:
             content = soup.get_text(separator="\n", strip=True)
         else:
@@ -274,6 +279,11 @@ class EpubParser(BaseParser):
         return title, content
 
     def _parse_chapter_number(self, title: str) -> int | None:
+        """Return an integer label matched by a configured pattern.
+
+        EPUB extraction deliberately does not use this value as its internal
+        chapter index: author-facing labels may be decimal or non-contiguous.
+        """
         if not title:
             return None
 

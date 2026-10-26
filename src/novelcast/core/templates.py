@@ -22,6 +22,14 @@ class AppTemplates(Jinja2Templates):
         if request and "current_user" not in context:
             context["current_user"] = getattr(request.state, "user", None)
 
+        if request and "release_update" not in context:
+            current_user = context.get("current_user")
+            if current_user and current_user.get("is_root"):
+                try:
+                    context["release_update"] = request.app.state.release_updates.get_available_update()
+                except AttributeError:
+                    context["release_update"] = None
+
         if request and "reading_settings_schema" not in context:
             try:
                 context["reading_settings_schema"] = request.app.state.ctx.settings.get_reading_settings_schema()

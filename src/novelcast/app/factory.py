@@ -17,6 +17,7 @@ from novelcast.app.lifespan import lifespan
 from novelcast.core.config import AppConfig
 from novelcast.core.logging import LogConfig, setup_logging
 from novelcast.core.templates import AppTemplates
+from novelcast.services.release_update_service import ReleaseUpdateService
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 TEMPLATES_DIR = BASE_DIR / "templates"
@@ -36,6 +37,7 @@ def create_app(config: AppConfig) -> FastAPI:
     app.state.config = config
     app.state.templates = AppTemplates(directory=str(TEMPLATES_DIR))
     app.state.templates = AppTemplates(directory=str(TEMPLATES_DIR))
+    app.state.release_updates = ReleaseUpdateService(config.github_repository)
 
     app.add_middleware(RequestIDMiddleware)
     app.add_middleware(AuthMiddleware)

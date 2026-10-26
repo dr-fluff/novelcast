@@ -10,6 +10,7 @@ from .logging_service import LoggingService
 from .notification_service import NotifierService
 from .password_reset_service import PasswordResetService
 from .progress_service import ProgressService
+from .release_update_service import ReleaseUpdateService
 from .rss_service import RssService
 from .settings_service import SettingsService
 from .stats_service import StatsService
