@@ -218,3 +218,6 @@ __marimo__/
 data/novelcast.db
 data/novelcast.db
 data/
+.env
+.env.bk
+db/
