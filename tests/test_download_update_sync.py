@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src")))
 
-from novelcast.app.lifespan import _run_auto_check
+from novelcast.services.workers.sync_worker import _run_auto_check
 from novelcast.services.story_download_service import StoryDownloadService
 from novelcast.services.story_service import StoryService
 from novelcast.services.sync_service import LibrarySyncService
@@ -24,6 +24,15 @@ class FakePipeline:
         self.append_calls.append((story_id, parsed))
         existing = set(self.chapters_repo.get_chapter_numbers(story_id) or [])
         return [ch["number"] for ch in parsed.get("chapters", []) if ch["number"] not in existing]
+    
+    def integrity_check(self, story_id):
+        return {
+            "ok": True,
+            "missing": [],
+            "restored": [],
+            "not_in_epub": [],
+            "needs_redownload": False,
+        }
 
 
 class TestStoryDownloadService(unittest.TestCase):
@@ -33,11 +42,13 @@ class TestStoryDownloadService(unittest.TestCase):
         self.stories_repo = MagicMock()
         self.pipeline = FakePipeline()
         self.notifier = MagicMock()
+        self.settings_service = MagicMock()
         self.service = StoryDownloadService(
             orchestrator=self.orchestrator,
             pipeline=self.pipeline,
             parser=self.parser,
             stories_repo=self.stories_repo,
+            settings_service=self.settings_service,
             notifier=self.notifier,
         )
 
@@ -210,13 +221,14 @@ class TestAutoSyncWorker(unittest.IsolatedAsyncioTestCase):
     async def test_run_auto_check_updates_auto_stories_when_pending(self):
         ctx = MagicMock()
         ctx.library_sync = MagicMock()
+        ctx.stories = MagicMock()
+
         ctx.library_sync.auto_sync_enabled.return_value = True
-        ctx.library_sync.stories.get_all_stories.return_value = [
+        ctx.stories.get_all_stories.return_value = [
             {"id": 1, "auto_update": True, "source_url": "https://example.com/1"},
             {"id": 2, "auto_update": False, "source_url": "https://example.com/2"},
         ]
         ctx.library_sync.check_updates.return_value = {"pending_chapters": 1}
-        ctx.library_sync.update_all = MagicMock()
 
         await _run_auto_check(ctx)
 

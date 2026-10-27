@@ -36,6 +36,23 @@ class DummyDownload:
     def _extract_metadata(self, raw):
         return {}
 
+class FakePatreonEngine:
+    def list_posts_with_access(self, url, story_match=None):
+        return {
+            "creator": "MarvinKnight",
+            "posts": [
+                {
+                    "number": 1,
+                    "title": "First Post",
+                    "locked": False,
+                },
+                {
+                    "number": 2,
+                    "title": "Second Post",
+                    "locked": False,
+                },
+            ],
+        }
 
 def test_patreon_preview_uses_creator_page_posts_for_chapter_count(monkeypatch):
     html = """
@@ -46,13 +63,14 @@ def test_patreon_preview_uses_creator_page_posts_for_chapter_count(monkeypatch):
     </body></html>
     """
 
-    monkeypatch.setattr(
-        "novelcast.api.routes.add_story.httpx.AsyncClient",
-        lambda *args, **kwargs: FakeAsyncClient(html),
-    )
-
     request = AddStoryRequest(url="https://www.patreon.com/c/MarvinKnight/home?vanity=MarvinKnight")
-    result = asyncio.run(preview_story_metadata(request, download=DummyDownload()))
+    result = asyncio.run(
+        preview_story_metadata(
+            request,
+            download=DummyDownload(),
+            patreon_engine=FakePatreonEngine(),
+        )
+    )
 
     assert result.title == "Patreon: MarvinKnight"
     assert result.author == "MarvinKnight"

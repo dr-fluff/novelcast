@@ -8,16 +8,16 @@ def test_parse_patreon_story():
         "title": "Test Story",
         "author": "Oliver",
         "raw": {
-            "chapters": [
+            "post_records": [
                 {
-                    "number": 1,
                     "title": "Chapter 1",
-                    "content": "Hello",
+                    "raw_content": "Hello",
+                    "content_format": "html",
                 },
                 {
-                    "number": 2,
                     "title": "Chapter 2",
-                    "content": "World",
+                    "raw_content": "World",
+                    "content_format": "html",
                 },
             ]
         },
@@ -32,7 +32,7 @@ def test_parse_patreon_story():
 
     assert story["chapters"][0]["number"] == 1
     assert story["chapters"][0]["title"] == "Chapter 1"
-    assert story["chapters"][0]["content"] == "Hello"
+    assert story["chapters"][0]["content"] == "<p>Hello</p>"
 
 
 def test_parse_empty_chapters():

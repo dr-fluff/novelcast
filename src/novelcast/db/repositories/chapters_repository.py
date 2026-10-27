@@ -174,56 +174,89 @@ class ChaptersRepository(BaseRepository):
 
             return chapter.id
 
+    
     def upsert(
         self,
         story_id: int,
         chapter_number: int,
         title: str | None,
         url: str | None,
-        file_path: str | None = None,
-        is_downloaded: int = 0,
+        file_path: str | None,
+        is_downloaded: int,
     ) -> None:
         with self.session() as db:
-            stmt = (
-                insert(Chapter)
-                .values(
-                    story_id=story_id,
-                    chapter_number=chapter_number,
-                    title=title,
-                    url=url,
-                    is_downloaded=bool(is_downloaded),
-                )
-                .on_conflict_do_update(
-                    index_elements=["url"],
-                    set_={
-                        "story_id": story_id,
-                        "chapter_number": chapter_number,
-                        "title": title,
-                        "is_downloaded": bool(is_downloaded),
-                    },
-                )
-            )
+            chapter = None
 
-            db.execute(stmt)
+            # A source URL is the strongest available identity when present.
+            if url:
+                chapter = db.scalars(
+                    select(Chapter).where(Chapter.url == url)
+                ).first()
 
-            # If we have file_path, attach it separately
-            if file_path:
-                chapter = db.scalars(select(Chapter).where(Chapter.url == url)).first()
+            # Do not reassign a URL that already belongs to another story.
+            if chapter is not None and chapter.story_id != story_id:
+                return
 
-                if chapter:
-                    # optionally clear previous canonical file
-                    for f in chapter.files:
-                        if f.is_canonical:
-                            f.is_canonical = False
-
-                    db.add(
-                        ChapterFile(
-                            chapter_id=chapter.id,
-                            file_path=file_path,
-                            format="html",
-                            is_canonical=True,
+            if chapter is None:
+                # A chapter without a URL cannot use the URL uniqueness
+                # constraint. Fall back to the story and chapter number.
+                if url is None:
+                    chapter = db.scalars(
+                        select(Chapter).where(
+                            Chapter.story_id == story_id,
+                            Chapter.chapter_number == chapter_number,
+                            Chapter.url.is_(None),
                         )
+                    ).first()
+
+                if chapter is None:
+                    chapter = Chapter(
+                        story_id=story_id,
+                        chapter_number=chapter_number,
+                        title=title,
+                        url=url,
+                        is_downloaded=bool(is_downloaded),
                     )
+                    db.add(chapter)
+                    db.flush()
+            else:
+                chapter.chapter_number = chapter_number
+                chapter.title = title
+                chapter.is_downloaded = bool(is_downloaded)
+
+            if not file_path:
+                return
+
+            # Reuse a matching HTML record instead of creating duplicates.
+            existing_file = db.scalars(
+                select(ChapterFile).where(
+                    ChapterFile.chapter_id == chapter.id,
+                    ChapterFile.file_path == file_path,
+                    ChapterFile.format == "html",
+                )
+            ).first()
+
+            if existing_file:
+                existing_file.is_canonical = True
+                for other_file in chapter.files:
+                    if other_file.id != existing_file.id and other_file.format == "html":
+                        other_file.is_canonical = False
+            else:
+                # Keep other file records intact. Make the new HTML file
+                # canonical without deleting unrelated formats.
+                for other_file in chapter.files:
+                    if other_file.format == "html":
+                        other_file.is_canonical = False
+
+                db.add(
+                    ChapterFile(
+                        chapter_id=chapter.id,
+                        file_path=file_path,
+                        format="html",
+                        is_canonical=True,
+                    )
+                )
+
 
     def upsert_bulk(self, chapters: list[dict]) -> None:
         """Bulk upsert chapters (Chapter only). ChapterFile handled separately."""

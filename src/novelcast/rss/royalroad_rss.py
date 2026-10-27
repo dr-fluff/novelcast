@@ -57,7 +57,18 @@ class RoyalRoadRss:
 
             r.raise_for_status()
 
-            return r.content.decode("utf-8-sig")
+            content = r.content.decode("utf-8-sig").lstrip("\ufeff\r\n\t ")
+
+            if not content.startswith("<?xml") and not content.startswith("<rss"):
+                logger.warning(
+                    "RoyalRoad RSS returned unexpected content | url=%s content-type=%s start=%r",
+                    url,
+                    r.headers.get("content-type"),
+                    content[:200],
+                )
+                return ""
+
+            return content
 
         except requests.exceptions.HTTPError as e:
             status = e.response.status_code if e.response is not None else None

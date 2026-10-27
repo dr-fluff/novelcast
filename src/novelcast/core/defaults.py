@@ -255,14 +255,24 @@ FFF_INCLUDE_IMAGES = "include_images"
 FFF_IS_ADULT = "is_adult"
 FFF_LANGUAGE = "language"
 FFF_TIMEOUT = "timeout"
+FFF_CONNECT_TIMEOUT = "connect_timeout"
 FFF_RETRIES = "retries"
 FFF_KEEP_SUMMARY_HTML = "keep_summary_html"
 FFF_ROYALROAD_EMAIL = "royalroad_email"
 FFF_ROYALROAD_PASSWORD = "royalroad_password"
 FFF_ROYALROAD_SLOW_DOWN_SLEEP_TIME = "royalroad_slow_down_sleep_time"
+FFF_ROYAL_ROAD_FLARESOLVERR_PROXY = "royalroad_flaresolverr_proxy"
+FFF_ROYAL_ROAD_FLARESOLVERR_USE_SESSION = ("royalroad_flaresolverr_use_session")
+FFF_ROYAL_ROAD_FLARESOLVERR_SESSION = ("royalroad_flaresolverr_session")
+FFF_ROYAL_ROAD_FLARESOLVERR_PROXY_ADDRESS = "royalroad_flaresolverr_proxy_address"
+FFF_ROYAL_ROAD_FLARESOLVERR_PROXY_PORT = "royalroad_flaresolverr_proxy_port"
+FFF_ROYAL_ROAD_FLARESOLVERR_PROXY_PROTOCOL = "royalroad_flaresolverr_proxy_protocol"
+FFF_ROYAL_ROAD_FLARESOLVERR_PROXY_TIMEOUT = "royalroad_flaresolverr_proxy_timeout"
 FFF_TTHFANFIC_USERNAME = "tthfanfic_username"
 FFF_TTHFANFIC_EMAIL = "tthfanfic_email"
 FFF_TTHFANFIC_PASSWORD = "tthfanfic_password"
+
+
 
 FANFICTIONFARE_DEFAULTS = {
     FFF_CONFIG_PATH: {
@@ -303,10 +313,19 @@ FANFICTIONFARE_DEFAULTS = {
     FFF_TIMEOUT: {
         KEY_TYPE: TYPE_NUMBER,
         KEY_DESCRIPTION: "Request timeout for FanFicFare (seconds)",
-        KEY_DEFAULT: 60,
+        KEY_DEFAULT: 240,
         KEY_MIN: 1,
         KEY_MAX: 300,
         KEY_LABEL: "Timeout (seconds)",
+        KEY_SCOPE: "defaults",
+    },
+    FFF_CONNECT_TIMEOUT: {
+        KEY_TYPE: TYPE_NUMBER,
+        KEY_DESCRIPTION: "Connection timeout for FanFicFare (seconds)",
+        KEY_DEFAULT: 120,
+        KEY_MIN: 1,
+        KEY_MAX: 300,
+        KEY_LABEL: "Connect timeout (seconds)",
         KEY_SCOPE: "defaults",
     },
     FFF_RETRIES: {
@@ -349,7 +368,71 @@ FANFICTIONFARE_DEFAULTS = {
         KEY_MAX: 10,
         KEY_LABEL: "Slow down sleep time (seconds)",
         KEY_SCOPE: "www.royalroad.com",
+        KEY_INI_KEY: "royalroad_slow_down_sleep_time"
     },
+    
+    
+    FFF_ROYAL_ROAD_FLARESOLVERR_PROXY: {
+        KEY_TYPE: TYPE_BOOL,
+        KEY_DESCRIPTION: "Proxy for FlareSolverr when accessing RoyalRoad",
+        KEY_DEFAULT: True,
+        KEY_LABEL: "FlareSolverr Proxy",
+        KEY_SCOPE: "www.royalroad.com",
+        KEY_INI_KEY: "use_flaresolverr_proxy",
+    },
+    FFF_ROYAL_ROAD_FLARESOLVERR_PROXY_ADDRESS: {
+        KEY_TYPE: TYPE_STRING,
+        KEY_DESCRIPTION: "Proxy address for FlareSolverr when accessing RoyalRoad",
+        KEY_DEFAULT: "192.168.1.103",
+        KEY_LABEL: "FlareSolverr Proxy Address",
+        KEY_SCOPE: "www.royalroad.com",
+        KEY_INI_KEY: "flaresolverr_proxy_address",
+    },
+    FFF_ROYAL_ROAD_FLARESOLVERR_PROXY_PORT: {
+        KEY_TYPE: TYPE_STRING,
+        KEY_DESCRIPTION: "Proxy port for FlareSolverr when accessing RoyalRoad",
+        KEY_DEFAULT: "8191",
+        KEY_MIN: 0,
+        KEY_MAX: 65535,
+        KEY_LABEL: "FlareSolverr Proxy Port",
+        KEY_SCOPE: "www.royalroad.com",
+        KEY_INI_KEY: "flaresolverr_proxy_port",
+    },
+    FFF_ROYAL_ROAD_FLARESOLVERR_PROXY_PROTOCOL: {
+        KEY_TYPE: TYPE_STRING,
+        KEY_DESCRIPTION: "Proxy protocol for FlareSolverr when accessing RoyalRoad (http, https, socks5, etc.)",
+        KEY_DEFAULT: "http",
+        KEY_LABEL: "FlareSolverr Proxy Protocol",
+        KEY_SCOPE: "www.royalroad.com",
+        KEY_INI_KEY: "flaresolverr_proxy_protocol",
+    },
+    FFF_ROYAL_ROAD_FLARESOLVERR_PROXY_TIMEOUT: {
+        KEY_TYPE: TYPE_NUMBER,
+        KEY_DESCRIPTION: "Maximum time FlareSolverr spends solving a request (seconds)",
+        KEY_DEFAULT: 180,
+        KEY_MIN: 1,
+        KEY_MAX: 300,
+        KEY_LABEL: "FlareSolverr Proxy Timeout (seconds)",
+        KEY_SCOPE: "www.royalroad.com",
+        KEY_INI_KEY: "flaresolverr_proxy_timeout",
+    },
+    FFF_ROYAL_ROAD_FLARESOLVERR_USE_SESSION: {
+        KEY_TYPE: TYPE_BOOL,
+        KEY_DESCRIPTION: "Reuse a FlareSolverr browser session for RoyalRoad requests",
+        KEY_DEFAULT: True,
+        KEY_LABEL: "Reuse FlareSolverr session",
+        KEY_SCOPE: "www.royalroad.com",
+        KEY_INI_KEY: "use_flaresolverr_session",
+    },
+    FFF_ROYAL_ROAD_FLARESOLVERR_SESSION: {
+        KEY_TYPE: TYPE_STRING,
+        KEY_DESCRIPTION: "FlareSolverr browser session name",
+        KEY_DEFAULT: "FanFicFareSession",
+        KEY_LABEL: "FlareSolverr session name",
+        KEY_SCOPE: "www.royalroad.com",
+        KEY_INI_KEY: "flaresolverr_session",
+    },
+
     FFF_TTHFANFIC_USERNAME: {
         KEY_TYPE: TYPE_STRING,
         KEY_DESCRIPTION: "Username for TTHFanfic",

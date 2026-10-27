@@ -43,7 +43,7 @@
                             <img src="{{ r.cover_url }}" alt="{{ r.title }}" loading="lazy" />
                         {% else %}
                             <div class="result-card__cover-placeholder">
-                                <i class="fa-solid fa-{% if r.kind == 'author' %}user{% else %}book{% endif %}"></i>
+                                <i class="fa-solid fa-{% if r.kind in ['author', 'author_search', 'author_profile'] %}user{% else %}book{% endif %}"></i>
                             </div>
                         {% endif %}
                         <span class="result-card__site-badge site-badge--{{ r.site }}">{{ r.site }}</span>

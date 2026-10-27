@@ -11,7 +11,7 @@ class DummyAuthorRepo:
         self.updated = []
         self.link_calls = []
 
-    def update(self, author_id, name, bio=None, picture_path=None):
+    def update(self, author_id, name, bio=None, picture_path=None, force=False):
         self.updated.append({"author_id": author_id, "name": name, "bio": bio, "picture_path": picture_path})
         return {"id": author_id, "name": name, "bio": bio, "picture_path": picture_path, "links": []}
 

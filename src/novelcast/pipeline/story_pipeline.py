@@ -302,8 +302,15 @@ class StoryPipeline:
             ch["content"],
         )
 
-        story_url = story.get("source_url") or story.get("url") or ""
-        chapter_url = f"{story_url}#chapter-{ch['number']}" if story_url else f"file://{path}"
+        chapter_url = ch.get("url")
+
+        if not chapter_url:
+            story_url = story.get("source_url") or story.get("url") or ""
+            chapter_url = (
+                f"{story_url}#chapter-{ch['number']}"
+                if story_url
+                else path.as_uri()
+            )
 
         self.chapters_repo.upsert(
             story_id,

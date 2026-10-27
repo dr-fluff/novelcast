@@ -1,3 +1,4 @@
+
 # tests/test_search_service.py
 
 import asyncio
@@ -6,7 +7,9 @@ import pytest
 
 from novelcast.services.scrapers import scrape_all
 from novelcast.services.scrapers.base import ScrapedResult
-from novelcast.services.search_service import SITE_REGISTRY, ParsedQuery, SearchService
+from novelcast.services.search_service import ParsedQuery, SearchService
+from novelcast.services.site_adapters import registry
+import novelcast.api.routes.add_story as add_story_module
 
 service = SearchService()
 
@@ -25,10 +28,14 @@ def urls(raw: str) -> list[str]:
 
 
 def test_parse_query_extracts_patreon_creator_from_vanity_url():
-    q = service.parse_query("https://www.patreon.com/c/MarvinKnight/home?vanity=MarvinKnight")
-    assert q.target == "patreon"
-    assert q.patreon_creator == "MarvinKnight"
-    assert q.resolved_url == "https://www.patreon.com/MarvinKnight"
+    q = service.parse_query(
+        "https://www.patreon.com/c/MarvinKnight/home?vanity=MarvinKnight"
+    )
+    assert q.target == "author"
+    assert q.identifier == "marvinknight"
+    assert q.site == "patreon"
+    assert q.lookup_type == "url"
+    assert q.resolved_url == "https://www.patreon.com/c/marvinknight/posts"
 
 
 def kinds(raw: str) -> list[str]:
@@ -59,13 +66,15 @@ class TestDirectUrls:
         q = parse("https://www.scribblehub.com/series/12345/some-title")
         assert q.site == "scribblehub"
         assert q.id_type == "numeric_id"
-        assert q.resolved_url == "https://www.scribblehub.com/series/12345"
+        assert q.resolved_url == "https://www.scribblehub.com/series/12345/"
 
     def test_royalroad_author_profile_url(self):
         q = parse("https://www.royalroad.com/profile/105290")
         assert q.site == "royalroad"
         assert q.id_type == "author"
-        assert q.resolved_url == "https://www.royalroad.com/profile/105290/fictions"
+        assert q.resolved_url == (
+            "https://www.royalroad.com/profile/105290/fictions"
+        )
 
     def test_scribblehub_author_profile_url(self):
         q = parse("https://www.scribblehub.com/profile/9999/")
@@ -93,12 +102,12 @@ class TestSiteNumericId:
     def test_scribblehub_numeric(self):
         q = parse("scribblehub:12345")
         assert q.site == "scribblehub"
-        assert q.resolved_url == "https://www.scribblehub.com/series/12345"
+        assert q.resolved_url == "https://www.scribblehub.com/series/12345/"
 
     def test_sh_alias_numeric(self):
         q = parse("sh:12345")
         assert q.site == "scribblehub"
-        assert q.resolved_url == "https://www.scribblehub.com/series/12345"
+        assert q.resolved_url == "https://www.scribblehub.com/series/12345/"
 
 
 # ---------------------------------------------------------------------------
@@ -166,7 +175,7 @@ class TestAuthorSearch:
 
     def test_global_author_only_author_kind(self):
         result_kinds = kinds("author:Mecanimus")
-        assert all(k == "author" for k in result_kinds)
+        assert all(kind == "author_search" for kind in result_kinds)
 
     def test_site_scoped_author(self):
         q = parse("royalroad:author:Mecanimus")
@@ -193,7 +202,9 @@ class TestAuthorSearch:
 
     def test_author_profile_url_direct(self):
         result_urls = urls("https://www.royalroad.com/profile/105290")
-        assert result_urls == ["https://www.royalroad.com/profile/105290/fictions"]
+        assert result_urls == [
+            "https://www.royalroad.com/profile/105290/fictions"
+        ]
 
 
 # ---------------------------------------------------------------------------
@@ -220,8 +231,8 @@ class TestBareKeyword:
 
     def test_bare_searches_both_kinds(self):
         result_kinds = kinds("Changeling")
-        assert "fiction" in result_kinds
-        assert "author" in result_kinds
+        assert "fiction_search" in result_kinds
+        assert "author_search" in result_kinds
 
     def test_bare_multiword(self):
         q = parse("He Who Fights With Monsters")
@@ -229,7 +240,7 @@ class TestBareKeyword:
         assert q.id_type == "title_and_author"
 
     def test_bare_generates_four_urls(self):
-        # 2 sites × 2 kinds = 4 search URLs
+        # 2 sites x 2 kinds = 4 search URLs
         result = service.build_search_urls(parse("Changeling"))
         assert len(result) == 4
 
@@ -260,26 +271,33 @@ class TestBuildSearchUrls:
         results = service.build_search_urls(q)
         assert len(results) == 1
         assert results[0].url == "https://www.royalroad.com/fiction/75345"
-        assert results[0].kind == "fiction"
+        assert results[0].kind == "fiction_detail"
 
     def test_site_title_returns_one_fiction_url(self):
         results = service.build_search_urls(parse("rr:Changeling"))
         assert len(results) == 1
-        assert results[0].kind == "fiction"
+        assert results[0].kind == "fiction_search"
         assert results[0].site == "royalroad"
 
     def test_global_author_returns_one_per_site(self):
         results = service.build_search_urls(parse("author:Mecanimus"))
-        assert len(results) == len(SITE_REGISTRY)
-        assert all(r.kind == "author" for r in results)
+        assert len(results) == len(registry.all_sites())
+        assert all(r.kind == "author_search" for r in results)
 
     def test_search_urls_encode_spaces(self):
         results = service.build_search_urls(parse("rr:He Who Fights"))
         assert "+" in results[0].url or "%20" in results[0].url
 
 
+# ---------------------------------------------------------------------------
+# Scraper orchestration
+# ---------------------------------------------------------------------------
+
+
 def test_scrape_all_uses_patreon_creator_scraper(monkeypatch):
-    async def fake_scrape_patreon_creator(client, creator_name):
+    async def fake_scrape_patreon_creator(
+        client, creator_name, session_cookie=None
+    ):
         return [
             ScrapedResult(
                 site="patreon",
@@ -292,9 +310,18 @@ def test_scrape_all_uses_patreon_creator_scraper(monkeypatch):
             )
         ]
 
+    from novelcast.services.scrapers import patreon
+
     monkeypatch.setattr(
-        "novelcast.services.scrapers.patreon.scrape_patreon_creator",
+        patreon,
+        "scrape_patreon_creator",
         fake_scrape_patreon_creator,
+    )
+
+    # Explicitly enable the site for this test.
+    monkeypatch.setattr(
+        "novelcast.services.scrapers.registry.is_enabled",
+        lambda site, settings_service=None: True,
     )
 
     results = asyncio.run(

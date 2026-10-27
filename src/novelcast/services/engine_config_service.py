@@ -5,7 +5,7 @@ import logging
 from collections import OrderedDict
 from pathlib import Path
 
-from novelcast.core.defaults import FFF_CONFIG_PATH, SECTION_FANFICFARE
+from novelcast.core.defaults import FFF_CONFIG_PATH, FFF_ROYAL_ROAD_FLARESOLVERR_PROXY_TIMEOUT, SECTION_FANFICFARE
 
 logger = logging.getLogger(__name__)
 
@@ -161,7 +161,9 @@ class BaseEngineConfigService:
         lines = self.build_lines()
         new_hash = self._compute_hash(lines)
 
-        path_obj = Path(path)
+        path_obj = Path(path).expanduser()
+        if not path_obj.is_absolute():
+            path_obj = (Path.cwd() / path_obj).resolve()
 
         if not force and self._last_hash == new_hash and self._last_path == str(path_obj):
             return str(path_obj)
@@ -183,6 +185,11 @@ class BaseEngineConfigService:
 class FanFicFareConfigService(BaseEngineConfigService):
     SECTION_ORDER = ["defaults", "epub"]
 
+    def post_format(self, key: str, value: str) -> str:
+        if key == FFF_ROYAL_ROAD_FLARESOLVERR_PROXY_TIMEOUT:
+            return str(int(float(value) * 1000))
+        return value
+    
     def section_key(self) -> str:
         return SECTION_FANFICFARE
 

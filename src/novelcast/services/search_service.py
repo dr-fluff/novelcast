@@ -10,12 +10,24 @@ from novelcast.services.site_adapters import registry
 
 @dataclass
 class ParsedQuery:
-    target: str  # fiction | author | auto
+    target: str
     identifier: str
-    lookup_type: str  # id | text | url
+    lookup_type: str
     site: str | None = None
     resolved_url: str | None = None
 
+    @property
+    def id_type(self) -> str:
+        """Compatibility with older templates and callers."""
+        if self.target == "auto":
+            return "title_and_author"
+        if self.target == "author":
+            return "author"
+        if self.lookup_type == "id":
+            return "numeric_id"
+        if self.lookup_type == "url":
+            return "numeric_id" if self.identifier.isdigit() else "author"
+        return "title"
 
 @dataclass
 class SearchResult:
@@ -41,33 +53,21 @@ class SearchService:
         self._settings_service = settings_service
 
     def _enabled_sites(self) -> list[str]:
+        if self._settings_service is None:
+            return registry.all_sites()
         return registry.enabled_sites(self._settings_service)
 
     def parse_query(self, raw: str) -> ParsedQuery:
         raw = raw.strip()
 
-        # -------------------------
-        # 1. "prefix:identifier" pinned to whichever enabled site owns
-        #    that trigger word — the adapter decides what the remainder
-        #    means. Falls through untouched if the prefix isn't a site's
-        #    or a generic fiction/author word (e.g. "https://...").
-        # -------------------------
-        m = re.match(r"^([a-zA-Z]+)\s*:\s*(.+)$", raw)
+        # Site prefix, optionally followed by a nested target:
+        # rr:12345, rr:author:Mecanimus, scribblehub:Changeling
+        m = re.match(r"^(?!https?://)([a-zA-Z -]+?)\s*:\s*(.+)$", raw, re.IGNORECASE)
         if m:
-            prefix, remainder = m.group(1).lower(), m.group(2).strip()
+            prefix = re.sub(r"[\s-]+", "", m.group(1).lower())
+            remainder = m.group(2).strip()
 
-            for site in self._enabled_sites():
-                adapter = registry.get_adapter(site)
-                if prefix in adapter.query_prefixes:
-                    match = adapter.parse_identifier(remainder)
-                    return ParsedQuery(
-                        target=match.target,
-                        identifier=match.identifier,
-                        lookup_type=match.lookup_type,
-                        site=site,
-                        resolved_url=match.resolved_url,
-                    )
-
+            # Generic search prefixes.
             if prefix in _GENERIC_FICTION_PREFIXES:
                 return ParsedQuery(
                     target="fiction",
@@ -82,12 +82,46 @@ class SearchService:
                     lookup_type="id" if remainder.isdigit() else "text",
                 )
 
-        # -------------------------
-        # 2. Direct URL recognized by any enabled site's own adapter.
-        #    Adding a new site only requires registering its adapter —
-        #    this loop never changes.
-        # -------------------------
-        for site in self._enabled_sites():
+            # Resolve site aliases independently of enabled state.
+            site = registry.resolve_alias(prefix)
+            if site is None:
+                raise ValueError(f"Unknown site prefix: {m.group(1).strip()}")
+
+            adapter = registry.get_adapter(site)
+
+            # Support nested author prefixes such as rr:author:Mecanimus.
+            nested = re.match(
+                r"^(author|authur|arthur|profile)\s*:\s*(.+)$",
+                remainder,
+                re.IGNORECASE,
+            )
+            if nested:
+                identifier = nested.group(2).strip()
+                return ParsedQuery(
+                    target="author",
+                    identifier=identifier,
+                    lookup_type="id" if identifier.isdigit() else "text",
+                    site=site,
+                )
+
+            match = adapter.parse_identifier(remainder)
+            resolved_url = match.resolved_url
+            if match.lookup_type == "id":
+                if match.target == "author":
+                    resolved_url = adapter.author_url(match.identifier)
+                else:
+                    resolved_url = adapter.fiction_url(match.identifier)
+
+            return ParsedQuery(
+                target=match.target,
+                identifier=match.identifier,
+                lookup_type=match.lookup_type,
+                site=site,
+                resolved_url=resolved_url,
+            )
+
+        # Direct URLs: check every adapter, not just enabled sites.
+        for site in registry.all_sites():
             adapter = registry.get_adapter(site)
 
             fid = adapter.match_fiction_url(raw)
@@ -110,10 +144,7 @@ class SearchService:
                     resolved_url=adapter.author_url(aid),
                 )
 
-        # -------------------------
-        # 3. Un-prefixed, non-URL shorthand a site recognizes on its own
-        #    (e.g. RoyalRoad/ScribbleHub's shared "{id}/{name}" or bare id).
-        # -------------------------
+        # Bare IDs recognized by an adapter.
         for site in self._enabled_sites():
             adapter = registry.get_adapter(site)
             match = adapter.match_bare(raw)
@@ -122,16 +153,11 @@ class SearchService:
                     target=match.target,
                     identifier=match.identifier,
                     lookup_type=match.lookup_type,
+                    site=site,
+                    resolved_url=match.resolved_url,
                 )
 
-        # -------------------------
-        # 4. Default = free-text search across every enabled site.
-        # -------------------------
-        return ParsedQuery(
-            target="auto",
-            identifier=raw,
-            lookup_type="text",
-        )
+        return ParsedQuery(target="auto", identifier=raw, lookup_type="text")
 
     # -----------------------------------------------------------------------
     # Build URLs
@@ -158,19 +184,53 @@ class SearchService:
             qtext = q.identifier.replace(" ", "+")
 
             if q.target == "author":
-                if q.lookup_type == "id":
-                    _add(SearchResult(site=site, kind="author_profile", url=adapter.author_url(q.identifier)))
+                if q.lookup_type in {"id", "url"}:
+                    _add(
+                        SearchResult(
+                            site=site,
+                            kind="author_profile",
+                            url=q.resolved_url or adapter.author_url(q.identifier),
+                        )
+                    )
                 else:
-                    _add(SearchResult(site=site, kind="author_search", url=adapter.author_search_url(qtext)))
-
+                    _add(
+                        SearchResult(
+                            site=site,
+                            kind="author_search",
+                            url=adapter.author_search_url(q.identifier.replace(" ", "+")),
+                        )
+                    )
             elif q.target == "fiction":
-                if q.lookup_type == "id":
-                    _add(SearchResult(site=site, kind="fiction_detail", url=adapter.fiction_url(q.identifier)))
+                if q.lookup_type in {"id", "url"}:
+                    _add(
+                        SearchResult(
+                            site=site,
+                            kind="fiction_detail",
+                            url=q.resolved_url or adapter.fiction_url(q.identifier),
+                        )
+                    )
                 else:
-                    _add(SearchResult(site=site, kind="fiction_search", url=adapter.fiction_search_url(qtext)))
-
-            else:  # auto
-                _add(SearchResult(site=site, kind="fiction_search", url=adapter.fiction_search_url(qtext)))
-                _add(SearchResult(site=site, kind="author_search", url=adapter.author_search_url(qtext)))
-
+                    _add(
+                        SearchResult(
+                            site=site,
+                            kind="fiction_search",
+                            url=adapter.fiction_search_url(q.identifier.replace(" ", "+")),
+                        )
+                    )
+            else:
+                qtext = q.identifier.replace(" ", "+")
+                _add(
+                    SearchResult(
+                        site=site,
+                        kind="fiction_search",
+                        url=adapter.fiction_search_url(qtext),
+                    )
+                )
+                _add(
+                    SearchResult(
+                        site=site,
+                        kind="author_search",
+                        url=adapter.author_search_url(qtext),
+                    )
+                )
         return results

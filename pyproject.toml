@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "novelcast"
-version = "0.1.0"
+version = "1.0.1"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11,<3.14"
@@ -17,7 +17,7 @@ dependencies = [
     "python-multipart",
     "pydantic",
     "schedule",
-    "fanficfare",
+    "fanficfare>=4.62.0",
     "requests",
     "beautifulsoup4",
     "pydantic-settings>=2.13.1",
