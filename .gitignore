@@ -221,3 +221,7 @@ data/
 .env
 .env.bk
 db/
+
+anubis_profile/
+anubis_profile2/
+anubis_profile2
