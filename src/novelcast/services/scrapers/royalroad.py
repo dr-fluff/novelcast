@@ -1,18 +1,47 @@
 # novelcast/services/scrapers/royalroad.py
 
+import logging
+import os
+
 import httpx
 from bs4 import BeautifulSoup
 
 from .base import ScrapedResult
 
+logger = logging.getLogger(__name__)
+
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (compatible; NovelCast/1.0)",
 }
 
+# Royal Road sits behind Anubis, which blocks plain HTTP clients. Pages are
+# fetched through the local FlareSolverr-compatible shim (anubis_shim.py).
+SHIM_URL = os.environ.get("NOVELCAST_ANUBIS_SHIM_URL", "http://127.0.0.1:8192/v1")
+SHIM_TIMEOUT_MS = 60000
+
+
+async def _fetch_html(client: httpx.AsyncClient, url: str) -> str:
+    """Return page HTML via the Anubis shim; fall back to a direct request if the shim fails."""
+    try:
+        resp = await client.post(
+            SHIM_URL,
+            json={"cmd": "request.get", "url": url, "maxTimeout": SHIM_TIMEOUT_MS},
+            timeout=(SHIM_TIMEOUT_MS / 1000) + 10,
+        )
+        data = resp.json()
+        if data.get("status") == "ok":
+            return data["solution"]["response"]
+        logger.warning("Anubis shim returned an error for %s: %s", url, data.get("message"))
+    except (httpx.HTTPError, ValueError, KeyError) as e:
+        logger.warning("Anubis shim request failed for %s: %s", url, e)
+
+    resp = await client.get(url, headers=HEADERS, follow_redirects=True)
+    return resp.text
+
 
 async def scrape_fiction_search(client: httpx.AsyncClient, url: str) -> list[ScrapedResult]:
-    resp = await client.get(url, headers=HEADERS, follow_redirects=True)
-    soup = BeautifulSoup(resp.text, "html.parser")
+    html = await _fetch_html(client, url)
+    soup = BeautifulSoup(html, "html.parser")
     results = []
 
     for row in soup.select(".fiction-list-item"):
@@ -41,8 +70,8 @@ async def scrape_fiction_search(client: httpx.AsyncClient, url: str) -> list[Scr
 
 
 async def scrape_author_search(client: httpx.AsyncClient, url: str) -> list[ScrapedResult]:
-    resp = await client.get(url, headers=HEADERS, follow_redirects=True)
-    soup = BeautifulSoup(resp.text, "html.parser")
+    html = await _fetch_html(client, url)
+    soup = BeautifulSoup(html, "html.parser")
     results = []
 
     for row in soup.select(".fiction-list-item"):
@@ -72,8 +101,8 @@ async def scrape_author_search(client: httpx.AsyncClient, url: str) -> list[Scra
 
 async def scrape_fiction_detail(client: httpx.AsyncClient, url: str) -> ScrapedResult | None:
     """Scrape a single fiction page for cover, title, author, description."""
-    resp = await client.get(url, headers=HEADERS, follow_redirects=True)
-    soup = BeautifulSoup(resp.text, "html.parser")
+    html = await _fetch_html(client, url)
+    soup = BeautifulSoup(html, "html.parser")
 
     title_el = soup.select_one(".fiction-title, h1.font-white")
     author_el = soup.select_one("a[href*='/profile/']")
@@ -95,8 +124,8 @@ async def scrape_fiction_detail(client: httpx.AsyncClient, url: str) -> ScrapedR
 
 
 async def scrape_author_detail(client: httpx.AsyncClient, url: str):
-    resp = await client.get(url, headers=HEADERS, follow_redirects=True)
-    soup = BeautifulSoup(resp.text, "html.parser")
+    html = await _fetch_html(client, url)
+    soup = BeautifulSoup(html, "html.parser")
 
     results = []
 
@@ -121,3 +150,6 @@ async def scrape_author_detail(client: httpx.AsyncClient, url: str):
     unique = {r.url: r for r in results}
 
     return list(unique.values())
+
+
+# end of file
