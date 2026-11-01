@@ -337,13 +337,14 @@ class AppContext:
     def _init_telegram(self):
         logger.info("Initializing Telegram service...")
 
+        
         self.telegram = TelegramService(
             self.settings,
             self.stories,
             self.story_download,
             self.library_sync,
         )
-
+        self.library_sync.telegram = self.telegram
         self.story_download.telegram = self.telegram
         self.stories.telegram = self.telegram
 
