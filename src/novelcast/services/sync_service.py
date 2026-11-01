@@ -230,13 +230,16 @@ class LibrarySyncService:
 
     @staticmethod
     def _short_reason(exc: Exception) -> str:
-        """One-line, length-capped reason for notifications.
+        """Return a concise, user-friendly exception message."""
+        message = str(exc).strip()
 
-        Engine errors can carry a whole subprocess stderr (hundreds of lines);
-        the last non-empty line is normally the actual exception message.
-        """
-        lines = [line.strip() for line in str(exc).splitlines() if line.strip()]
+        if not message:
+            message = type(exc).__name__
+
+        # Keep only the final line if the exception contains multiline output.
+        lines = [line.strip() for line in message.splitlines() if line.strip()]
         reason = lines[-1] if lines else type(exc).__name__
+
         return reason[:200]
 
     def _notify_failures(self, failures: list[dict], checked: int):

@@ -15,6 +15,7 @@ from novelcast.services.site_adapters.patreon import extract_creator as extract_
 from . import patreon, royalroad, scribblehub
 from .base import ScrapedResult
 from .utils import normalize
+from .exceptions import ScraperUnavailableError
 
 _SCRAPERS = {
     "royalroad": royalroad,
@@ -60,14 +61,21 @@ def _build_task(client: httpx.AsyncClient, sr, settings_service=None):
 
 async def _gather(tasks):
     results = await asyncio.gather(*tasks, return_exceptions=True)
+
     combined = []
-    for r in results:
-        if isinstance(r, Exception) or r is None:
+
+    for result in results:
+        if isinstance(result, ScraperUnavailableError):
+            raise result
+
+        if isinstance(result, Exception) or result is None:
             continue
-        if isinstance(r, list):
-            combined.extend(r)
+
+        if isinstance(result, list):
+            combined.extend(result)
         else:
-            combined.append(r)
+            combined.append(result)
+
     return combined
 
 

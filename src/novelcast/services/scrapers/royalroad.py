@@ -6,6 +6,7 @@ import os
 import httpx
 from bs4 import BeautifulSoup
 
+from .exceptions import ScraperUnavailableError
 from .base import ScrapedResult
 
 logger = logging.getLogger(__name__)
@@ -21,22 +22,48 @@ SHIM_TIMEOUT_MS = 60000
 
 
 async def _fetch_html(client: httpx.AsyncClient, url: str) -> str:
-    """Return page HTML via the Anubis shim; fall back to a direct request if the shim fails."""
+    """Fetch RoyalRoad HTML through the required Anubis shim.
+
+    Never fall back to direct requests: a challenge page could otherwise
+    be mistaken for a successful search with zero results.
+    """
     try:
         resp = await client.post(
             SHIM_URL,
-            json={"cmd": "request.get", "url": url, "maxTimeout": SHIM_TIMEOUT_MS},
+            json={
+                "cmd": "request.get",
+                "url": url,
+                "maxTimeout": SHIM_TIMEOUT_MS,
+            },
             timeout=(SHIM_TIMEOUT_MS / 1000) + 10,
         )
-        data = resp.json()
-        if data.get("status") == "ok":
-            return data["solution"]["response"]
-        logger.warning("Anubis shim returned an error for %s: %s", url, data.get("message"))
-    except (httpx.HTTPError, ValueError, KeyError) as e:
-        logger.warning("Anubis shim request failed for %s: %s", url, e)
+        resp.raise_for_status()
 
-    resp = await client.get(url, headers=HEADERS, follow_redirects=True)
-    return resp.text
+        data = resp.json()
+
+        if not isinstance(data, dict):
+            raise ValueError("Invalid shim response")
+
+        if data.get("status") != "ok":
+            raise ValueError(data.get("message") or "Shim returned an unsuccessful response")
+
+        html = data.get("solution", {}).get("response")
+
+        if not isinstance(html, str) or not html.strip():
+            raise ValueError("Shim returned an empty HTML response")
+
+        return html
+
+    except (httpx.HTTPError, ValueError, KeyError, TypeError) as exc:
+        message = (
+            "RoyalRoad search is unavailable because the Anubis shim "
+            f"could not fetch the page: {exc}"
+        )
+
+        raise ScraperUnavailableError(
+            source="royalroad",
+            message=message,
+        ) from exc
 
 
 async def scrape_fiction_search(client: httpx.AsyncClient, url: str) -> list[ScrapedResult]:

@@ -1,3 +1,4 @@
+# novelcast/engine/engine_fanficfare.py
 import configparser
 import json
 import logging
@@ -230,9 +231,9 @@ class FanFicFareEngine(StoryEngine):
         except Exception as exc:
             detail = getattr(exc, "reason", None) or exc
             message = (
-                f"Proxy unreachable at {target.rstrip('/')} ({detail}). Is the Anubis shim / FlareSolverr running?"
+                f"Proxy unreachable at {target.rstrip('/')} "
+                f"({detail}). Is the Anubis shim / FlareSolverr running?"
             )
-            logger.error(message)
             raise ProxyUnavailableError(message) from exc
 
     def _run_fanficfare(self, url, config_path, progress_callback=None, extra_flags=None):
@@ -272,8 +273,17 @@ class FanFicFareEngine(StoryEngine):
         logger.debug("stdout size=%s chars", len(stdout))
 
         if process.returncode != 0:
-            logger.error("FanFicFare failed: %s", stderr)
-            raise RuntimeError(stderr or "FanFicFare failed")
+            stderr_text = stderr.strip()
+
+            logger.debug(
+                "FanFicFare failed: returncode=%s stderr=%s",
+                process.returncode,
+                stderr_text[-2000:] if stderr_text else "(empty)",
+            )
+
+            raise RuntimeError(
+                stderr_text[-2000:] if stderr_text else "FanFicFare failed"
+            )
 
         raw = self._parse_json_stdout(stdout)
 
