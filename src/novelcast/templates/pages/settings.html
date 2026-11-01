@@ -19,10 +19,11 @@
 
         <!-- TAB BAR -->
         <div class="tab-bar">
-            {% for section_name in schema.keys() %}
-                <button class="tab-btn {% if loop.first %}active{% endif %}" data-tab="{{ section_name }}" type="button">
+            {# One tab per entry in settings_tabs (built in core/settings_tabs.py); a schema section can span several tabs. #}
+            {% for tab in settings_tabs %}
+                <button class="tab-btn {% if loop.first %}active{% endif %}" data-tab="{{ tab.id }}" type="button">
 
-                    {{ section_name | capitalize }}
+                    {{ tab.label }}
                 </button>
             {% endfor %}
 
@@ -35,9 +36,28 @@
         <form method="post" action="/settings" id="settings-form">
             <input type="hidden" name="_active_tab" id="active-tab" value="" />
 
-            {% for section_name, section in schema.items() %}
-                <div class="tab-panel {% if loop.first %}active{% endif %}" data-panel="{{ section_name }}">
-                    {% set section_values = server_settings.get(section_name, {}) %}
+            {% for tab in settings_tabs %}
+                {# Field names still use the real schema section, so saving is unaffected by how tabs are split. #}
+                {% set section_name = tab.section %}
+                {% set section = schema[section_name] %}
+                <div class="tab-panel {% if loop.first %}active{% endif %}" data-panel="{{ tab.id }}">
+                    {% set section_values = tab.scoped %}
+
+                    {% if tab.id == "anubis" %}
+                        <div class="section-card">
+                            <div class="field-card">
+                                <div class="field-card__label-col">
+                                    <span class="field-label">About these settings</span>
+                                    <span class="field-hint"
+                                        >These point FanFicFare at a FlareSolverr-compatible proxy: the Anubis shim
+                                        (<code>anubis_shim.py</code>, normally 127.0.0.1 port 8192) or FlareSolverr itself.
+                                        The shim's own options (headless, concurrency, profile directory) are set through its
+                                        service environment, not here.</span
+                                    >
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
 
                     {% for scope_name, scope_fields in section_values.items() %}
                         {% for key, value in scope_fields.items() %}

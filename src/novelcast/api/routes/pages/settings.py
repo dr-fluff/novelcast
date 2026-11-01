@@ -5,6 +5,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from novelcast.api.deps import get_current_user, get_settings, get_templates, get_users
+from novelcast.core.settings_tabs import build_settings_tabs
 from novelcast.core.template_names import TemplateNames
 from novelcast.core.template_context import TemplateContext as ContextKey
 from novelcast.services import SettingsService, UserService
@@ -49,6 +50,8 @@ def settings(
             ContextKey.USER_SETTINGS: user_settings,
             ContextKey.SERVER_SETTINGS: server_settings,
             ContextKey.USERS: all_users,
+            # Tab layout for the page (a section can span several tabs).
+            "settings_tabs": build_settings_tabs(settings.schema, server_settings),
         },
     )
 

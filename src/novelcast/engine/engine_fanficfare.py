@@ -1,10 +1,14 @@
+import configparser
 import json
 import logging
 import queue
+import ssl
 import subprocess
 import sys
 import threading
 import time
+import urllib.error
+import urllib.request
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -18,6 +22,11 @@ FFF_SUPPORTED_SITES = {"royalroad.com", "www.royalroad.com"}
 IDLE_TIMEOUT_SECONDS = 300
 # Hard ceiling regardless of activity — safety net in case dots never stop.
 MAX_TOTAL_SECONDS = 3600
+
+# Pre-flight check of the FlareSolverr-compatible proxy (Anubis shim / FlareSolverr).
+PROXY_CHECK_TIMEOUT_SECONDS = 3
+# Values of use_flaresolverr_proxy that mean "don't use the proxy".
+_PROXY_OFF_VALUES = ("", "false", "0", "no", "off")
 
 # --- FanFicFare's raw JSON field names (their schema, not ours) ---
 # These are what fanficfare.cli --json-meta actually emits. Kept as constants
@@ -45,6 +54,14 @@ FFF_NAME = "name"
 # genuinely the same field concept; "number"/"selected" are chapter-only.
 CHAPTER_KEY_NUMBER = "number"
 CHAPTER_KEY_SELECTED = "selected"
+
+
+class ProxyUnavailableError(RuntimeError):
+    """The configured FlareSolverr-compatible proxy isn't reachable.
+
+    Raised *before* FanFicFare is launched. Subclasses RuntimeError so existing
+    `except RuntimeError` / `except Exception` handlers keep working.
+    """
 
 
 class FanFicFareEngine(StoryEngine):
@@ -146,7 +163,81 @@ class FanFicFareEngine(StoryEngine):
 
         return chapters
 
+    # ── pre-flight: is the FlareSolverr-compatible proxy up? ─────────────
+
+    def _proxy_settings(self, url: str, config_path: str):
+        """Read the generated ini and return (protocol, address, port) if this
+        URL is routed through the FlareSolverr proxy, else None.
+
+        Reads the same file FanFicFare reads, so the check can never drift from
+        what the GUI settings actually produced. A site section (e.g. the
+        RoyalRoad one) wins over [defaults].
+        """
+        parser = configparser.ConfigParser(interpolation=None, strict=False, allow_no_value=True)
+        parser.read(config_path, encoding="utf-8")
+
+        host = (urlparse(url).hostname or "").lower().removeprefix("www.")
+        sections = [s for s in parser.sections() if s.lower().removeprefix("www.") == host]
+        sections.append("defaults")
+
+        def lookup(key: str, default: str) -> str:
+            for section in sections:
+                if parser.has_option(section, key):
+                    value = parser.get(section, key)
+                    if value and value.strip():
+                        return value.strip()
+            return default
+
+        if lookup("use_flaresolverr_proxy", "false").lower() in _PROXY_OFF_VALUES:
+            return None
+
+        protocol = lookup("flaresolverr_proxy_protocol", "http").lower()
+        address = lookup("flaresolverr_proxy_address", "localhost")
+        port = lookup("flaresolverr_proxy_port", "8191")
+        return protocol, address, port
+
+    def _ensure_proxy_available(self, url: str, config_path: str) -> None:
+        """Fail fast, with one clear log line, if the proxy FanFicFare is about
+        to use isn't answering. Any HTTP response (even a 404) counts as up."""
+        try:
+            proxy = self._proxy_settings(url, config_path)
+        except Exception:
+            logger.debug("Could not read proxy settings from %s; skipping proxy check", config_path, exc_info=True)
+            return
+
+        if proxy is None:
+            return
+
+        protocol, address, port = proxy
+        if protocol not in ("http", "https"):
+            return  # e.g. socks5 can't be probed with a plain HTTP GET
+
+        target = f"{protocol}://{address}:{port}/"
+
+        # Bypass any HTTP(S)_PROXY env vars; this is a direct liveness probe.
+        handlers = [urllib.request.ProxyHandler({})]
+        if protocol == "https":
+            context = ssl.create_default_context()
+            context.check_hostname = False
+            context.verify_mode = ssl.CERT_NONE  # liveness only, nothing is sent
+            handlers.append(urllib.request.HTTPSHandler(context=context))
+        opener = urllib.request.build_opener(*handlers)
+
+        try:
+            opener.open(target, timeout=PROXY_CHECK_TIMEOUT_SECONDS).close()
+        except urllib.error.HTTPError:
+            return  # it answered over HTTP, so it's up
+        except Exception as exc:
+            detail = getattr(exc, "reason", None) or exc
+            message = (
+                f"Proxy unreachable at {target.rstrip('/')} ({detail}). Is the Anubis shim / FlareSolverr running?"
+            )
+            logger.error(message)
+            raise ProxyUnavailableError(message) from exc
+
     def _run_fanficfare(self, url, config_path, progress_callback=None, extra_flags=None):
+
+        self._ensure_proxy_available(url, config_path)
 
         cmd = [
             sys.executable,

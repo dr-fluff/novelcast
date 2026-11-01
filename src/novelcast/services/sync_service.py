@@ -15,6 +15,8 @@ class LibrarySyncService:
         self.download = download
         self.settings = settings
         self.notifier = notifier
+        # Assigned by AppContext._init_telegram() after both services exist.
+        self.telegram = None
         self._lock = Lock()
         self._last_update_check = {
             "status": "not_checked",
@@ -96,6 +98,7 @@ class LibrarySyncService:
             checked = 0
             updated = 0
             new_chapters = 0
+            failures: list[dict] = []
 
             self._emit("sync_run_started", {"stories": len(stories), "story_ids": story_ids})
 
@@ -109,16 +112,24 @@ class LibrarySyncService:
 
                 try:
                     result = self.download.update_story(story)
-                except Exception:
+                except Exception as exc:
                     logger.exception(
                         "Failed to update story id=%s title=%r source_url=%r",
                         story.get("id"),
                         story.get("title"),
                         story.get("source_url"),
                     )
+                    reason = self._short_reason(exc)
+                    failures.append(
+                        {
+                            "story_id": story.get("id"),
+                            "title": title,
+                            "reason": reason,
+                        }
+                    )
                     self._emit(
                         "sync_story_failed",
-                        {"story_id": story.get("id"), "title": title},
+                        {"story_id": story.get("id"), "title": title, "error": reason},
                     )
                     continue
 
@@ -142,6 +153,9 @@ class LibrarySyncService:
                             "title": title,
                         },
                     )
+
+            if failures:
+                self._notify_failures(failures, checked)
 
             payload = {
                 "status": "finished",
@@ -207,6 +221,27 @@ class LibrarySyncService:
 
     def last_update_check(self) -> dict:
         return dict(self._last_update_check)
+
+    @staticmethod
+    def _short_reason(exc: Exception) -> str:
+        """One-line, length-capped reason for notifications.
+
+        Engine errors can carry a whole subprocess stderr (hundreds of lines);
+        the last non-empty line is normally the actual exception message.
+        """
+        lines = [line.strip() for line in str(exc).splitlines() if line.strip()]
+        reason = lines[-1] if lines else type(exc).__name__
+        return reason[:200]
+
+    def _notify_failures(self, failures: list[dict], checked: int):
+        telegram = getattr(self, "telegram", None)
+        if not telegram:
+            return
+        try:
+            # TelegramService.send_message() checks enabled/token/chat_id itself.
+            telegram.notify_update_failures(failures, checked)
+        except Exception:
+            logger.exception("Failed to send telegram failure notification")
 
     def _emit(self, event_type: str, payload: dict):
         if self.notifier:

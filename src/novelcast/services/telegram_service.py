@@ -1,6 +1,7 @@
 # novelcast/services/telegram_service.py
 
 import asyncio
+import concurrent.futures
 import logging
 
 import httpx
@@ -23,6 +24,7 @@ TELEGRAM_API = "https://api.telegram.org/bot{token}/{method}"
 _MAX_BACKOFF = 30
 _MAX_FAILURES = 5
 _OFFLINE_RETRY_INTERVAL = 60
+_MAX_LISTED_FAILURES = 15  # stories named in one failure summary (Telegram caps messages at 4096 chars)
 
 
 class TelegramService:
@@ -214,29 +216,38 @@ class TelegramService:
             self._offset = update["update_id"] + 1
             await self._handle_update(update)
 
-
-    def _handle_task_result(self, task: asyncio.Task):
+    def _handle_task_result(self, task):
         try:
             task.result()
-        except asyncio.CancelledError:
+        except (asyncio.CancelledError, concurrent.futures.CancelledError):
             logger.debug("Telegram background task cancelled")
         except Exception:
             logger.exception("Telegram background task failed")
 
     def _fire_and_forget(self, coro):
+        """Schedule a coroutine on the Telegram event loop.
+
+        Safe to call from any thread: sync/download work runs in executor
+        threads, and loop.create_task() is not thread-safe, so the coroutine
+        is handed over with run_coroutine_threadsafe().
+        """
         if self._disabled:
             logger.debug("Telegram notification skipped: service disabled")
+            coro.close()
             return
         if self._loop is None:
             logger.warning("Telegram notification skipped: no event loop")
+            coro.close()
             return
         if self._loop.is_closed():
             logger.warning("Telegram notification skipped: event loop closed")
+            coro.close()
             return
         try:
-            task = self._loop.create_task(coro)
-            task.add_done_callback(self._handle_task_result)
+            future = asyncio.run_coroutine_threadsafe(coro, self._loop)
+            future.add_done_callback(self._handle_task_result)
         except Exception:
+            coro.close()
             logger.exception("Failed to schedule Telegram notification")
 
     # ── command handling ─────────────────────────────────────────────────
@@ -374,6 +385,17 @@ class TelegramService:
 
     # ── notifications ─────────────────────────────────────────────────────
 
+    @staticmethod
+    def _md_escape(text: str) -> str:
+        """Escape the characters that break Telegram's legacy Markdown parse mode.
+
+        An unbalanced '_', '*', '`' or '[' makes Telegram reject the whole
+        message with a 400, so error text and titles must be escaped.
+        """
+        for ch in ("_", "*", "`", "["):
+            text = text.replace(ch, "\\" + ch)
+        return text
+
     def notify_story_added(self, title: str, author: str, link: str | None):
         self._fire_and_forget(
             self.send_message(
@@ -394,3 +416,43 @@ class TelegramService:
 
     def notify_story_deleted(self, title: str):
         self._fire_and_forget(self.send_message(f"🗑️ *Story deleted*\n{title}"))
+
+    def notify_update_failures(self, failures: list[dict], checked: int):
+        """One summary message for a whole sync run.
+
+        `failures` is a list of {"story_id", "title", "reason"} dicts. Stories
+        are grouped by reason, so a dependency outage (e.g. the Anubis shim
+        being down) shows as one reason with a list of titles instead of
+        dozens of identical messages.
+        """
+        if not failures:
+            return
+
+        by_reason: dict[str, list[str]] = {}
+        for item in failures:
+            reason = item.get("reason") or "Unknown error"
+            by_reason.setdefault(reason, []).append(item.get("title") or "Unknown")
+
+        total = len(failures)
+        if total == 1:
+            header = "⚠️ *Story update failed*"
+        else:
+            header = f"⚠️ *{total} of {checked} story updates failed*"
+
+        lines = [header]
+        shown = 0
+        for reason, titles in by_reason.items():
+            lines.append("")
+            lines.append(f"❌ {self._md_escape(reason)}")
+            for title in titles:
+                if shown >= _MAX_LISTED_FAILURES:
+                    break
+                lines.append(f"• {self._md_escape(title[:100])}")
+                shown += 1
+
+        if total > shown:
+            lines.append("")
+            lines.append(f"…and {total - shown} more")
+
+        text = "\n".join(lines)[:4000].rstrip("\\")
+        self._fire_and_forget(self.send_message(text))
