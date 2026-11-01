@@ -191,7 +191,7 @@ async def _do_post(url: str, post_data: str, timeout_ms: int) -> dict:
         "url": resp.url,
         "status": resp.status,
         "headers": dict(resp.headers),
-        "response": html,c
+        "response": html,
         "cookies": await ctx.cookies(url),
         "userAgent": USER_AGENT,
     }
