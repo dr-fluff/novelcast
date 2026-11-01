@@ -61,8 +61,16 @@ def get_cover(path: str):
         raise HTTPException(status_code=404, detail="Cover not found")
     return FileResponse(file_path)
 
+FAVICON_PATH = (
+    Path(__file__).resolve().parent.parent
+    / "static/images/favicon.svg"
+)
+
 
 @router.get("/favicon.svg")
+@router.get("/favicon.ico", include_in_schema=False)
 def favicon():
-    path = Path(__file__).resolve().parent.parent / "static/images/favicon.svg"
-    return FileResponse(path, media_type="image/svg+xml")
+    return FileResponse(
+        FAVICON_PATH,
+        media_type="image/svg+xml",
+    )

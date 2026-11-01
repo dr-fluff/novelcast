@@ -59,6 +59,7 @@ class AuthMiddleware:
         "/forgot-password",
         "/reset-password",
         "/favicon.svg",
+        "/favicon.ico",
     }
 
     # paths that stay accessible even if the user is logged in
