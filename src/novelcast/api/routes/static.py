@@ -62,7 +62,7 @@ def get_cover(path: str):
     return FileResponse(file_path)
 
 FAVICON_PATH = (
-    Path(__file__).resolve().parent.parent
+    Path(__file__).resolve().parents[2]
     / "static/images/favicon.svg"
 )
 

@@ -9,7 +9,7 @@ from novelcast.core.template_context import TemplateContext as ContextKey
 from novelcast.services.scrapers import scrape_all, scrape_details
 from novelcast.services.search_service import SearchService
 from novelcast.services.settings_service import SettingsService
-
+from novelcast.services.scrapers.exceptions import ScraperUnavailableError
 router = APIRouter()
 
 
@@ -26,6 +26,7 @@ def search_page(
             ContextKey.CURRENT_USER: current_user,
         },
     )
+
 
 
 @router.get("/search/results")
@@ -59,11 +60,22 @@ async def search_results(
             "id",
             "url",
         ):
-            results = await scrape_details(search_urls, settings_service=settings_service)
+            results = await scrape_details(
+                search_urls, settings_service=settings_service
+            )
         else:
-            results = await scrape_all(search_urls, settings_service=settings_service)
+            results = await scrape_all(
+                search_urls, settings_service=settings_service
+            )
 
         error = None
+
+    except ScraperUnavailableError as e:
+        parsed = None
+        search_urls = []
+        results = []
+        error = str(e)
+
     except ValueError as e:
         parsed = None
         search_urls = []
@@ -81,3 +93,4 @@ async def search_results(
             "error": error,
         },
     )
+
