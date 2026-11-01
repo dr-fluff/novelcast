@@ -26,24 +26,15 @@ POLL_INTERVAL = 0.5  # seconds
 
 
 @router.websocket("/tail")
-async def log_tail_ws(
-    websocket: WebSocket,
-):
+async def log_tail_ws(websocket: WebSocket):
     await websocket.accept()
 
-    # TODO: validate session/cookie here
-    # Example:
-    # user = await get_current_user_from_ws(websocket)
-    # if not user or not user.get("is_root"):
-    #     await websocket.close(code=1008)
-    #     return
-
-    backlog, cursor = log_buffer.drain()
-
-    if backlog:
-        await websocket.send_json({"type": "backlog", "lines": backlog})
-
     try:
+        backlog, cursor = log_buffer.drain()
+
+        if backlog:
+            await websocket.send_json({"type": "backlog", "lines": backlog})
+
         while True:
             await asyncio.sleep(POLL_INTERVAL)
 
@@ -54,7 +45,8 @@ async def log_tail_ws(
 
     except WebSocketDisconnect:
         pass
-
+    except asyncio.CancelledError:
+        raise
     except Exception:
         logger.exception("log_tail_ws error")
 

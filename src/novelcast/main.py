@@ -26,4 +26,5 @@ if __name__ == "__main__":
         reload_excludes=["*.pyc", "__pycache__/*"],
         log_level=config.log_level,
         ws="websockets",
+        timeout_graceful_shutdown=15,
     )

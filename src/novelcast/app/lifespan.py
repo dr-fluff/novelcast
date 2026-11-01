@@ -110,7 +110,7 @@ async def lifespan(app: FastAPI):
         # ─────────────────────────────
         if telegram:
             try:
-                telegram.stop()
+                await telegram.stop()
             except Exception:
                 logger.exception("Failed to stop Telegram service")
 
