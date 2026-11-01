@@ -113,13 +113,14 @@ class LibrarySyncService:
                 try:
                     result = self.download.update_story(story)
                 except Exception as exc:
-                    logger.exception(
-                        "Failed to update story id=%s title=%r source_url=%r",
-                        story.get("id"),
-                        story.get("title"),
-                        story.get("source_url"),
-                    )
                     reason = self._short_reason(exc)
+
+                    logger.error(
+                        "Failed to update story id=%s title=%r: %s",
+                        story.get("id"),
+                        title,
+                        reason,
+                    )
                     failures.append(
                         {
                             "story_id": story.get("id"),
@@ -189,8 +190,13 @@ class LibrarySyncService:
                 checked += 1
                 try:
                     result = self.download.check_story_updates(story)
-                except Exception:
-                    logger.exception("Failed to check story %s", story.get("id"))
+                except Exception as exc:
+                    logger.error(
+                        "Failed to check story id=%s title=%r: %s",
+                        story.get("id"),
+                        story.get("title"),
+                        self._short_reason(exc),
+                    )
                     continue
 
                 count = int(result.get("pending_chapters", 0) or 0)
