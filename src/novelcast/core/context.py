@@ -274,8 +274,9 @@ class AppContext:
                         prefix,
                     )
                 else:
-                    self.loop.call_soon_threadsafe(service.stop)
-                    self.loop.call_soon_threadsafe(service.start)
+                    self.loop.call_soon_threadsafe(
+                        lambda: self.loop.create_task(service.restart())    
+                    )
             else:
                 service.stop()
                 service.start()

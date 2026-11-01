@@ -103,18 +103,38 @@ class TelegramService:
             logger.info("Telegram polling started")
 
     def stop(self):
-        if not self._task:
+        """Request polling cancellation without waiting."""
+        if self._task is None:
             return
+
         logger.info("Stopping Telegram polling")
         self._task.cancel()
-        self._task = None
-        self._loop = None
 
-    def restart(self):
+    async def stop_async(self):
+        """Stop polling and wait for the task to finish."""
+        task = self._task
+        if task is None:
+            return
+
+        logger.info("Stopping Telegram polling")
+        task.cancel()
+
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+        finally:
+            if self._task is task:
+                self._task = None
+                self._loop = None
+
+    async def restart(self):
+        """Restart polling after the previous task has stopped."""
         if self._disabled:
             logger.warning("Telegram is permanently disabled; restart blocked")
             return
-        self.stop()
+
+        await self.stop_async()
         self._consecutive_failures = 0
         self.start()
 
