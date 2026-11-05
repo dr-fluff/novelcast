@@ -53,7 +53,7 @@ class ReleaseUpdateService:
         repository: str | None,
         *,
         current_version: str | None = None,
-        cache_seconds: int = 6 * 60 * 60,
+        cache_seconds: int = 5 * 60,
         http_get: Callable = httpx.get,
     ):
         self.repository = repository.strip("/") if repository else ""
