@@ -5,6 +5,8 @@ set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 UV_BIN="${UV_BIN:-$REPO_DIR/.tools/bin/uv}"
+RELEASE_TAG="${1:-}"
+GITHUB_REPOSITORY="${2:-}"
 
 if [ ! -x "$UV_BIN" ]; then
     UV_BIN="$(command -v uv || true)"
@@ -22,8 +24,26 @@ git diff --quiet && git diff --cached --quiet || {
 }
 
 echo "==> Fetching updates"
-git fetch --tags origin
-git pull --ff-only
+if [ -n "$RELEASE_TAG" ]; then
+    [[ "$RELEASE_TAG" =~ ^v?[0-9]+([.][0-9]+)*$ ]] || {
+        echo "Invalid release tag: $RELEASE_TAG" >&2
+        exit 2
+    }
+    [[ "$GITHUB_REPOSITORY" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || {
+        echo "Invalid GitHub repository: $GITHUB_REPOSITORY" >&2
+        exit 2
+    }
+
+    git fetch --tags "https://github.com/${GITHUB_REPOSITORY}.git"
+    git rev-parse --verify "refs/tags/${RELEASE_TAG}^{commit}" >/dev/null || {
+        echo "Release tag $RELEASE_TAG was not found on GitHub." >&2
+        exit 1
+    }
+    git checkout --detach "refs/tags/${RELEASE_TAG}"
+else
+    git fetch --tags origin
+    git pull --ff-only
+fi
 
 echo "==> Installing locked production dependencies"
 "$UV_BIN" sync --frozen --no-dev

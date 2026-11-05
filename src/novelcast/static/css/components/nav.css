@@ -192,10 +192,27 @@
 }
 
 .release-update-banner a {
-    margin-left: auto;
     color: var(--accent-color);
     font-weight: 650;
     white-space: nowrap;
+}
+
+.release-update-banner__action {
+    margin-left: auto;
+}
+
+.release-update-banner__button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.45rem 0.75rem;
+    white-space: nowrap;
+}
+
+.release-update-banner__status {
+    flex-basis: 100%;
+    color: var(--text-secondary);
+    font-size: 0.82rem;
 }
 
 /* ── RESPONSIVE ── */
@@ -222,6 +239,10 @@
     }
 
     .release-update-banner a {
+        margin-left: 1.5rem;
+    }
+
+    .release-update-banner__action {
         margin-left: 1.5rem;
     }
 }

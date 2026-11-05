@@ -1,6 +1,9 @@
 # novelcast/api/router/admin/__init__.py
+import subprocess
+from pathlib import Path
+
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
 
@@ -24,6 +27,46 @@ router = APIRouter()
 router.include_router(telegram_router, prefix="/telegram")
 router.include_router(patreon_router, prefix="/patreon")
 router.include_router(log_tail_router, prefix="/logs", tags=["admin"])
+
+
+@router.post("/update", response_class=HTMLResponse)
+def install_latest_release(request: Request, _admin: dict = Depends(require_admin)):
+    release_updates = request.app.state.release_updates
+    release = release_updates.get_available_update(refresh=True)
+    if release is None:
+        return HTMLResponse("<span>No newer GitHub release is available.</span>")
+
+    repo_dir = Path(__file__).resolve().parents[5]
+    if Path("/.dockerenv").exists() or not (repo_dir / ".git").exists():
+        return HTMLResponse(
+            "<span>Docker updates must be run on the host: "
+            "<code>git pull --ff-only</code>, then <code>docker compose up -d --build</code>.</span>"
+        )
+
+    update_script = repo_dir / "scripts" / "update.sh"
+    if not update_script.is_file():
+        return HTMLResponse("<span>The managed update script was not found.</span>")
+
+    log_path = repo_dir / "logs" / "update.log"
+    try:
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        with log_path.open("a", encoding="utf-8") as update_log:
+            subprocess.Popen(
+                ["bash", str(update_script), release.latest_version, release_updates.repository],
+                cwd=repo_dir,
+                stdin=subprocess.DEVNULL,
+                stdout=update_log,
+                stderr=subprocess.STDOUT,
+                start_new_session=True,
+                close_fds=True,
+            )
+    except OSError:
+        return HTMLResponse("<span>Could not start the update. Check NovelCast logs.</span>")
+
+    return HTMLResponse(
+        f"<span>Updating to NovelCast {release.latest_version}. "
+        "The app will restart when installation is complete.</span>"
+    )
 
 
 # ── Users ─────────────────────────────────────────────────────────────────

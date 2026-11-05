@@ -57,6 +57,20 @@
                 <span class="release-update-banner__current">(you have {{ release_update.current_version }})</span>.
             </span>
             <a href="{{ release_update.release_url }}" target="_blank" rel="noopener noreferrer">View release</a>
+            <form
+                class="release-update-banner__action"
+                hx-post="/api/admin/update"
+                hx-target="#release-update-status"
+                hx-swap="innerHTML"
+                hx-disabled-elt="find button"
+                hx-confirm="Install NovelCast {{ release_update.latest_version }} and restart now?"
+            >
+                <button type="submit" class="btn-primary release-update-banner__button">
+                    <i class="fa-solid fa-download" aria-hidden="true"></i>
+                    Update
+                </button>
+            </form>
+            <span id="release-update-status" class="release-update-banner__status" aria-live="polite"></span>
         </div>
     </aside>
 {% endif %}

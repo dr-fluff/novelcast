@@ -19,12 +19,18 @@
 
         <!-- TAB BAR -->
         <div class="tab-bar">
-            {# One tab per entry in settings_tabs (built in core/settings_tabs.py); a schema section can span several tabs. #}
-            {% for tab in settings_tabs %}
-                <button class="tab-btn {% if loop.first %}active{% endif %}" data-tab="{{ tab.id }}" type="button">
-
-                    {{ tab.label }}
-                </button>
+            {% for category in settings_categories %}
+                {% if category.grouped %}
+                    <button class="tab-btn" data-category="{{ category.id }}" type="button">{{ category.label }}</button>
+                {% else %}
+                    {% set tab = category.tabs[0] %}
+                    <button
+                        class="tab-btn {% if loop.first %}active{% endif %}"
+                        data-tab="{{ tab.id }}"
+                        data-category="{{ category.id }}"
+                        type="button"
+                    >{{ category.label }}</button>
+                {% endif %}
             {% endfor %}
 
             {% if user and user.is_root %}
@@ -40,10 +46,19 @@
                 {# Field names still use the real schema section, so saving is unaffected by how tabs are split. #}
                 {% set section_name = tab.section %}
                 {% set section = schema[section_name] %}
-                <div class="tab-panel {% if loop.first %}active{% endif %}" data-panel="{{ tab.id }}">
+                {% if tab.subcategory_group_start %}
+                    <section class="settings-subcategory" data-category="{{ tab.category_id }}" hidden>
+                        <div class="settings-subcategory__heading">{{ tab.subcategory_label }}</div>
+                        <div class="settings-subcategory__content">
+                {% endif %}
+                <div
+                    class="tab-panel {% if loop.first %}active{% endif %}"
+                    data-panel="{{ tab.id }}"
+                    data-category="{{ tab.category_id }}"
+                >
                     {% set section_values = tab.scoped %}
 
-                    {% if tab.id == "anubis" %}
+                    {% if tab.id == "fanficfare" %}
                         <div class="section-card">
                             <div class="field-card">
                                 <div class="field-card__label-col">
@@ -122,7 +137,7 @@
                             {% endif %}
                         {% endfor %}
 
-                        {% if section_name == "library" %}
+                        {% if section_name == "library" and tab.id == "library_storage" %}
                             <div class="section-card">
                                 <div class="field-card">
                                     <div class="field-card__label-col">
@@ -204,6 +219,10 @@
                         {% endif %}
                     {% endfor %}
                 </div>
+                {% if tab.subcategory_group_end %}
+                        </div>
+                    </section>
+                {% endif %}
             {% endfor %}
 
             {# ── Users panel (admin only) ── #}
@@ -248,8 +267,10 @@
 
     <script>
         (function () {
-            const tabs = document.querySelectorAll('.tab-btn');
+            const tabs = document.querySelectorAll('.tab-btn[data-tab]');
             const panels = document.querySelectorAll('.tab-panel');
+            const categoryButtons = document.querySelectorAll('.tab-btn[data-category]');
+            const groupedSections = document.querySelectorAll('.settings-subcategory');
             const activeTabInput = document.querySelector('#active-tab');
 
             function activateTab(tabName, updateHash = true) {
@@ -259,24 +280,71 @@
 
                 tabs.forEach((t) => t.classList.remove('active'));
                 panels.forEach((p) => p.classList.remove('active'));
+                categoryButtons.forEach((button) => button.classList.remove('active'));
 
                 tab.classList.add('active');
-                panel.classList.add('active');
+                const category = tab.dataset.category;
+                groupedSections.forEach((section) => {
+                    section.hidden = section.dataset.category !== category;
+                });
+                panels.forEach((candidate) => {
+                    if (candidate.dataset.category === category) candidate.classList.add('active');
+                });
+                const categoryButton = [...categoryButtons].find((button) => button.dataset.category === category);
+                if (categoryButton) categoryButton.classList.add('active');
 
                 if (activeTabInput) activeTabInput.value = tabName;
                 if (updateHash) history.replaceState(null, '', `#${encodeURIComponent(tabName)}`);
             }
 
+            function activateCategory(categoryName, updateHash = true) {
+                const hasCategoryPanels = [...panels].some((panel) => panel.dataset.category === categoryName);
+                if (!hasCategoryPanels) return;
+
+                tabs.forEach((tab) => tab.classList.remove('active'));
+                panels.forEach((panel) => {
+                    panel.classList.toggle('active', panel.dataset.category === categoryName);
+                });
+                groupedSections.forEach((section) => {
+                    section.hidden = section.dataset.category !== categoryName;
+                });
+                categoryButtons.forEach((button) => button.classList.remove('active'));
+                const categoryButton = [...categoryButtons].find((button) => button.dataset.category === categoryName);
+                if (categoryButton) categoryButton.classList.add('active');
+
+                if (activeTabInput) activeTabInput.value = categoryName;
+                if (updateHash) history.replaceState(null, '', `#${encodeURIComponent(categoryName)}`);
+            }
+
             const initialTab = decodeURIComponent(window.location.hash.replace(/^#/, ''));
-            if (initialTab) {
+            const initialCategoryButton = [...categoryButtons].find((button) => button.dataset.category === initialTab);
+            const initialPanel = [...panels].find((panel) => panel.dataset.panel === initialTab);
+            if (initialCategoryButton && !initialCategoryButton.dataset.tab) {
+                activateCategory(initialTab, false);
+            } else if (initialPanel && [...categoryButtons].some((button) =>
+                button.dataset.category === initialPanel.dataset.category && !button.dataset.tab)) {
+                activateCategory(initialPanel.dataset.category, false);
+            } else if (initialTab) {
                 activateTab(initialTab, false);
-            } else if (tabs.length) {
-                activateTab(tabs[0].dataset.tab, false);
+                } else if (categoryButtons.length) {
+                    const firstCategoryButton = categoryButtons[0];
+                    if (firstCategoryButton.dataset.tab) {
+                        activateTab(firstCategoryButton.dataset.tab, false);
+                    } else {
+                        activateCategory(firstCategoryButton.dataset.category, false);
+                    }
+                } else if (tabs.length) {
+                    activateTab(tabs[0].dataset.tab, false);
             }
 
             tabs.forEach((tab) => {
                 tab.addEventListener('click', () => {
                     activateTab(tab.dataset.tab);
+                });
+            });
+            [...categoryButtons].filter((button) => !button.dataset.tab).forEach((button) => {
+                button.addEventListener('click', () => {
+                    activateCategory(button.dataset.category);
                 });
             });
         })();

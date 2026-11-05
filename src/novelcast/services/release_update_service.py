@@ -64,12 +64,12 @@ class ReleaseUpdateService:
         self._cached_update: ReleaseUpdate | None = None
         self._lock = threading.Lock()
 
-    def get_available_update(self) -> ReleaseUpdate | None:
+    def get_available_update(self, *, refresh: bool = False) -> ReleaseUpdate | None:
         if not self.repository:
             return None
 
         with self._lock:
-            if time.monotonic() - self._checked_at < self.cache_seconds:
+            if not refresh and time.monotonic() - self._checked_at < self.cache_seconds:
                 return self._cached_update
 
             self._checked_at = time.monotonic()
