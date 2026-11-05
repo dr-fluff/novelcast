@@ -45,17 +45,42 @@
         </div>
 
         <div class="section-card">
-            <div class="section-card__head">
+            <div class="section-card__head section-card__head--activity">
                 <span class="section-card__title">Activity</span>
+                <span class="heatmap-range">{{ heatmap_range_label }}</span>
             </div>
             <div class="heatmap-wrap">
-                <div class="heatmap-grid">
+                <div class="heatmap-calendar" aria-label="Reading activity by day">
+                    <div class="heatmap-months" style="--week-count: {{ heatmap_week_count }}">
+                        {% for month in heatmap_months %}
+                            <span class="heatmap-month" style="grid-column: {{ month.week + 1 }}" title="{{ month.title }}">
+                                <span class="heatmap-month__full">{{ month.label }}</span>
+                                <span class="heatmap-month__short">{{ month.short_label }}</span>
+                            </span>
+                        {% endfor %}
+                    </div>
+                    <div class="heatmap-weekdays" aria-hidden="true">
+                        {% for weekday in heatmap_weekdays %}
+                            <span>{{ weekday }}</span>
+                        {% endfor %}
+                    </div>
+                    <div class="heatmap-grid" style="--week-count: {{ heatmap_week_count }}">
                     {% for day in heatmap_days %}
                         <div
-                            class="heatmap-day{% if day.seconds > 0 %}heatmap-day--active{% endif %}"
-                            title="{{ day.date }}{% if day.seconds > 0 %}— {{ (day.seconds / 60) | round | int }} min{% endif %}"
+                            class="heatmap-day{% if day.seconds > 0 %} heatmap-day--active{% endif %}{% if day.is_padding %} heatmap-day--padding{% endif %}"
+                            {% if not day.is_padding %}
+                                title="{{ day.date }}{% if day.seconds > 0 %} - {{ (day.seconds / 60) | round | int }} min{% endif %}"
+                                aria-label="{{ day.date }}{% if day.seconds > 0 %}, {{ (day.seconds / 60) | round | int }} minutes{% else %}, no reading activity{% endif %}"
+                            {% else %}
+                                aria-hidden="true"
+                            {% endif %}
                         ></div>
                     {% endfor %}
+                    </div>
+                </div>
+                <div class="heatmap-legend">
+                    <span class="heatmap-legend__swatch" aria-hidden="true"></span>
+                    <span>Reading activity</span>
                 </div>
             </div>
         </div>

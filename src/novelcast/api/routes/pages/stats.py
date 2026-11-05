@@ -15,6 +15,45 @@ router = APIRouter()
 # Number of days shown in the activity heatmap (GitHub's is 371 —
 # 53 weeks — so the grid always ends on a full week).
 HEATMAP_DAYS = 371
+HEATMAP_WEEKDAYS = ("Mon", "", "Wed", "", "Fri", "", "")
+
+
+def build_heatmap_calendar(today: date, activity_by_date: dict[date, int], days: int = HEATMAP_DAYS) -> dict:
+    start_date = today - timedelta(days=days - 1)
+    calendar_start = start_date - timedelta(days=start_date.weekday())
+    calendar_end = today + timedelta(days=6 - today.weekday())
+    calendar_days = (calendar_end - calendar_start).days + 1
+
+    heatmap_days = []
+    heatmap_months = []
+    for offset in range(calendar_days):
+        current_date = calendar_start + timedelta(days=offset)
+        is_padding = current_date < start_date or current_date > today
+        heatmap_days.append(
+            {
+                "date": "" if is_padding else current_date.isoformat(),
+                "seconds": 0 if is_padding else activity_by_date.get(current_date, 0),
+                "is_padding": is_padding,
+            }
+        )
+
+        if not is_padding and (current_date == start_date or current_date.day == 1):
+            heatmap_months.append(
+                {
+                    "label": current_date.strftime("%b"),
+                    "short_label": current_date.strftime("%b")[0],
+                    "week": offset // 7,
+                    "title": current_date.strftime("%B %Y"),
+                }
+            )
+
+    range_label = f"{start_date.strftime('%b %Y')} - {today.strftime('%b %Y')}"
+    return {
+        "days": heatmap_days,
+        "months": heatmap_months,
+        "week_count": calendar_days // 7,
+        "range_label": range_label,
+    }
 
 
 @router.get("/stats")
@@ -33,16 +72,7 @@ def stats_page(
     activity_rows = stats.get_activity_heatmap(user_id, days=HEATMAP_DAYS)
     activity_by_date = {row["date"]: row["read_seconds"] for row in activity_rows}
 
-    today = date.today()
-    heatmap_days = []
-    for offset in range(HEATMAP_DAYS - 1, -1, -1):
-        d = today - timedelta(days=offset)
-        heatmap_days.append(
-            {
-                "date": d.isoformat(),
-                "seconds": activity_by_date.get(d, 0),
-            }
-        )
+    calendar = build_heatmap_calendar(date.today(), activity_by_date)
 
     total_read_seconds = summary["total_read_seconds"]
     reading_speed_wpm = summary["reading_speed_wpm"]
@@ -57,6 +87,10 @@ def stats_page(
             ContextKey.CHAPTERS_READ: summary["chapters_read"],
             ContextKey.STORIES_READ: summary["stories_read"],
             ContextKey.READING_SPEED_WPM: round(reading_speed_wpm) if reading_speed_wpm is not None else None,
-            ContextKey.HEATMAP_DAYS: heatmap_days,
+            ContextKey.HEATMAP_DAYS: calendar["days"],
+            "heatmap_months": calendar["months"],
+            "heatmap_week_count": calendar["week_count"],
+            "heatmap_range_label": calendar["range_label"],
+            "heatmap_weekdays": HEATMAP_WEEKDAYS,
         },
     )

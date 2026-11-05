@@ -26,6 +26,7 @@ class PaginatedEReader {
         this.resizeTimer = null;
         this.repaginateTimer = null;
         this.touch = { startX: 0, endX: 0, threshold: 50 };
+        this.tapZonePointer = null;
 
         // Reading-time heartbeat: fires every heartbeatIntervalMs while the
         // tab is visible, reporting elapsed seconds since the last beat.
@@ -284,6 +285,37 @@ class PaginatedEReader {
 
     onIframeLoad() {
         const touchTarget = this.iframeDoc.body;
+
+        touchTarget.addEventListener(
+            'pointerdown',
+            (e) => {
+                if (e.pointerType !== 'touch' && e.pointerType !== 'pen') return;
+                this.tapZonePointer = { x: e.clientX, y: e.clientY, target: e.target };
+            },
+            { passive: true }
+        );
+
+        touchTarget.addEventListener(
+            'pointerup',
+            (e) => {
+                const start = this.tapZonePointer;
+                this.tapZonePointer = null;
+                if (!start || Math.abs(e.clientX - start.x) > 16 || Math.abs(e.clientY - start.y) > 16) return;
+
+                const interactiveSelector = 'a, button, input, select, textarea, video, audio, [contenteditable="true"]';
+                if (start.target?.closest?.(interactiveSelector) || e.target?.closest?.(interactiveSelector)) return;
+                if (!this.iframeWin.getSelection()?.isCollapsed) return;
+
+                const zoneWidth = this.iframe.clientWidth * 0.2;
+                if (e.clientX <= zoneWidth) this.prevPage();
+                else if (e.clientX >= this.iframe.clientWidth - zoneWidth) this.nextPage();
+            },
+            { passive: true }
+        );
+
+        touchTarget.addEventListener('pointercancel', () => {
+            this.tapZonePointer = null;
+        });
 
         touchTarget.addEventListener('touchstart', (e) => {
             this.touch.startX = e.changedTouches[0].screenX;
