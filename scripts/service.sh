@@ -17,7 +17,7 @@ case "$(uname -s)" in
         ;;
     Linux)
         case "$ACTION" in
-            start|restart|stop|status) systemctl --user "$ACTION" novelcast.service ;;
+            start|restart|stop|status) systemctl "$ACTION" novelcast.service ;;
             *) echo "Usage: $0 {start|status|restart|stop}" >&2; exit 2 ;;
         esac
         ;;
