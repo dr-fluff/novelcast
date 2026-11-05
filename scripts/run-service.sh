@@ -5,7 +5,7 @@
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
-UV_BIN="${UV_BIN:-$REPO_DIR/.tools/bin/uv}"
+UV_BIN="${UV_BIN:-/root/.local/bin/uv}"
 
 if [ ! -x "$UV_BIN" ]; then
     UV_BIN="$(command -v uv || true)"

@@ -4,7 +4,7 @@
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
-UV_BIN="${UV_BIN:-$REPO_DIR/.tools/bin/uv}"
+UV_BIN="${UV_BIN:-/root/.local/bin/uv}"
 RELEASE_TAG="${1:-}"
 GITHUB_REPOSITORY="${2:-}"
 
