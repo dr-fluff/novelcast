@@ -50,6 +50,25 @@ def test_parse_chapter_html():
     assert "Hello World" in content
 
 
+def test_parse_chapter_unwraps_backticks_from_table_attributes():
+    parser = EpubParser()
+    html = b'''
+    <html><body>
+        <h1>Chapter 1</h1>
+        <table style="`width: 100%; background-color: rgb(0, 0, 0)`">
+            <tr><td colspan="`4`" style="`color: white`">Stats</td></tr>
+        </table>
+    </body></html>
+    '''
+
+    title, content = parser._parse_chapter(html)
+
+    assert title == "Chapter 1"
+    assert 'style="width: 100%; background-color: rgb(0, 0, 0)"' in content
+    assert 'colspan="4"' in content
+    assert 'style="color: white"' in content
+
+
 def test_parse_real_epub(sample_epub):
     parser = EpubParser(patterns=[r"ch\.?\s*(\d+)"])
 

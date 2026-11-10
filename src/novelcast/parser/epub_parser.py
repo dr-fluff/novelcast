@@ -252,6 +252,11 @@ class EpubParser(BaseParser):
             logger.exception("Failed parsing XHTML chapter")
             return "", ""
 
+        for element in soup.find_all(True):
+            for attribute, value in list(element.attrs.items()):
+                if isinstance(value, str) and value.startswith("`") and value.endswith("`"):
+                    element.attrs[attribute] = value[1:-1]
+
         title_tag = soup.find(["h1", "h2", "h3", "title"])
         if not title_tag:
             title_tag = soup.find("meta", attrs={"name": "chaptertitle"})

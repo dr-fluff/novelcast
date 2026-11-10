@@ -1,10 +1,12 @@
-.PHONY: install dev backend frontend predev lint format test benchmark clean ports db doctor docker-build docker-up docker-down docker-logs docker-rebuild
+.PHONY: install dev backend frontend anubis predev lint format test benchmark clean ports db doctor docker-build docker-up docker-down docker-logs docker-rebuild
 
 VENV ?= .venv
 
 UV := uv
 NPX := npx
 NPM := npm
+ANUBIS_PORT ?= 8192
+ANUBIS_URL := http://127.0.0.1:$(ANUBIS_PORT)/v1
 
 
 install:
@@ -12,11 +14,14 @@ install:
 
 
 dev: predev
+	$(UV) run playwright install chromium
+	@mkdir -p .tools
 	$(NPX) concurrently -k \
-		-n BACKEND,FRONTEND \
+		-n BACKEND,FRONTEND,ANUBIS \
 		-c auto \
-		"$(UV) run python -m novelcast.main" \
-		"$(NPX) browser-sync start --config bs-config.js"
+		"NOVELCAST_ANUBIS_SHIM_URL=$(ANUBIS_URL) $(UV) run python -m novelcast.main" \
+		"$(NPX) browser-sync start --config bs-config.js" \
+		"SHIM_USER_DATA_DIR=.tools/anubis-profile $(UV) run uvicorn anubis_shim:app --host 127.0.0.1 --port $(ANUBIS_PORT)"
 
 
 backend:
@@ -26,13 +31,18 @@ backend:
 frontend:
 	$(NPX) browser-sync start --config bs-config.js
 
+anubis:
+	$(UV) run playwright install chromium
+	@mkdir -p .tools
+	SHIM_USER_DATA_DIR=.tools/anubis-profile $(UV) run uvicorn anubis_shim:app --host 127.0.0.1 --port $(ANUBIS_PORT)
+
 
 predev:
-	$(NPX) kill-port 8001 3000 || true
+	$(NPX) kill-port 8001 3000 $(ANUBIS_PORT) || true
 
 
 ports:
-	$(NPX) kill-port 8001 3000 || true
+	$(NPX) kill-port 8001 3000 $(ANUBIS_PORT) || true
 
 
 lint:

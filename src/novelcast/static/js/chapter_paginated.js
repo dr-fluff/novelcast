@@ -351,7 +351,7 @@ class PaginatedEReader {
 
     buildIframe() {
         if (!this.state.originalContent) {
-            this.state.originalContent = this.el.chapterSource?.innerHTML || '';
+            this.state.originalContent = this.normalizeChapterAttributes(this.el.chapterSource?.innerHTML || '');
         }
 
         if (this.iframe) {
@@ -402,6 +402,22 @@ class PaginatedEReader {
 </body>
 </html>`);
         this.iframeDoc.close();
+    }
+
+    normalizeChapterAttributes(html) {
+        const template = document.createElement('template');
+        template.innerHTML = html;
+
+        template.content.querySelectorAll('*').forEach((element) => {
+            Array.from(element.attributes).forEach((attribute) => {
+                const value = attribute.value;
+                if (value.startsWith('`') && value.endsWith('`')) {
+                    element.setAttribute(attribute.name, value.slice(1, -1));
+                }
+            });
+        });
+
+        return template.innerHTML;
     }
 
     async resolveStartPage() {
@@ -638,7 +654,6 @@ class PaginatedEReader {
       p, span, a, b, i, em, strong {
         font-size:   ${fontSize}rem !important;
         line-height: ${lineHeight} !important;
-        color:       ${c.text} !important;
         font-weight: ${fontWeight} !important;
       }
 

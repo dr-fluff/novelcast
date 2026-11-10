@@ -1,5 +1,12 @@
-from novelcast.core.defaults import SETTINGS_TAB_LAYOUT
+from novelcast.core.defaults import FANFICTIONFARE_DEFAULTS, FFF_ROYALROAD_SLOW_DOWN_SLEEP_TIME, SETTINGS_TAB_LAYOUT
 from novelcast.core.settings_tabs import build_settings_tab_categories, build_settings_tabs
+
+
+def test_royalroad_request_delay_can_be_disabled():
+    setting = FANFICTIONFARE_DEFAULTS[FFF_ROYALROAD_SLOW_DOWN_SLEEP_TIME]
+
+    assert setting["default"] == 0
+    assert setting["min"] == 0
 
 
 def test_settings_are_grouped_by_category_and_subcategory_without_changing_ownership():
