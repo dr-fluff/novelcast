@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "novelcast"
-version = "1.0.3"
+dynamic = ["version"]
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11,<3.14"
@@ -35,6 +35,9 @@ dependencies = [
 
 [tool.setuptools]
 package-dir = {"" = "src"}
+
+[tool.setuptools.dynamic]
+version = {attr = "novelcast.__version__"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
