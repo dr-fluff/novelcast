@@ -113,7 +113,7 @@ class RssService:
         if self.settings.get(setting_keys.RSS_SETTINGS.ROYALROAD, default=False).value:
             readers.append(RoyalRoadRss(self.story_service))
 
-        logger.info(
+        logger.debug(
             "Created RSS readers=%s",
             [r.__class__.__name__ for r in readers],
         )

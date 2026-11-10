@@ -4,6 +4,7 @@ import inspect
 import json
 import logging
 import re
+import shutil
 import uuid
 from pathlib import Path
 
@@ -33,8 +34,19 @@ class StoryDownloadService:
         self.notifier = notifier
         self.settings_service = settings_service
 
-    def _download_raw(self, url: str, progress_callback=None, story_match: str | None = None) -> dict:
-        return self.orchestrator.download(url, progress_callback=progress_callback, story_match=story_match)
+    def _download_raw(
+        self,
+        url: str,
+        progress_callback=None,
+        story_match: str | None = None,
+        existing_epub: Path | None = None,
+    ) -> dict:
+        return self.orchestrator.download(
+            url,
+            progress_callback=progress_callback,
+            story_match=story_match,
+            existing_epub=str(existing_epub) if existing_epub else None,
+        )
 
     def _parse_raw(self, raw: dict, settings: dict | None = None) -> dict:
         if settings and "settings" in inspect.signature(self.parser.parse).parameters:
@@ -234,19 +246,54 @@ class StoryDownloadService:
             },
         )
 
+        try:
+            update_check = self.check_story_updates(story)
+        except Exception:
+            logger.warning(
+                "Metadata-only update check failed; falling back to full download for story=%s",
+                story_id,
+                exc_info=True,
+            )
+        else:
+            if update_check.get("up_to_date"):
+                integrity = self.pipeline.integrity_check(story_id)
+                if not integrity["ok"]:
+                    self._handle_integrity_failure(story_id, source_url, integrity, download_id=None)
+
+                logger.info("Story is already up to date: story=%s", story_id)
+                self._emit(
+                    "update_finished",
+                    {"story_id": story_id, "title": title, "new_chapters": 0},
+                )
+                return {
+                    "story_id": story_id,
+                    "new_chapters": 0,
+                    "chapter_numbers": [],
+                    "up_to_date": True,
+                }
+
         settings = self._load_patreon_settings(story_id)
+        existing_epub = self.pipeline.get_local_epub_path(story_id)
 
-        raw = self._download_raw(source_url, story_match=settings.get("chapter_regex"))
-        parsed = self._parse_raw(raw, settings=settings)
-        self._update_story_metadata(story_id, raw, parsed)
+        raw = self._download_raw(
+            source_url,
+            story_match=settings.get("chapter_regex"),
+            existing_epub=existing_epub,
+        )
+        staged_epub = raw.get("file_path")
+        try:
+            parsed = self._parse_raw(raw, settings=settings)
+            self._update_story_metadata(story_id, raw, parsed)
 
-        new_chapters = self.pipeline.append_new_chapters(story_id, parsed)
+            new_chapters = self.pipeline.append_new_chapters(story_id, parsed)
 
-        self._refresh_metadata_from_json(story_id)
+            self._refresh_metadata_from_json(story_id)
 
-        check = self.pipeline.integrity_check(story_id)
-        if not check["ok"]:
-            self._handle_integrity_failure(story_id, source_url, check, download_id=None)
+            check = self.pipeline.integrity_check(story_id)
+            if not check["ok"]:
+                self._handle_integrity_failure(story_id, source_url, check, download_id=None)
+        finally:
+            self._cleanup_update_staging(staged_epub)
 
         final_title = parsed.get("title") or title
 
@@ -383,6 +430,7 @@ class StoryDownloadService:
         online_numbers = self._online_chapter_numbers(raw)
         local_numbers = self.pipeline.chapters_repo.get_chapter_numbers(story_id)
         pending = sorted(number for number in online_numbers if number not in local_numbers)
+        up_to_date = bool(online_numbers) and set(online_numbers) == set(local_numbers)
 
         return {
             "story_id": story_id,
@@ -391,6 +439,7 @@ class StoryDownloadService:
             "chapter_numbers": pending,
             "online_chapters": len(online_numbers),
             "local_chapters": len(local_numbers),
+            "up_to_date": up_to_date,
         }
 
     def _online_chapter_numbers(self, raw: dict) -> list[int]:
@@ -409,6 +458,14 @@ class StoryDownloadService:
             return list(range(1, count + 1))
 
         return []
+
+    def _cleanup_update_staging(self, file_path: str | None) -> None:
+        if not file_path:
+            return
+
+        staging_path = Path(file_path)
+        if staging_path.parent.name.startswith(".fanficfare-update-"):
+            shutil.rmtree(staging_path.parent, ignore_errors=True)
 
     def _update_story_metadata(self, story_id: int, raw: dict, parsed: dict) -> None:
         metadata_json = self._load_local_metadata_json(story_id)

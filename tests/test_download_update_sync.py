@@ -1,11 +1,14 @@
 import os
 import sys
+from pathlib import Path
+from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import MagicMock
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src")))
 
 from novelcast.services.workers.sync_worker import _run_auto_check
+from novelcast.engine.engine_fanficfare import FanFicFareEngine
 from novelcast.services.story_download_service import StoryDownloadService
 from novelcast.services.story_service import StoryService
 from novelcast.services.sync_service import LibrarySyncService
@@ -16,6 +19,10 @@ class FakePipeline:
         self.persist_calls = []
         self.append_calls = []
         self.chapters_repo = MagicMock()
+        self.local_epub_path = None
+
+    def get_local_epub_path(self, story_id):
+        return self.local_epub_path
 
     def persist(self, story_id, parsed):
         self.persist_calls.append((story_id, parsed))
@@ -112,11 +119,13 @@ class TestStoryDownloadService(unittest.TestCase):
             "chapters": [{"number": 1}, {"number": 2}],
         }
 
+        self.orchestrator.check_updates.return_value = {"zchapters": [1, 2]}
         self.orchestrator.download.return_value = raw
         self.parser.parse.return_value = parsed
         self.stories_repo.get_by_id.return_value = {"id": 101, "local_path": None}
         self.stories_repo.update_full_metadata.return_value = {"id": 101}
         self.pipeline.chapters_repo.get_chapter_numbers.return_value = [1]
+        self.pipeline.local_epub_path = Path("/library/story/story.epub")
 
         result = self.service.update_story(story)
 
@@ -125,6 +134,22 @@ class TestStoryDownloadService(unittest.TestCase):
         self.assertEqual(result["chapter_numbers"], [2])
         self.assertEqual(self.pipeline.persist_calls, [])
         self.assertEqual(len(self.pipeline.append_calls), 1)
+        self.assertEqual(
+            self.orchestrator.download.call_args.kwargs["existing_epub"],
+            str(self.pipeline.local_epub_path),
+        )
+
+    def test_update_story_skips_full_download_when_chapters_match(self):
+        story = {"id": 102, "source_url": "https://example.com/story", "title": "Story"}
+        self.orchestrator.check_updates.return_value = {"zchapters": [1, 2]}
+        self.pipeline.chapters_repo.get_chapter_numbers.return_value = [1, 2]
+
+        result = self.service.update_story(story)
+
+        self.assertEqual(result["new_chapters"], 0)
+        self.assertTrue(result["up_to_date"])
+        self.orchestrator.download.assert_not_called()
+        self.assertEqual(self.pipeline.append_calls, [])
 
     def test_check_story_updates_returns_pending_chapters(self):
         story = {"id": 200, "source_url": "https://example.com/story"}
@@ -137,6 +162,38 @@ class TestStoryDownloadService(unittest.TestCase):
 
         self.assertEqual(result["pending_chapters"], 1)
         self.assertEqual(result["chapter_numbers"], [3])
+
+
+class TestFanFicFareEngine(unittest.TestCase):
+    def test_update_epub_uses_a_staged_existing_epub(self):
+        with TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            download_dir = root / "downloads"
+            download_dir.mkdir()
+            existing_epub = root / "story.epub"
+            existing_epub.write_bytes(b"existing epub")
+            config_service = MagicMock()
+            config_service.write_config.return_value = str(root / "fanficfare.ini")
+
+            engine = FanFicFareEngine(None, config_service, str(download_dir))
+            engine._run_fanficfare = MagicMock(
+                side_effect=lambda url, config_path, progress_callback=None, extra_flags=None, input_path=None: {
+                    "title": "Story",
+                    "output_filename": input_path,
+                }
+            )
+
+            result = engine.update_epub(
+                "https://www.royalroad.com/fiction/123",
+                existing_epub,
+            )
+
+            call_kwargs = engine._run_fanficfare.call_args.kwargs
+            staged_epub = Path(call_kwargs["input_path"])
+            self.assertEqual(call_kwargs["extra_flags"], ["--update-epub"])
+            self.assertNotEqual(staged_epub, existing_epub)
+            self.assertEqual(staged_epub.read_bytes(), existing_epub.read_bytes())
+            self.assertEqual(result["file_path"], str(staged_epub))
 
 
 class TestStoryService(unittest.TestCase):

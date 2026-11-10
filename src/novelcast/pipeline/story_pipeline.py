@@ -84,6 +84,11 @@ class StoryPipeline:
     def get_story_by_url(self, url: str):
         return self.stories_repo.get_by_url(url)
 
+    def get_local_epub_path(self, story_id: int) -> Path | None:
+        story = self.stories_repo.get_by_id(story_id) or {}
+        local_path = story.get("local_path")
+        return self._find_local_epub(local_path) if local_path else None
+
     # ─────────────────────────────
     # APPEND CHAPTERS ONLY
     # ─────────────────────────────

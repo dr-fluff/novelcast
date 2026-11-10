@@ -10,9 +10,18 @@ class StoryDownloadOrchestrator:
     def __init__(self, selector):
         self.selector = selector
 
-    def download(self, url: str, progress_callback=None, story_match: str | None = None) -> dict:
+    def download(
+        self,
+        url: str,
+        progress_callback=None,
+        story_match: str | None = None,
+        existing_epub: str | None = None,
+    ) -> dict:
         engine = self.selector.get_engine(url)
         logger.debug("Using engine: %s", engine.__class__.__name__)
+
+        if existing_epub and hasattr(engine, "update_epub"):
+            return engine.update_epub(url, existing_epub, progress_callback=progress_callback)
 
         kwargs = {"progress_callback": progress_callback}
         if story_match and "story_match" in inspect.signature(engine.fetch).parameters:

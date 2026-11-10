@@ -3,9 +3,11 @@ import configparser
 import json
 import logging
 import queue
+import shutil
 import ssl
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 import urllib.error
@@ -72,6 +74,7 @@ class FanFicFareEngine(StoryEngine):
     FLAG_NO_OUTPUT = "--no-output"
     FLAG_NON_INTERACTIVE = "--non-interactive"
     FLAG_PROGRESS = "--progressbar"
+    FLAG_UPDATE_EPUB = "--update-epub"
 
     def __init__(self, settings_repo, config_service, download_dir: str):
         self.settings_repo = settings_repo
@@ -122,6 +125,40 @@ class FanFicFareEngine(StoryEngine):
             story_site_id=self._extract_story_site_id(url, raw),
             raw=raw,
         )
+
+    def update_epub(self, url: str, existing_epub: str | Path, progress_callback=None) -> dict:
+        existing_path = Path(existing_epub).resolve()
+        if not existing_path.is_file():
+            return self.fetch(url, progress_callback=progress_callback)
+
+        staging_dir = Path(tempfile.mkdtemp(prefix=".fanficfare-update-", dir=self.download_dir))
+        staged_epub = staging_dir / existing_path.name
+
+        try:
+            shutil.copy2(existing_path, staged_epub)
+            config_path = self.config_service.write_config()
+            raw = self._run_fanficfare(
+                url,
+                config_path,
+                progress_callback=progress_callback,
+                extra_flags=[self.FLAG_UPDATE_EPUB],
+                input_path=str(staged_epub),
+            )
+            result = make_result(
+                title=raw.get(FFF_TITLE),
+                author=raw.get(FFF_AUTHOR),
+                url=url,
+                file_path=self._extract_epub_path(raw),
+                chapters=self._extract_chapter_details(raw),
+                format=FORMAT_EPUB,
+                story_site_id=self._extract_story_site_id(url, raw),
+                raw=raw,
+            )
+        except Exception:
+            shutil.rmtree(staging_dir, ignore_errors=True)
+            raise
+
+        return result
 
     def _extract_chapter_details(self, raw: dict) -> list[dict]:
         chapters_raw = raw.get(FFF_CHAPTERS) or raw.get(FFF_ZCHAPTERS) or []
@@ -236,7 +273,7 @@ class FanFicFareEngine(StoryEngine):
             )
             raise ProxyUnavailableError(message) from exc
 
-    def _run_fanficfare(self, url, config_path, progress_callback=None, extra_flags=None):
+    def _run_fanficfare(self, url, config_path, progress_callback=None, extra_flags=None, input_path=None):
 
         self._ensure_proxy_available(url, config_path)
 
@@ -254,7 +291,7 @@ class FanFicFareEngine(StoryEngine):
         if extra_flags:
             cmd.extend(extra_flags)
 
-        cmd.append(url)
+        cmd.append(input_path or url)
 
         logger.info("FanFicFare CMD=%s", " ".join(cmd))
 
