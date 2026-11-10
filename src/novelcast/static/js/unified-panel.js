@@ -574,6 +574,11 @@ const UnifiedPanel = (() => {
                     const autoUpdateEl = $(`metaAutoUpdate-${panelId}`);
                     if (autoUpdateEl) autoUpdateEl.checked = Boolean(st.auto_update);
 
+                    const telegramNotificationsEl = $(`metaTelegramNotifications-${panelId}`);
+                    if (telegramNotificationsEl) {
+                        telegramNotificationsEl.checked = st.telegram_notifications !== false;
+                    }
+
                     this.renderCoverPreview(panelId, st.cover_path);
 
                     renderTagList('metaSeriesWrap', panelId, st.series_list || parseCommaList(st.series));
@@ -625,6 +630,7 @@ const UnifiedPanel = (() => {
                     tags: collectTagList('metaTagsWrap', panelId),
                     source_url: sourceUrl,
                     auto_update: $(`metaAutoUpdate-${panelId}`)?.checked || false,
+                    telegram_notifications: $(`metaTelegramNotifications-${panelId}`)?.checked || false,
                     hide_author_notes: $(`metaHideAuthorNotes-${panelId}`)?.checked || false,
                 };
 

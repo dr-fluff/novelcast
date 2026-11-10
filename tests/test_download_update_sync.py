@@ -58,6 +58,7 @@ class TestStoryDownloadService(unittest.TestCase):
             settings_service=self.settings_service,
             notifier=self.notifier,
         )
+        self.service.telegram = MagicMock()
 
     def test_add_story_skips_existing_story(self):
         self.stories_repo.get_by_url.return_value = {
@@ -107,7 +108,12 @@ class TestStoryDownloadService(unittest.TestCase):
         self.assertTrue(self.notifier.called)
 
     def test_update_story_returns_new_chapters(self):
-        story = {"id": 101, "source_url": "https://example.com/story", "title": "Story"}
+        story = {
+            "id": 101,
+            "source_url": "https://example.com/story",
+            "title": "Story",
+            "telegram_notifications": False,
+        }
         raw = {
             "url": "https://example.com/story",
             "title": "Story",
@@ -134,6 +140,7 @@ class TestStoryDownloadService(unittest.TestCase):
         self.assertEqual(result["chapter_numbers"], [2])
         self.assertEqual(self.pipeline.persist_calls, [])
         self.assertEqual(len(self.pipeline.append_calls), 1)
+        self.service.telegram.notify_story_updated.assert_not_called()
         self.assertEqual(
             self.orchestrator.download.call_args.kwargs["existing_epub"],
             str(self.pipeline.local_epub_path),
@@ -222,6 +229,26 @@ class TestStoryService(unittest.TestCase):
             10,
             "auto_update",
             "1",
+            category="story",
+            type="bool",
+        )
+
+    def test_update_story_metadata_persists_telegram_notifications_setting(self):
+        repo = MagicMock()
+        repo.update_full_metadata.return_value = {"id": 10}
+
+        story_service = StoryService(repo, author_repo=None)
+        story_service.update_story_metadata(
+            story_id=10,
+            title="Title",
+            author="Author",
+            telegram_notifications=False,
+        )
+
+        repo.set_story_setting.assert_called_once_with(
+            10,
+            "telegram_notifications",
+            "0",
             category="story",
             type="bool",
         )

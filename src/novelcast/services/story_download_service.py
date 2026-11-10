@@ -316,7 +316,11 @@ class StoryDownloadService:
             )
 
             telegram = getattr(self, "telegram", None)
-            if telegram and self.settings_service.get(setting_keys.TELEGRAM_SETTINGS.ENABLED).value:
+            if (
+                telegram
+                and story.get("telegram_notifications", True)
+                and self.settings_service.get(setting_keys.TELEGRAM_SETTINGS.ENABLED).value
+            ):
                 logger.info("telegram msg notify_story_updated")
                 try:
                     telegram.notify_story_updated(

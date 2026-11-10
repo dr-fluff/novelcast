@@ -6,7 +6,7 @@
 - [X] Make it deployebal as a service insted of docker
 - [X] update banner when new version is avalibel on git
 - [ ] set telegram notification per story to not get spammed.
-- [ ] add status comands to telegram for checking on the app
+- [X] add status comands to telegram for checking on the app
 
 ## 🟡 High Priority
 

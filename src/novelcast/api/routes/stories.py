@@ -86,6 +86,7 @@ class StoryMetadataUpdate(BaseModel):
     tags: list[str] | None = None
     source_url: str | None = None
     auto_update: bool | None = None
+    telegram_notifications: bool | None = None
     hide_author_notes: bool | None = None
 
 
@@ -144,6 +145,7 @@ def update_story_metadata(
             tags=body.tags,
             source_url=body.source_url,
             auto_update=body.auto_update,
+            telegram_notifications=body.telegram_notifications,
             hide_author_notes=body.hide_author_notes,
         )
         request.app.state.ctx.emit("story_updated", {"story_id": story_id})

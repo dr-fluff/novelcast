@@ -369,6 +369,7 @@ def _to_dict(story: Story | None) -> dict | None:
         "source_url": story.source_url,
         "story_site_id": story.story_site_id,
         "auto_update": _story_setting_bool(story, "auto_update", default=False),
+        "telegram_notifications": _story_setting_bool(story, "telegram_notifications", default=True),
         "hide_author_notes": _story_setting_bool(story, "hide_author_notes", default=True),
         "local_path": story.local_path,
         "cover_path": story.cover_path,

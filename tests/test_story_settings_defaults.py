@@ -36,3 +36,19 @@ def test_hide_author_notes_respects_explicit_true():
     )
 
     assert _to_dict(story)["hide_author_notes"] is True
+
+
+def test_telegram_notifications_default_to_true_when_unset():
+    story = make_story()
+
+    assert _to_dict(story)["telegram_notifications"] is True
+
+
+def test_telegram_notifications_respects_explicit_false():
+    story = make_story(
+        [
+            StorySetting(name="telegram_notifications", value="0"),
+        ]
+    )
+
+    assert _to_dict(story)["telegram_notifications"] is False

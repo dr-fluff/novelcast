@@ -197,6 +197,7 @@ class StoryService:
         tags: list[str] | None = None,
         source_url: str | None = None,
         auto_update: bool | None = None,
+        telegram_notifications: bool | None = None,
         hide_author_notes: bool | None = None,
     ) -> dict | None:
         updated = self.repo.update_full_metadata(
@@ -223,6 +224,14 @@ class StoryService:
                 story_id,
                 "auto_update",
                 "1" if bool(auto_update) else "0",
+                category="story",
+                type="bool",
+            )
+        if updated and telegram_notifications is not None:
+            self.repo.set_story_setting(
+                story_id,
+                "telegram_notifications",
+                "1" if bool(telegram_notifications) else "0",
                 category="story",
                 type="bool",
             )
