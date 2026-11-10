@@ -83,6 +83,12 @@ def test_admin_update_starts_the_latest_release_tag(monkeypatch, tmp_path):
     monkeypatch.setattr(Path, "exists", exists)
     launched = []
     monkeypatch.setattr(admin_routes.subprocess, "Popen", lambda *args, **kwargs: launched.append((args, kwargs)))
+    git_statuses = iter([0, 0, 1])
+    monkeypatch.setattr(
+        admin_routes.subprocess,
+        "run",
+        lambda *args, **kwargs: SimpleNamespace(returncode=next(git_statuses), stderr=b""),
+    )
 
     class FakeReleaseUpdates:
         repository = "dr-fluff/novelcast"
@@ -102,3 +108,10 @@ def test_admin_update_starts_the_latest_release_tag(monkeypatch, tmp_path):
     assert "Updating to NovelCast v1.4.0" in response.text
     assert launched[0][0][0] == ["bash", str(update_script), "v1.4.0", "dr-fluff/novelcast"]
     assert launched[0][1]["start_new_session"] is True
+
+    dirty_response = TestClient(app).post("/api/admin/update")
+
+    assert dirty_response.status_code == 200
+    assert "Other tracked files have local changes" in dirty_response.text
+    assert "Commit or stash those changes before updating" in dirty_response.text
+    assert len(launched) == 1

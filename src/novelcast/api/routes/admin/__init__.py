@@ -29,6 +29,26 @@ router.include_router(patreon_router, prefix="/patreon")
 router.include_router(log_tail_router, prefix="/logs", tags=["admin"])
 
 
+def _has_tracked_local_changes(repo_dir: Path) -> bool:
+    commands = (
+        ["git", "diff", "--quiet", "--", ".", ":(exclude)scripts/update.sh"],
+        ["git", "diff", "--cached", "--quiet"],
+    )
+    for command in commands:
+        result = subprocess.run(
+            command,
+            cwd=repo_dir,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+        if result.returncode == 1:
+            return True
+        if result.returncode != 0:
+            raise RuntimeError("Could not check the repository for local changes.")
+    return False
+
+
 @router.post("/update", response_class=HTMLResponse)
 def install_latest_release(request: Request, _admin: dict = Depends(require_admin)):
     release_updates = request.app.state.release_updates
@@ -46,6 +66,15 @@ def install_latest_release(request: Request, _admin: dict = Depends(require_admi
     update_script = repo_dir / "scripts" / "update.sh"
     if not update_script.is_file():
         return HTMLResponse("<span>The managed update script was not found.</span>")
+
+    try:
+        if _has_tracked_local_changes(repo_dir):
+            return HTMLResponse(
+                "<span>ERROR: Other tracked files have local changes. "
+                "Commit or stash those changes before updating.</span>"
+            )
+    except (OSError, RuntimeError):
+        return HTMLResponse("<span>Could not check for local changes before updating.</span>")
 
     log_path = repo_dir / "logs" / "update.log"
     try:
