@@ -668,6 +668,27 @@ class PaginatedEReader {
         padding: 0 !important;
       }
 
+            table {
+                width: 100%;
+                max-width: 100%;
+                table-layout: fixed;
+                border-collapse: collapse;
+                margin: 0.75rem 0;
+            }
+
+            td, th {
+                min-width: 0;
+                padding: 0.2em 0.35em;
+                border: 1px solid ${c.hr};
+                vertical-align: top;
+                overflow-wrap: anywhere;
+            }
+
+            tr {
+                break-inside: avoid;
+                -webkit-column-break-inside: avoid;
+            }
+
       img {
         max-width: 100% !important;
         height:    auto !important;
