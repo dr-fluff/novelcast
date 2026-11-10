@@ -81,14 +81,19 @@ def test_admin_update_starts_the_latest_release_tag(monkeypatch, tmp_path):
         return original_exists(path)
 
     monkeypatch.setattr(Path, "exists", exists)
+
     launched = []
-    monkeypatch.setattr(admin_routes.subprocess, "Popen", lambda *args, **kwargs: launched.append((args, kwargs)))
     git_statuses = iter([0, 0, 1])
-    monkeypatch.setattr(
-        admin_routes.subprocess,
-        "run",
-        lambda *args, **kwargs: SimpleNamespace(returncode=next(git_statuses), stderr=b""),
-    )
+
+    def fake_run(command, **kwargs):
+        if command[0] == "git":
+            return SimpleNamespace(returncode=next(git_statuses), stderr=b"")
+        if command[0] == "systemd-run":
+            launched.append((command, kwargs))
+            return SimpleNamespace(returncode=0, stdout="Running as unit.")
+        raise AssertionError(f"Unexpected command: {command}")
+
+    monkeypatch.setattr(admin_routes.subprocess, "run", fake_run)
 
     class FakeReleaseUpdates:
         repository = "dr-fluff/novelcast"
@@ -106,8 +111,19 @@ def test_admin_update_starts_the_latest_release_tag(monkeypatch, tmp_path):
 
     assert response.status_code == 200
     assert "Updating to NovelCast v1.4.0" in response.text
-    assert launched[0][0][0] == ["bash", str(update_script), "v1.4.0", "dr-fluff/novelcast"]
-    assert launched[0][1]["start_new_session"] is True
+    assert launched[0][0] == [
+        "systemd-run",
+        "--system",
+        "--no-block",
+        "--collect",
+        "--unit=novelcast-update.service",
+        f"--property=WorkingDirectory={repo_dir}",
+        "/bin/bash",
+        str(update_script),
+        "v1.4.0",
+        "dr-fluff/novelcast",
+    ]
+    assert launched[0][1]["stdin"] == admin_routes.subprocess.DEVNULL
 
     dirty_response = TestClient(app).post("/api/admin/update")
 
@@ -115,3 +131,53 @@ def test_admin_update_starts_the_latest_release_tag(monkeypatch, tmp_path):
     assert "Other tracked files have local changes" in dirty_response.text
     assert "Commit or stash those changes before updating" in dirty_response.text
     assert len(launched) == 1
+
+
+def test_admin_update_escapes_systemd_launch_errors(monkeypatch, tmp_path):
+    repo_dir = tmp_path / "repo"
+    package_init = repo_dir / "src" / "novelcast" / "api" / "routes" / "admin" / "__init__.py"
+    package_init.parent.mkdir(parents=True)
+    (repo_dir / ".git").mkdir(parents=True)
+    update_script = repo_dir / "scripts" / "update.sh"
+    update_script.parent.mkdir()
+    update_script.touch()
+
+    monkeypatch.setattr(admin_routes, "__file__", str(package_init))
+    original_exists = Path.exists
+
+    def exists(path):
+        if path == Path("/.dockerenv"):
+            return False
+        return original_exists(path)
+
+    monkeypatch.setattr(Path, "exists", exists)
+
+    def fake_run(command, **kwargs):
+        if command[0] == "git":
+            return SimpleNamespace(returncode=0, stderr=b"")
+        if command[0] == "systemd-run":
+            return SimpleNamespace(
+                returncode=1,
+                stdout="<script>alert('unexpected')</script>",
+            )
+        raise AssertionError(f"Unexpected command: {command}")
+
+    monkeypatch.setattr(admin_routes.subprocess, "run", fake_run)
+
+    class FakeReleaseUpdates:
+        repository = "dr-fluff/novelcast"
+
+        def get_available_update(self, *, refresh=False):
+            assert refresh is True
+            return SimpleNamespace(latest_version="v1.1.2")
+
+    app = FastAPI()
+    app.include_router(admin_routes.router, prefix="/api/admin")
+    app.state.release_updates = FakeReleaseUpdates()
+    app.dependency_overrides[require_admin] = lambda: {"id": 1, "is_root": True}
+
+    response = TestClient(app).post("/api/admin/update")
+
+    assert response.status_code == 200
+    assert "&lt;script&gt;" in response.text
+    assert "<script>" not in response.text

@@ -34,7 +34,7 @@ command -v sqlite3 >/dev/null || {
 
 [ -x "$SERVICE_HELPER" ] || {
     echo "ERROR: Service helper is missing or not executable." >&2
-    eit 1
+    exit 1
 }
 
 cd "$REPO_DIR"
@@ -241,4 +241,4 @@ echo
 echo "NovelCast update completed successfully."
 echo "Database backup: $BACKUP_DB"
 echo "Previous commit: $ORIGINAL_COMMIT"
-echo "Updated commit:  $NEW_COMMIT"x
+echo "Updated commit:  $NEW_COMMIT"
