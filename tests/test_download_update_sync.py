@@ -158,6 +158,17 @@ class TestStoryDownloadService(unittest.TestCase):
         self.orchestrator.download.assert_not_called()
         self.assertEqual(self.pipeline.append_calls, [])
 
+    def test_update_story_skips_download_when_local_has_extra_chapters(self):
+        story = {"id": 103, "source_url": "https://example.com/story", "title": "Story"}
+        self.orchestrator.check_updates.return_value = {"zchapters": [1, 2]}
+        self.pipeline.chapters_repo.get_chapter_numbers.return_value = [1, 2, 3]
+
+        result = self.service.update_story(story)
+
+        self.assertTrue(result["up_to_date"])
+        self.assertEqual(result["new_chapters"], 0)
+        self.orchestrator.download.assert_not_called()
+
     def test_check_story_updates_returns_pending_chapters(self):
         story = {"id": 200, "source_url": "https://example.com/story"}
         raw = {"zchapters": [1, 2, 3]}

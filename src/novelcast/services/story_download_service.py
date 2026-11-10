@@ -260,7 +260,12 @@ class StoryDownloadService:
                 if not integrity["ok"]:
                     self._handle_integrity_failure(story_id, source_url, integrity, download_id=None)
 
-                logger.info("Story is already up to date: story=%s", story_id)
+                logger.info(
+                    "Story has no pending chapters: story=%s online=%s local=%s",
+                    story_id,
+                    update_check["online_chapters"],
+                    update_check["local_chapters"],
+                )
                 self._emit(
                     "update_finished",
                     {"story_id": story_id, "title": title, "new_chapters": 0},
@@ -434,7 +439,7 @@ class StoryDownloadService:
         online_numbers = self._online_chapter_numbers(raw)
         local_numbers = self.pipeline.chapters_repo.get_chapter_numbers(story_id)
         pending = sorted(number for number in online_numbers if number not in local_numbers)
-        up_to_date = bool(online_numbers) and set(online_numbers) == set(local_numbers)
+        up_to_date = bool(online_numbers) and not pending
 
         return {
             "story_id": story_id,
