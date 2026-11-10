@@ -1,5 +1,6 @@
 # novelcast/api/router/admin/__init__.py
 import subprocess
+from html import escape
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
@@ -76,25 +77,46 @@ def install_latest_release(request: Request, _admin: dict = Depends(require_admi
     except (OSError, RuntimeError):
         return HTMLResponse("<span>Could not check for local changes before updating.</span>")
 
-    log_path = repo_dir / "logs" / "update.log"
+    command = [
+        "systemd-run",
+        "--system",
+        "--no-block",
+        "--collect",
+        "--unit=novelcast-update.service",
+        f"--property=WorkingDirectory={repo_dir}",
+        "/bin/bash",
+        str(update_script),
+        release.latest_version,
+        release_updates.repository,
+    ]
+
     try:
-        log_path.parent.mkdir(parents=True, exist_ok=True)
-        with log_path.open("a", encoding="utf-8") as update_log:
-            subprocess.Popen(
-                ["bash", str(update_script), release.latest_version, release_updates.repository],
-                cwd=repo_dir,
-                stdin=subprocess.DEVNULL,
-                stdout=update_log,
-                stderr=subprocess.STDOUT,
-                start_new_session=True,
-                close_fds=True,
-            )
+        result = subprocess.run(
+            command,
+            cwd=repo_dir,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            check=False,
+        )
     except OSError:
-        return HTMLResponse("<span>Could not start the update. Check NovelCast logs.</span>")
+        return HTMLResponse(
+            "<span>Could not launch the systemd update job. "
+            "Check NovelCast service logs.</span>"
+        )
+
+    if result.returncode != 0:
+        detail = (result.stdout or "").strip()
+        return HTMLResponse(
+            "<span>Could not start the update job. "
+            f"<code>{escape(detail)}</code></span>"
+        )
 
     return HTMLResponse(
         f"<span>Updating to NovelCast {release.latest_version}. "
-        "The app will restart when installation is complete.</span>"
+        "The app will restart when installation is complete. "
+        "Update output is available through journalctl.</span>"
     )
 
 
